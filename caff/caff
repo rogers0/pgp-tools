@@ -200,7 +200,7 @@ sub info($) {
 };
 sub debug($) {
 	my ($line) = @_;
-	print "[DEBUG] $line\n";
+	#print "[DEBUG] $line\n";
 };
 sub trace($) {
 	my ($line) = @_;
@@ -596,7 +596,7 @@ for my $keyid (@keyids_ok) {
 	while (1) {
 		my $this_uid_text = '';
 		$uid_number++;
-		info("Doing key $keyid, uid $uid_number");
+		debug("Doing key $keyid, uid $uid_number");
 
 		# import into temporary gpghome
 		###############################
@@ -665,7 +665,7 @@ for my $keyid (@keyids_ok) {
 			next;
 		};
 		unless ($have_one) {
-			info("Uid ".($uid_number-1)." was the last, there is no $uid_number.");
+			debug("Uid ".($uid_number-1)." was the last, there is no $uid_number.");
 			info("key $keyid done.");
 			last;
 		};
