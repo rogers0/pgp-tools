@@ -35,6 +35,9 @@ Repsonse systems like CABot, without all the extra hassle of those
 systems.
 
 
+
+Dependencies: gnupg (>= 1.2), perl, libgnupg-interface-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
+
 -- 
 Peter
 $Id$
