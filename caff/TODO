@@ -1,0 +1,9 @@
+Legend:
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+- need to import own keys into our gnupghome
