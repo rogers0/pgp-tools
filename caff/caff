@@ -247,7 +247,7 @@ sub readwrite_gpg($$$$$%) {
 
 	my ($stdout, $stderr, $status) = ("", "", "");
 	my $exitwhenstatusmatches = $options{'exitwhenstatusmatches'};
-	trace("doign stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
+	trace("doing stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
 
 	my $readwrote_stuff_this_time = 0;
 	my $do_not_wait_on_select = 0;
