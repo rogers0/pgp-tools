@@ -35,6 +35,24 @@ systems.
 
 Dependencies: gnupg (>= 1.3.92), perl, libgnupg-interface-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
 
+
+INSTALLATION NOTES
+
+After creating a ~/.caffrc from the template, caff almost works out of the box.
+
+It has a problem, though: your personal public key is not imported in the caff
+working keyring.  Do fix it, do this:
+
+Considering you have this:
+
+   $CONFIG{'caffhome'}    = $ENV{'HOME'}.'.caff';
+
+Do:
+
+   gpg --export <your-key-id> | gpg --import --homedir ~/.caff/gnupghome
+
+This is a workaround for a bug which is already noted in the TODO list.
+
 -- 
 Peter
 $Id$
