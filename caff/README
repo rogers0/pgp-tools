@@ -1,0 +1,39 @@
+ caff  --  CA - fire and forget
+
+caff is a script that helps you in keysigning.  It takes a list of
+keyids on the command line, fetches them from a keyserver and calls
+GnuPG so that you can sign it.  It then mails each key to all its
+email addresses - only including the one UID that we send to in each
+mail.
+
+
+Features:
+ * Easy to setup.
+ * Attaches only the very UID that we send to in the mail.
+ * Prunes the key from all signatures that are not self sigs and
+   not done by you, thereby greatly reducing the size of mails.
+ * Sends the mail encrypted if possible, will warn before sending
+   unencrypted mail (sign only keys)
+ * Creates proper PGP MIME messages.
+ * Uses separate GNUPGHOME for all its operations.
+
+Caveats:
+ * Requires a gpg patch for now, until 2 bugs are fixed:
+     http://bugs.debian.org/252917    gnupg: --with-colons and --edit delsigs
+     http://bugs.debian.org/254072    gpg should flush stdout before prompting in --edit
+
+Discussion:
+
+Since we do not upload the new signatures, or import them into our
+main keyring, the signature only gets public if:
+ - the email address is valid
+ - the person reading the email can decrypt the mail (if it was sent
+   encrypted).
+
+Therefore we achieve the same level of security as common Challenge
+Repsonse systems like CABot, without all the extra hassle of those
+systems.
+
+
+-- 
+Peter
