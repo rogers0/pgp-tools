@@ -463,7 +463,7 @@ $CONFIG{'owner'}
 
 	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
 	$message_entity->head->add("To", $address);
-	$message_entity->head->add("From", $CONFIG{'owner'}.' <'.$CONFIG{'email'}.'>');
+	$message_entity->head->add("From", '"'.$CONFIG{'owner'}.'" <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("User-Agent", $USER_AGENT);
 	$message_entity->send();
 	$message_entity->stringify();
