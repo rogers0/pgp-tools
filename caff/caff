@@ -3,7 +3,7 @@
 # caff  --  CA - Fire and Forget
 # $Id$
 #
-# Copyright (c) 2004 Peter Palfrader <peter@palfrader.org>
+# Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 #
 # All rights reserved.
 #
@@ -348,7 +348,7 @@ my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET
 my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 load_config;
-my $USER_AGENT = "caff $VERSION - (c) 2004 Peter Palfrader";
+my $USER_AGENT = "caff $VERSION - (c) 2004, 2005 Peter Palfrader";
 
 my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
 my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
@@ -362,7 +362,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 
 sub usage() {
-	print STDERR "caff $VERSION - (c) 2004 Peter Palfrader\n";
+	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
 	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid] <keyid> [<keyid> ...]\n";
 	exit 1;
 };
