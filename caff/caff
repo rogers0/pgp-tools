@@ -554,14 +554,15 @@ if ($CONFIG{'no-download'}) {
 # sign keys
 ###########
 unless ($CONFIG{'no-sign'}) {
-	info("Sign the following keys according to your policy...");
+	info("Sign the following keys according to your policy..., then exit gpg with 'save'");
 	for my $keyid (@keyids_ok) {
 		my @command;
 		push @command, $CONFIG{'gpg-sign'};
 		push @command, '--local-user', $USER if (defined $USER);
 		push @command, "--homedir=$GNUPGHOME";
 		push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-		push @command, '--sign-key', $keyid;
+		push @command, '--edit', $keyid;
+		push @command, 'sign';
 		print join(' ', @command),"\n";
 		system (@command);
 	};
