@@ -6,7 +6,6 @@ GnuPG so that you can sign it.  It then mails each key to all its
 email addresses - only including the one UID that we send to in each
 mail.
 
-
 Features:
  * Easy to setup.
  * Attaches only the very UID that we send to in the mail.
@@ -17,10 +16,8 @@ Features:
  * Creates proper PGP MIME messages.
  * Uses separate GNUPGHOME for all its operations.
 
-Caveats:
- * Requires a gpg patch for now, until 2 bugs are fixed:
-     http://bugs.debian.org/252917    gnupg: --with-colons and --edit delsigs
-     http://bugs.debian.org/254072    gpg should flush stdout before prompting in --edit
+Special Requirements:
+ * GnuPG 1.3.92 or later.
 
 Discussion:
 
@@ -36,7 +33,7 @@ systems.
 
 
 
-Dependencies: gnupg (>= 1.2), perl, libgnupg-interface-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
+Dependencies: gnupg (>= 1.3.92), perl, libgnupg-interface-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
 
 -- 
 Peter
