@@ -684,7 +684,8 @@ for my $keyid (@keyids_ok) {
 		while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 			# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
 			my @sigline = grep { /^sig/ } (split /\n/, $stdout);
-			notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!?.") if scalar @sigline >= 2; # XXX
+			$stdout =~ s/\n/\\n/g;
+			notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
 			my $line = pop @sigline;
 			my $answer = "no";
 			if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
@@ -702,7 +703,6 @@ for my $keyid (@keyids_ok) {
 					$answer = "yes";
 				};
 			} else {
-				$stdout =~ s/\n/\\n/g;
 				debug("[sigremoval] no sig line here, only got: ".$stdout);
 			};
 			($stdout, $stderr, $status) =
