@@ -654,6 +654,7 @@ for my $keyid (@keyids_ok) {
 			next;
 		};
 		unless ($have_one) {
+			info("Uid ".($uid_number-1)." was the last, there is no $uid_number.");
 			info("key $keyid done.");
 			last;
 		};
