@@ -1,4 +1,4 @@
- caff  --  CA - fire and forget
+caff  --  CA - fire and forget
 
 caff is a script that helps you in keysigning.  It takes a list of
 keyids on the command line, fetches them from a keyserver and calls
@@ -37,3 +37,4 @@ systems.
 
 -- 
 Peter
+$Id$
