@@ -446,7 +446,8 @@ $CONFIG{'owner'}
 sub sanitize_uid($) {
 	my ($uid) = @_;
 
-	my $good_uid =~ tr#/:\\#_#;
+	my $good_uid = $uid;
+	$good_uid =~ tr#/:\\#_#;
 	trace2("[sanitize_uid] changed UID from $uid to $good_uid.\n") if $good_uid ne $uid;
 	return $good_uid;
 };
@@ -713,7 +714,7 @@ for my $keyid (@keyids_ok) {
 			trace("UID: $uid->{'text'}\n");
 			unless ($uid->{'text'} =~ /@/) {
 				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email sent?", 1);
-				push @attached, $uid;
+				push @attached, $uid if $attach;
 			};
 		};
 
