@@ -4,6 +4,13 @@
 
 $CONFIG{'owner'}       = 'Peter Palfrader';
 $CONFIG{'email'}       = 'peter@palfrader.org';
+
+# you can get your long keyid from
+#   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>
+#
+# if you have a v4 key, it will simply be the last 16 digits of
+# your fingerprint.
+
 $CONFIG{'keyid'}       = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 $CONFIG{'also-encrypt-to'} = 'DE7AAF6E94C09C7F';
 $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
