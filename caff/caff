@@ -118,7 +118,7 @@ Path to the GnuPG binary.  Default: B<gpg>.
 Path to the GnuPG binary which is used to sign keys.  Default: what
 B<gpg> is set to.
 
-=item B<gpg-sdelsig> [string]
+=item B<gpg-delsig> [string]
 
 Path to the GnuPG binary which is used to split off signatures.  This is
 needed while the upstream GnuPG is not fixed  (there are 2 bugs in the
@@ -127,6 +127,19 @@ Debian Bug Tracking System).  Default: what B<gpg> is set to.
 =item B<secret-keyring> [string]
 
 Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
+
+=item B<also-encrypt-to> [keyid]
+
+An additional keyid to encrypt messages to. Default: none.
+
+=item B<no-download> [boolean]
+
+If true, then skip the step of fetching keys from the keyserver.
+Default: B<0>.
+
+=item B<no-sign> [boolean]
+
+If true, then skip the signing step. Default: B<0>.
 
 =back
 
@@ -173,6 +186,8 @@ sub load_config() {
 	$CONFIG{'gpg-sign'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-sign'};
 	$CONFIG{'gpg-delsig'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-delsig'};
 	$CONFIG{'secret-keyring'} = $ENV{'HOME'}.'/.gnupg/secring.gpg' unless defined $CONFIG{'secret-keyring'};
+	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
+	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
 };
 
 sub notice($) {
@@ -475,49 +490,57 @@ for my $keyid (@ARGV) {
 };
 
 
+
 #############################
 # receive keys from keyserver
 #############################
-my $gpg = GnuPG::Interface->new();
-$gpg->call( $CONFIG{'gpg'} );
-$gpg->options->hash_init(
-	'homedir' => $GNUPGHOME,
-	'extra_args' => '--keyserver='.$CONFIG{'keyserver'} );
-$gpg->options->meta_interactive( 0 );
-my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
-my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-waitpid $pid, 0;
-
 my @keyids_ok;
 my @keyids_failed;
+if ($CONFIG{'no-download'}) {
+	@keyids_ok = @KEYIDS;
+} else {
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'homedir' => $GNUPGHOME,
+		'extra_args' => '--keyserver='.$CONFIG{'keyserver'} );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	
+	my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
 # [GNUPG:] NODATA 1
 # [GNUPG:] NODATA 1
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
-for my $line (split /\n/, $status) {
-	if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
-		push @keyids_ok, shift @KEYIDS;
-	} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
-		push @keyids_failed, shift @KEYIDS;
-	};
-}
-die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
-notice ("Import failed for: ". (join ' ', @keyids_failed).".") if scalar @keyids_failed;
+	for my $line (split /\n/, $status) {
+		if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
+			push @keyids_ok, shift @KEYIDS;
+		} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
+			push @keyids_failed, shift @KEYIDS;
+		};
+	}
+	die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
+	notice ("Import failed for: ". (join ' ', @keyids_failed).".") if scalar @keyids_failed;
+};
 
 ###########
 # sign keys
 ###########
-info("Sign the following keys according to your policy...");
-for my $keyid (@keyids_ok) {
-	my @command;
-	push @command, $CONFIG{'gpg-sign'};
-	push @command, '--local-user', $USER if (defined $USER);
-	push @command, "--homedir=$GNUPGHOME";
-	push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-	push @command, '--sign-key', $keyid;
-	print join(' ', @command),"\n";
-	system (@command);
+unless ($CONFIG{'no-sign'}) {
+	info("Sign the following keys according to your policy...");
+	for my $keyid (@keyids_ok) {
+		my @command;
+		push @command, $CONFIG{'gpg-sign'};
+		push @command, '--local-user', $USER if (defined $USER);
+		push @command, "--homedir=$GNUPGHOME";
+		push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+		push @command, '--sign-key', $keyid;
+		print join(' ', @command),"\n";
+		system (@command);
+	};
 };
 
 ##################
@@ -527,14 +550,14 @@ KEYS:
 for my $keyid (@keyids_ok) {
 	# get key listing
 	#################
-	$gpg = GnuPG::Interface->new();
+	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init( 'homedir' => $GNUPGHOME );
 	$gpg->options->meta_interactive( 0 );
-	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fixed-list-mode' ] );
-	$pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
-	($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
 	waitpid $pid, 0;
 	if ($stdout eq '') {
 		warn ("No data from gpg for list-key $keyid\n");

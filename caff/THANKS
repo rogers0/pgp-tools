@@ -1,0 +1,10 @@
+Caff is not the work of a sole author.  It wouldn't be what it is without the
+help of several people.  I'ld like to say thank you to everybody who helped to
+make caff better.
+
+- Nick Mathewson
+  For suggesting and implementing --no-download and --no-sign.
+
+- And of course everyone who sent comments, suggestions or bug-reports.
+
+$Id$
