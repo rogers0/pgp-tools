@@ -200,7 +200,7 @@ sub info($) {
 };
 sub debug($) {
 	my ($line) = @_;
-	#print "[DEBUG] $line\n";
+	print "[DEBUG] $line\n";
 };
 sub trace($) {
 	my ($line) = @_;
@@ -249,19 +249,29 @@ sub readwrite_gpg($$$$$%) {
 	my $exitwhenstatusmatches = $options{'exitwhenstatusmatches'};
 	trace("doign stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
 
+	my $readwrote_stuff_this_time = 0;
+	my $do_not_wait_on_select = 0;
 	my ($readyr, $readyw, $written);
 	while ($sout->count() > 0 || (defined($sin) && ($sin->count() > 0))) {
 		if (defined $exitwhenstatusmatches) {
 			if ($status =~ /$exitwhenstatusmatches/m) {
 				trace("readwrite_gpg found match on $exitwhenstatusmatches");
-				last;
+				if ($readwrote_stuff_this_time) {
+					trace("read/write some more\n");
+					$do_not_wait_on_select = 1;
+				} else {
+					trace("that's it in our while loop.\n");
+					last;
+				}
 			};
 		};
 
+		$readwrote_stuff_this_time = 0;
 		trace("select waiting for ".($sout->count())." fds.");
-		($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, 1);
+		($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
 		trace("ready: write: ".(defined $readyw ? scalar @$readyw : 0 )."; read: ".(defined $readyr ? scalar @$readyr : 0));
 		for my $wfd (@$readyw) {
+			$readwrote_stuff_this_time = 1;
 			if (length($in) != $offset) {
 				trace("writing to $wfd.");
 				$written = $wfd->syswrite($in, length($in) - $offset, $offset);
@@ -281,6 +291,7 @@ sub readwrite_gpg($$$$$%) {
 		next unless (defined(@$readyr)); # Wait some more.
 
 		for my $rfd (@$readyr) {
+			$readwrote_stuff_this_time = 1;
 			if ($rfd->eof) {
 				trace("reading from $rfd done.");
 				$sout->remove($rfd);
