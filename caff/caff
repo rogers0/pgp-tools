@@ -443,6 +443,14 @@ $CONFIG{'owner'}
 	$message_entity->stringify();
 };
 
+sub sanitize_uid($) {
+	my ($uid) = @_;
+
+	my $good_uid =~ tr#/:\\#_#;
+	trace2("[sanitize_uid] changed UID from $uid to $good_uid.\n") if $good_uid ne $uid;
+	return $good_uid;
+};
+
 my $USER;
 my @KEYIDS;
 
@@ -684,7 +692,7 @@ for my $keyid (@keyids_ok) {
 			my $keydir = "$KEYSBASE/$DATE_STRING";
 			-d $keydir  || mkpath($keydir , 0, 0700) or die ("Cannot create $keydir $!\n");
 
-			my $keyfile = "$keydir/$longkeyid.key.$uid_number.$this_uid_text.asc";
+			my $keyfile = "$keydir/$longkeyid.key.$uid_number.".sanitize_uid($this_uid_text).".asc";
 			open (KEY, ">$keyfile") or die ("Cannot open $keyfile\n");
 			print KEY $asciikey;
 			close KEY;
@@ -702,6 +710,7 @@ for my $keyid (@keyids_ok) {
 	} else {
 		my @attached ;
 		for my $uid (@UIDS) {
+			trace("UID: $uid->{'text'}\n");
 			unless ($uid->{'text'} =~ /@/) {
 				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email sent?", 1);
 				push @attached, $uid;
@@ -718,7 +727,7 @@ for my $keyid (@keyids_ok) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
-					my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".$uid->{'text'};
+					my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
 					open (KEY, ">$mailfile") or die ("Cannot open $mailfile\n");
 					print KEY $mail;
 					close KEY;
