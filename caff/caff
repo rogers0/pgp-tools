@@ -41,7 +41,8 @@ use GnuPG::Interface;
 
 my %CONFIG;
 my $REVISION = '$Rev$';
-my $VERSION = '0.0.0.1';
+my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
+my $VERSION = "0.0.0.$REVISION_NUMER";
 
 sub load_config() {
 	my $config = $ENV{'HOME'} . '/.caffrc';
@@ -228,6 +229,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 
 sub usage() {
+	print STDERR "caff $VERSION - (c) 2004 Peter Palfrader\n";
 	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid] <keyid> [<keyid> ...]\n";
 	exit 1;
 };
