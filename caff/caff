@@ -518,21 +518,34 @@ if ($CONFIG{'no-download'}) {
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	
-	my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
+	my @local_keyids = @KEYIDS;
+	for my $keyid (@local_keyids) {
+		info ("fetching $keyid...");
+		my $pid = $gpg->recv_keys(handles => $handles, command_args => [ $keyid ]);
+		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		waitpid $pid, 0;
 
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
 # [GNUPG:] NODATA 1
 # [GNUPG:] NODATA 1
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
-	for my $line (split /\n/, $status) {
-		if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
-			push @keyids_ok, shift @KEYIDS;
-		} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
+		my $handled = 0;
+		for my $line (split /\n/, $status) {
+			if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
+				push @keyids_ok, shift @KEYIDS;
+				$handled = 1;
+				last;
+			} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
+				push @keyids_failed, shift @KEYIDS;
+				$handled = 1;
+				last;
+			};
+		};
+		unless ($handled) {
+			notice ("Huh, what's up with $keyid?");
 			push @keyids_failed, shift @KEYIDS;
 		};
-	}
+	};
 	die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
 	notice ("Import failed for: ". (join ' ', @keyids_failed).".") if scalar @keyids_failed;
 };
