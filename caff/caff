@@ -1,0 +1,675 @@
+#!/usr/bin/perl -w
+
+# caff  --  CA - fire and forget
+#
+# Copyright (c) 2004 Peter Palfrader <peter@palfrader.org>
+#
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+use strict;
+use IO::Handle;
+use English;
+use File::Path;
+use File::Temp qw{tempdir};
+use MIME::Entity;
+use Fcntl;
+use IO::Select;
+use GnuPG::Interface;
+
+my %CONFIG;
+my $VERSION = '0.0.0.1';
+
+sub load_config() {
+	my $config = $ENV{'HOME'} . '/.caffrc';
+	-f $config or die "No file $config present.  See caffrc(5).\n";
+	unless (scalar eval `cat $config`) {
+		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
+	};
+
+	die ("caffhome is not defined.\n") unless defined $CONFIG{'caffhome'};
+	die ("owner is not defined.\n") unless defined $CONFIG{'owner'};
+	die ("email is not defined.\n") unless defined $CONFIG{'email'};
+	die ("keyid is not defined.\n") unless defined $CONFIG{'keyid'};
+	die ("keyid is not an array ref\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
+	for my $keyid (@{$CONFIG{'keyid'}}) {
+		$keyid =~ /^[A-Fa-z0-9]{16}$/ or die ("key $keyid is not a long (16 digit) keyid.\n");
+	};
+	@{$CONFIG{'keyid'}} = map { uc } @{$CONFIG{'keyid'}};
+	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
+	$CONFIG{'keyserver'} = 'subkeys.pgp.net' unless defined $CONFIG{'keyserver'};
+	$CONFIG{'gpg'} = 'gpg' unless defined $CONFIG{'gpg'};
+	$CONFIG{'gpg-sign'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-sign'};
+	$CONFIG{'gpg-delsig'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-delsig'};
+	$CONFIG{'secret-keyring'} = $ENV{'HOME'}.'/.gnupg/secring.gpg' unless defined $CONFIG{'secret-keyring'};
+};
+
+sub notice($) {
+	my ($line) = @_;
+	print "[NOTICE] $line\n";
+};
+sub info($) {
+	my ($line) = @_;
+	print "[INFO] $line\n";
+};
+sub debug($) {
+	my ($line) = @_;
+	#print "[DEBUG] $line\n";
+};
+sub trace($) {
+	my ($line) = @_;
+	#print "[trace] $line\n";
+};
+sub trace2($) {
+	my ($line) = @_;
+	#print "[trace2] $line\n";
+};
+
+sub make_gpg_fds() {
+	my %fds = (
+		stdin => IO::Handle->new(),
+		stdout => IO::Handle->new(),
+		stderr => IO::Handle->new(),
+		status => IO::Handle->new() );
+	my $handles = GnuPG::Handles->new( %fds );
+	return ($fds{'stdin'}, $fds{'stdout'}, $fds{'stderr'}, $fds{'status'}, $handles);
+};
+
+sub readwrite_gpg($$$$$%) {
+	my ($in, $inputfd, $stdoutfd, $stderrfd, $statusfd, %options) = @_;
+
+	trace("Entering readwrite_gpg.");
+
+	my ($first_line, $dummy) = split /\n/, $in;
+	debug("readwrite_gpg sends ".(defined $first_line ? $first_line : "<nothing>"));
+
+	local $INPUT_RECORD_SEPARATOR = undef;
+	my $sout = IO::Select->new();
+	my $sin = IO::Select->new();
+	my $offset = 0;
+
+	trace("input is $inputfd; output is $stdoutfd; err is $stderrfd; status is ".(defined $statusfd ? $statusfd : 'undef').".");
+
+	$inputfd->blocking(0);
+	$stdoutfd->blocking(0);
+	$statusfd->blocking(0) if defined $statusfd;
+	$stderrfd->blocking(0);
+	$sout->add($stdoutfd);
+	$sout->add($stderrfd);
+	$sout->add($statusfd) if defined $statusfd;
+	$sin->add($inputfd);
+
+	my ($stdout, $stderr, $status) = ("", "", "");
+	my $exitwhenstatusmatches = $options{'exitwhenstatusmatches'};
+	trace("doign stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
+
+	my ($readyr, $readyw, $written);
+	while ($sout->count() > 0 || (defined($sin) && ($sin->count() > 0))) {
+		if (defined $exitwhenstatusmatches) {
+			if ($status =~ /$exitwhenstatusmatches/m) {
+				trace("readwrite_gpg found match on $exitwhenstatusmatches");
+				last;
+			};
+		};
+
+		trace("select waiting for ".($sout->count())." fds.");
+		($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, 1);
+		trace("ready: write: ".(defined $readyw ? scalar @$readyw : 0 )."; read: ".(defined $readyr ? scalar @$readyr : 0));
+		for my $wfd (@$readyw) {
+			if (length($in) != $offset) {
+				trace("writing to $wfd.");
+				$written = $wfd->syswrite($in, length($in) - $offset, $offset);
+				$offset += $written;
+			};
+			if ($offset == length($in)) {
+				trace("writing to $wfd done.");
+				unless ($options{'nocloseinput'}) {
+					close $wfd;
+					trace("$wfd closed.");
+				};
+				$sin->remove($wfd);
+				$sin = undef;
+			}
+		}
+
+		next unless (defined(@$readyr)); # Wait some more.
+
+		for my $rfd (@$readyr) {
+			if ($rfd->eof) {
+				trace("reading from $rfd done.");
+				$sout->remove($rfd);
+				close($rfd);
+				next;
+			}
+			trace("reading from $rfd.");
+			if ($rfd == $stdoutfd) {
+				$stdout .= <$rfd>;
+				trace2("stdout is now $stdout\n================");
+				next;
+			}
+			if (defined $statusfd && $rfd == $statusfd) {
+				$status .= <$rfd>;
+				trace2("status is now $status\n================");
+				next;
+			}
+			if ($rfd == $stderrfd) {
+				$stderr .= <$rfd>;
+				trace2("stderr is now $stderr\n================");
+				next;
+			}
+		}
+	}
+	trace("readwrite_gpg done.");
+	return ($stdout, $stderr, $status);
+};
+
+sub ask($$) {
+	my ($question, $default) = @_;
+	my $answer;
+	while (1) {
+		print $question,' ',($default ? '[Y/n]' : '[y/N]'), ' ';
+		$answer = <STDIN>;
+		chomp $answer;
+		last if ((defined $answer) && (length $answer <= 1));
+		print "grrrrrr.\n";
+		sleep 1;
+	};
+	my $result = $default;
+	$result = 1 if $answer =~ /y/i;
+	$result = 0 if $answer =~ /n/i;
+	return $result;
+};
+
+
+
+
+
+my $KEYEDIT_PROMPT = '^\[GNUPG:\] GET_LINE keyedit.prompt';
+my $KEYEDIT_DELUID_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.uid.okay';
+my $KEYEDIT_DELSIG_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.delsig';
+my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET_LINE keyedit.prompt)';
+my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
+
+load_config;
+my $USER_AGENT = "caff $VERSION - (c) 2004 Peter Palfrader";
+
+my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
+my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
+
+-d $KEYSBASE  || mkpath($KEYSBASE , 0, 0700) or die ("Cannot create $KEYSBASE: $!\n");
+-d $GNUPGHOME || mkpath($GNUPGHOME, 0, 0700) or die ("Cannot create $GNUPGHOME: $!\n");
+
+my $NOW = time;
+my  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($NOW);
+my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
+
+
+sub usage() {
+	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid] <keyid> [<keyid> ...]\n";
+	exit 1;
+};
+
+sub export_key($$) {
+	my ($gnupghome, $keyid) = @_;
+
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'homedir' => $gnupghome,
+		'armor' => 1 );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my $pid = $gpg->export_keys(handles => $handles, command_args => [ $keyid ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	return $stdout;
+};
+
+#send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
+sub send_mail($$$@) {
+	my ($address, $can_encrypt, $key_id, @keys) = @_;
+
+	my $message = "Hi,\n\n";
+
+	$message .= 'please find attached the user id'.(scalar @keys >= 2 ? 's' : '')."\n";
+	for my $key (@keys) {
+		$message .= "\t".$key->{'text'}."\n";
+	};
+	$message .= qq{of your key $key_id signed by me.
+
+Note that I did not upload your key to any keyservers. If you want this
+new signature to be available to others, please upload it yourself.
+With GnuPG this can be done using
+	gpg --keyserver subkeys.pgp.net --send-key $key_id
+
+If you have any questions, don't hesitate to ask.
+
+Regards,
+$CONFIG{'owner'}
+};
+	my $message_entity = MIME::Entity->build(
+		Type        => "text/plain",
+		Charset     => "utf-8",
+		Disposition => 'inline',
+		Data        => $message);
+
+	my @key_entities;
+	for my $key (@keys) {
+		$message_entity->attach(
+			Type        => "application/pgp-keys",
+			Disposition => 'attachment',
+			Encoding    => "7bit",
+			Description => "PGP Key 0x$key_id, uid ".($key->{'text'}).' ('.($key->{'serial'}).')',
+			Data        => $key->{'key'},
+			Filename    => "0x$key_id.".$key->{'serial'}.".asc");
+	};
+
+	if ($can_encrypt) {
+		my $message = $message_entity->stringify();
+
+		my $gpg = GnuPG::Interface->new();
+		$gpg->call( $CONFIG{'gpg'} );
+		$gpg->options->hash_init( 'homedir' => $GNUPGHOME,
+			'extra_args' => '--always-trust',
+			'armor' => 1 );
+		$gpg->options->meta_interactive( 0 );
+		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		$gpg->options->push_recipients( $key_id );
+		$gpg->options->push_recipients( $CONFIG{'also-encrypt-to'} ) if defined $CONFIG{'also-encrypt-to'};
+		my $pid = $gpg->encrypt(handles => $handles);
+		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		waitpid $pid, 0;
+		if ($stdout eq '') {
+			warn ("No data from gpg for list-key $key_id\n");
+			next;
+		};
+		$message = $stdout;
+
+		$message_entity = MIME::Entity->build(
+			Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"');
+
+		$message_entity->attach(
+			Type        => "application/pgp-encrypted",
+			Disposition => 'attachment',
+			Encoding    => "7bit",
+			Data        => "Version: 1\n");
+			
+		$message_entity->attach(
+			Type        => "application/octet-stream",
+			Filename    => 'msg.asc',
+			Disposition => 'inline',
+			Encoding    => "7bit",
+			Data        => $message);
+	};
+
+	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
+	$message_entity->head->add("To", $address);
+	$message_entity->head->add("From", $CONFIG{'owner'}.' <'.$CONFIG{'email'}.'>');
+	$message_entity->head->add("User-Agent", $USER_AGENT);
+	$message_entity->send();
+	$message_entity->stringify();
+};
+
+my $USER;
+my @KEYIDS;
+
+usage() unless scalar @ARGV >= 1;
+if ($ARGV[0] eq '-u') {
+	usage() unless scalar @ARGV >= 3;
+	shift @ARGV;
+	$USER = shift @ARGV;
+	unless ($USER =~ /^[A-Za-z0-9]{8,8}([A-Za-z0-9]{8})?$/) {
+		print STDERR "-u $USER is not a keyid.\n";
+		usage();
+	};
+	$USER = uc($USER);
+};
+for my $keyid (@ARGV) {
+	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
+		print STDERR "$keyid is not a keyid.\n";
+		usage();
+	};
+	push @KEYIDS, uc($keyid);
+};
+
+
+#############################
+# receive keys from keyserver
+#############################
+my $gpg = GnuPG::Interface->new();
+$gpg->call( $CONFIG{'gpg'} );
+$gpg->options->hash_init(
+	'homedir' => $GNUPGHOME,
+	'extra_args' => '--keyserver='.$CONFIG{'keyserver'} );
+$gpg->options->meta_interactive( 0 );
+my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
+my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+waitpid $pid, 0;
+
+my @keyids_ok;
+my @keyids_failed;
+# [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
+# [GNUPG:] NODATA 1
+# [GNUPG:] NODATA 1
+# [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
+for my $line (split /\n/, $status) {
+	if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
+		push @keyids_ok, shift @KEYIDS;
+	} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
+		push @keyids_failed, shift @KEYIDS;
+	};
+}
+die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
+notice ("Import failed for: ". (join ' ', @keyids_failed).".") if scalar @keyids_failed;
+
+###########
+# sign keys
+###########
+info("Sign the following keys according to your policy...");
+for my $keyid (@keyids_ok) {
+	my @command;
+	push @command, $CONFIG{'gpg-sign'};
+	push @command, '--local-user', $USER if (defined $USER);
+	push @command, "--homedir=$GNUPGHOME";
+	push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+	push @command, '--sign-key', $keyid;
+	print join(' ', @command),"\n";
+	system (@command);
+};
+
+##################
+# export and prune
+##################
+KEYS:
+for my $keyid (@keyids_ok) {
+	# get key listing
+	#################
+	$gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init( 'homedir' => $GNUPGHOME );
+	$gpg->options->meta_interactive( 0 );
+	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fixed-list-mode' ] );
+	$pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
+	($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+	if ($stdout eq '') {
+		warn ("No data from gpg for list-key $keyid\n");
+		next;
+	};
+	my $keyinfo = $stdout;
+	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	my ($dummy1, $dummy2, $dummy3, $dummy4, $longkeyid, $dummy6, $dummy7, $dummy8, $dummy9, $dummy10, $dummy11, $flags) = split /:/, pop @publine;
+	my $can_encrypt = $flags =~ /E/;
+	unless (defined $longkeyid) {
+		warn ("Didn't find public keyid in edit dialog of key $keyid.\n");
+		next;
+	};
+
+	# export the key
+	################
+	my $asciikey = export_key($GNUPGHOME, $keyid);
+	if ($asciikey eq '') {
+		warn ("No data from gpg for export $keyid\n");
+		next;
+	};
+
+	my @UIDS;
+	my $uid_number = 0;
+	while (1) {
+		my $this_uid_text = '';
+		$uid_number++;
+		info("Doing key $keyid, uid $uid_number");
+
+		# import into temporary gpghome
+		###############################
+		my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
+		my $gpg = GnuPG::Interface->new();
+		$gpg->call( $CONFIG{'gpg'} );
+		$gpg->options->hash_init( 'homedir' => $tempdir );
+		$gpg->options->meta_interactive( 0 );
+		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		my $pid = $gpg->import_keys(handles => $handles);
+		my ($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		waitpid $pid, 0;
+
+		if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
+			warn ("Could not import $keyid into temporary gnupg.\n");
+			next;
+		};
+
+		# prune it
+		##########
+		$gpg = GnuPG::Interface->new();
+		$gpg->call( $CONFIG{'gpg-delsig'} );
+		$gpg->options->hash_init(
+			'homedir' => $tempdir,
+			'extra_args' => [ '--with-colons', '--fixed-list-mode', '--command-fd=0', '--no-tty' ] );
+		($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		$pid = $gpg->wrap_call(
+			commands     => [ '--edit' ],
+			command_args => [ $keyid ],
+			handles      => $handles );
+
+		debug("Starting edit session");
+		($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+
+		# delete other uids
+		###################
+		my $number_of_subkeys = 0;
+		my $i = 1;
+		my $have_one = 0;
+		my $is_uat = 0;
+		my $delete_some = 0;
+		debug("Parsing stdout output.");
+		for my $line (split /\n/, $stdout) {
+			debug("Checking line $line");
+			my ($type, $dummy2, $dummy3, $dummy4, $dummy5, $dummy6, $dummy7, $dummy8, $dummy9, $uidtext) = split /:/, $line;
+			if ($type eq 'sub') {
+				$number_of_subkeys++;
+			};
+			next unless ($type eq 'uid' || $type eq 'uat');
+			debug("line is interesting.");
+			if ($uid_number != $i) {
+				debug("mark for deletion.");
+				readwrite_gpg("$i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				$delete_some = 1;
+			} else {
+				debug("keep it.");
+				$have_one = 1;
+				$this_uid_text = ($type eq 'uid') ? $uidtext : 'attribute';
+				$is_uat = $type eq 'uat';
+			};
+			$i++;
+		};
+		debug("Parsing stdout output done.");
+		if ($is_uat) {
+			notice("Can't handle attribute userid of key $keyid.");
+			next;
+		};
+		unless ($have_one) {
+			info("key $keyid done.");
+			last;
+		};
+		if ($delete_some) {
+			debug("need to delete a few uids.");
+			readwrite_gpg("deluid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
+			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		};
+
+		# delete subkeys
+		################
+		if ($number_of_subkeys > 0) {
+			for (my $i=1; $i<=$number_of_subkeys; $i++) {
+				readwrite_gpg("key $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			};
+			readwrite_gpg("delkey\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
+			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		};
+
+		# delete signatures
+		###################
+		my $signed_by_me = 0;
+		readwrite_gpg("1\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		($stdout, $stderr, $status) =
+			readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+
+		while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
+			# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
+			my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+			my $line = pop @sigline;
+			my $answer = "no";
+			if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
+				my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
+				if ($signer eq $longkeyid) {
+					$answer = "no";
+				} elsif (grep { $signer eq $_ } @{$CONFIG{'keyid'}}) {
+					$answer = "no";
+					$signed_by_me = $signed_by_me > $created ? $signed_by_me : $created;
+				} else {
+					$answer = "yes";
+				};
+			};
+			($stdout, $stderr, $status) =
+				readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
+		};
+		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		waitpid $pid, 0;
+
+		my $asciikey = export_key($tempdir, $longkeyid);
+		if ($asciikey eq '') {
+			warn ("No data from gpg for export $longkeyid\n");
+			next;
+		};
+
+		if ($signed_by_me) {
+			if ($NOW - $signed_by_me > $CONFIG{'export-sig-age'} ) {
+				my $write = ask("Signature on $this_uid_text is old.  Export?", 0);
+				next unless $write;
+			};
+			my $keydir = "$KEYSBASE/$DATE_STRING";
+			-d $keydir  || mkpath($keydir , 0, 0700) or die ("Cannot create $keydir $!\n");
+
+			my $keyfile = "$keydir/$longkeyid.key.$uid_number.$this_uid_text.asc";
+			open (KEY, ">$keyfile") or die ("Cannot open $keyfile\n");
+			print KEY $asciikey;
+			close KEY;
+
+			push @UIDS, { text => $this_uid_text, key => $asciikey, serial => $uid_number };
+
+			info("$longkeyid $uid_number $this_uid_text done.");
+		} else {
+			info("$longkeyid $uid_number $this_uid_text is not signed by me, not writing.");
+		};
+	};
+
+	if (scalar @UIDS == 0) {
+		info("found no signed uids for $keyid");
+	} else {
+		my @attached ;
+		for my $uid (@UIDS) {
+			unless ($uid->{'text'} =~ /@/) {
+				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email sent?", 1);
+				push @attached, $uid;
+			};
+		};
+
+		notice("Key has no encryption capabilities, mail will be sent unencrypted") unless $can_encrypt;
+		for my $uid (@UIDS) {
+			if ($uid->{'text'} =~ /@/) {
+				my $address = $uid->{'text'};
+				$address =~ s/.*<(.*)>.*/$1/;
+				my $send = ask("Send mail to '$address' for $uid->{'text'}?", 1);
+				if ($send) {
+					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
+
+					my $keydir = "$KEYSBASE/$DATE_STRING";
+					my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".$uid->{'text'};
+					open (KEY, ">$mailfile") or die ("Cannot open $mailfile\n");
+					print KEY $mail;
+					close KEY;
+				};
+			};
+		};
+	};
+
+};
+
+
+
+
+###############################################################3
+#### old fork gpg --edit
+=cut
+		my ($stdin_read, $stdin_write);
+		my ($stdout_read, $stdout_write);
+		my ($stderr_read, $stderr_write);
+		my ($status_read, $status_write);
+		pipe $stdin_read, $stdin_write;
+		pipe $stdout_read, $stdout_write;
+		pipe $stderr_read, $stderr_write;
+		pipe $status_read, $status_write;
+
+		$pid = fork();
+		unless ($pid) { # child
+			close $stdin_write;
+			close $stdout_read;
+			close $stderr_read;
+			close $status_read;
+
+			my @call;
+			push @call, $CONFIG{'gpg-delsig'};
+			push @call, "--homedir=$tempdir";
+			push @call, '--with-colons';
+			push @call, '--fixed-list-mode';
+			push @call, '--command-fd=0';
+			push @call, "--status-fd=".fileno($status_write);
+			push @call, "--no-tty";
+			push @call, "--edit";
+			push @call, $keyid;
+
+			close STDIN;
+			close STDOUT;
+			close STDERR;
+			open (STDIN, "<&".fileno($stdin_read)) or die ("Cannot reopen stdin: $!\n");
+			open (STDOUT, ">&".fileno($stdout_write)) or die ("Cannot reopen stdout: $!\n");
+			open (STDERR, ">&".fileno($stderr_write)) or die ("Cannot reopen stderr: $!\n");
+
+			fcntl $status_write, F_SETFD, 0;
+
+			exec (@call);
+			exit;
+		};
+		close $stdin_read;
+		close $stdout_write;
+		close $stderr_write;
+		close $status_write;
+
+		$inputfd = $stdin_write;
+		$stdoutfd = $stdout_read;
+		$stderrfd = $stderr_read;
+		$statusfd = $status_read;
+=cut
