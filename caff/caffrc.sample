@@ -1,5 +1,7 @@
 #! perl  <-- get vim to syntax highlight properly
 
+# $Id$
+
 $CONFIG{'owner'}       = 'Peter Palfrader';
 $CONFIG{'email'}       = 'peter@palfrader.org';
 $CONFIG{'keyid'}       = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];

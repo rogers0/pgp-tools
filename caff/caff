@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 # caff  --  CA - fire and forget
+# $Id$
 #
 # Copyright (c) 2004 Peter Palfrader <peter@palfrader.org>
 #
@@ -39,6 +40,7 @@ use IO::Select;
 use GnuPG::Interface;
 
 my %CONFIG;
+my $REVISION = '$Rev$';
 my $VERSION = '0.0.0.1';
 
 sub load_config() {
