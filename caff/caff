@@ -363,7 +363,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 sub usage() {
 	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
-	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid] <keyid> [<keyid> ...]\n";
+	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
 	exit 1;
 };
 
