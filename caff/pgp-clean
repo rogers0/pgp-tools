@@ -1,0 +1,480 @@
+#!/usr/bin/perl -w
+
+# caff  --  CA - Fire and Forget
+# $Id: caff 37 2005-02-28 23:20:15Z weasel $
+#
+# Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
+#
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+=pod
+
+=head1 NAME
+
+caff -- CA - Fire and Forget
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<caff> [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
+
+=back
+
+=head1 DESCRIPTION
+
+CA Fire and Forget is a script that helps you in keysigning.  It takes a list
+of keyids on the command line, fetches them from a keyserver and calls GnuPG so
+that you can sign it.  It then mails each key to all its email addresses - only
+including the one UID that we send to in each mail, pruned from all but self
+sigs and sigs done by you.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-u> I<yourkeyid>
+
+Select the key that is used for signing, in case you have more than one key.
+
+=back
+
+=head1 FILES
+
+=over
+
+=item $HOME/.caffrc  -  configuration file
+
+=back
+
+=head1 CONFIGURATION FILE OPTIONS
+
+The configuration file is a perl script that sets values in the hash B<%CONFIG>.
+
+Example:
+
+	$CONFIG{'owner'}       = 'Peter Palfrader';
+	$CONFIG{'email'}       = 'peter@palfrader.org';
+
+=head2 Valid keys
+
+=over
+
+=item B<caffhome> [string]
+
+Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
+
+=item B<owner> [string]
+
+Your name.  B<REQUIRED>.
+
+=item B<email> [string]
+
+Your email address, used in From: lines.  B<REQUIRED>.
+
+=item B<keyid> [list of keyids]
+
+A list of your keys.  This is used to determine which signatures to keep
+in the pruning step.  If you select a key using B<-u> it has to be in
+this list.  B<REQUIRED>.
+
+=item B<export-sig-age> [seconds]
+
+Don't export UIDs by default, on which your latest signature is older
+than this age.  Default: B<24*60*60> (i.e. one day).
+
+=item B<keyserver> [string]
+
+Keyserver to download keys from.  Default: B<subkeys.pgp.net>.
+
+=item B<gpg> [string]
+
+Path to the GnuPG binary.  Default: B<gpg>.
+
+=item B<gpg-sign> [string]
+
+Path to the GnuPG binary which is used to sign keys.  Default: what
+B<gpg> is set to.
+
+=item B<gpg-delsig> [string]
+
+Path to the GnuPG binary which is used to split off signatures.  This is
+needed while the upstream GnuPG is not fixed  (there are 2 bugs in the
+Debian Bug Tracking System).  Default: what B<gpg> is set to.
+
+=item B<secret-keyring> [string]
+
+Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
+
+=item B<also-encrypt-to> [keyid]
+
+An additional keyid to encrypt messages to. Default: none.
+
+=item B<no-download> [boolean]
+
+If true, then skip the step of fetching keys from the keyserver.
+Default: B<0>.
+
+=item B<no-sign> [boolean]
+
+If true, then skip the signing step. Default: B<0>.
+
+=back
+
+=head1 AUTHOR
+
+Peter Palfrader <peter@palfrader.org>
+
+=cut
+
+use strict;
+use IO::Handle;
+use English;
+use File::Path;
+use File::Temp qw{tempdir};
+use Fcntl;
+use IO::Select;
+use GnuPG::Interface;
+
+my $REVISION = '$Rev: 37 $';
+my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
+my $VERSION = "0.0.0.$REVISION_NUMER";
+
+sub notice($) {
+	my ($line) = @_;
+	print STDERR "[NOTICE] $line\n";
+};
+sub info($) {
+	my ($line) = @_;
+	print STDERR "[INFO] $line\n";
+};
+sub debug($) {
+	my ($line) = @_;
+	print STDERR "[DEBUG] $line\n";
+};
+sub trace($) {
+	my ($line) = @_;
+	#print STDERR "[trace] $line\n";
+};
+sub trace2($) {
+	my ($line) = @_;
+	#print STDERR "[trace2] $line\n";
+};
+
+sub make_gpg_fds() {
+	my %fds = (
+		stdin => IO::Handle->new(),
+		stdout => IO::Handle->new(),
+		stderr => IO::Handle->new(),
+		status => IO::Handle->new() );
+	my $handles = GnuPG::Handles->new( %fds );
+	return ($fds{'stdin'}, $fds{'stdout'}, $fds{'stderr'}, $fds{'status'}, $handles);
+};
+
+sub readwrite_gpg($$$$$%) {
+	my ($in, $inputfd, $stdoutfd, $stderrfd, $statusfd, %options) = @_;
+
+	trace("Entering readwrite_gpg.");
+
+	my ($first_line, $dummy) = split /\n/, $in;
+	debug("readwrite_gpg sends ".(defined $first_line ? $first_line : "<nothing>"));
+
+	local $INPUT_RECORD_SEPARATOR = undef;
+	my $sout = IO::Select->new();
+	my $sin = IO::Select->new();
+	my $offset = 0;
+
+	trace("input is $inputfd; output is $stdoutfd; err is $stderrfd; status is ".(defined $statusfd ? $statusfd : 'undef').".");
+
+	$inputfd->blocking(0);
+	$stdoutfd->blocking(0);
+	$statusfd->blocking(0) if defined $statusfd;
+	$stderrfd->blocking(0);
+	$sout->add($stdoutfd);
+	$sout->add($stderrfd);
+	$sout->add($statusfd) if defined $statusfd;
+	$sin->add($inputfd);
+
+	my ($stdout, $stderr, $status) = ("", "", "");
+	my $exitwhenstatusmatches = $options{'exitwhenstatusmatches'};
+	trace("doing stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
+
+	my $readwrote_stuff_this_time = 0;
+	my $do_not_wait_on_select = 0;
+	my ($readyr, $readyw, $written);
+	while ($sout->count() > 0 || (defined($sin) && ($sin->count() > 0))) {
+		if (defined $exitwhenstatusmatches) {
+			if ($status =~ /$exitwhenstatusmatches/m) {
+				trace("readwrite_gpg found match on $exitwhenstatusmatches");
+				if ($readwrote_stuff_this_time) {
+					trace("read/write some more\n");
+					$do_not_wait_on_select = 1;
+				} else {
+					trace("that's it in our while loop.\n");
+					last;
+				}
+			};
+		};
+
+		$readwrote_stuff_this_time = 0;
+		trace("select waiting for ".($sout->count())." fds.");
+		($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
+		trace("ready: write: ".(defined $readyw ? scalar @$readyw : 0 )."; read: ".(defined $readyr ? scalar @$readyr : 0));
+		for my $wfd (@$readyw) {
+			$readwrote_stuff_this_time = 1;
+			if (length($in) != $offset) {
+				trace("writing to $wfd.");
+				$written = $wfd->syswrite($in, length($in) - $offset, $offset);
+				$offset += $written;
+			};
+			if ($offset == length($in)) {
+				trace("writing to $wfd done.");
+				unless ($options{'nocloseinput'}) {
+					close $wfd;
+					trace("$wfd closed.");
+				};
+				$sin->remove($wfd);
+				$sin = undef;
+			}
+		}
+
+		next unless (defined(@$readyr)); # Wait some more.
+
+		for my $rfd (@$readyr) {
+			$readwrote_stuff_this_time = 1;
+			if ($rfd->eof) {
+				trace("reading from $rfd done.");
+				$sout->remove($rfd);
+				close($rfd);
+				next;
+			}
+			trace("reading from $rfd.");
+			if ($rfd == $stdoutfd) {
+				$stdout .= <$rfd>;
+				trace2("stdout is now $stdout\n================");
+				next;
+			}
+			if (defined $statusfd && $rfd == $statusfd) {
+				$status .= <$rfd>;
+				trace2("status is now $status\n================");
+				next;
+			}
+			if ($rfd == $stderrfd) {
+				$stderr .= <$rfd>;
+				trace2("stderr is now $stderr\n================");
+				next;
+			}
+		}
+	}
+	trace("readwrite_gpg done.");
+	return ($stdout, $stderr, $status);
+};
+
+sub export_key($$) {
+	my ($gnupghome, $keyid) = @_;
+
+	my $gpg = GnuPG::Interface->new();
+	my %confighash = ( armor => 1 );
+	$confighash{'homedir'}=$gnupghome if (defined $gnupghome);
+	$gpg->options->hash_init( %confighash );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my $pid = $gpg->export_keys(handles => $handles, command_args => [ $keyid ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	return $stdout;
+};
+
+my $KEYEDIT_PROMPT = '^\[GNUPG:\] GET_LINE keyedit.prompt';
+my $KEYEDIT_DELUID_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.uid.okay';
+my $KEYEDIT_DELSIG_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.delsig';
+my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET_LINE keyedit.prompt)';
+my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
+
+
+sub usage() {
+	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
+	print STDERR "Usage: $PROGRAM_NAME <keyid> [<keyid> ...]\n";
+	exit 1;
+};
+
+usage() unless scalar @ARGV >= 1;
+my @KEYIDS;
+for my $keyid (@ARGV) {
+	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
+		print STDERR "$keyid is not a keyid.\n";
+		usage();
+	};
+	push @KEYIDS, uc($keyid);
+};
+
+
+
+##################
+# export and prune
+##################
+KEYS:
+for my $keyid (@KEYIDS) {
+	# get key listing
+	#################
+	my $gpg = GnuPG::Interface->new();
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fixed-list-mode' ] );
+	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+	if ($stdout eq '') {
+		warn ("No data from gpg for list-key $keyid\n");
+		next;
+	};
+	my $keyinfo = $stdout;
+	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	my ($dummy1, $dummy2, $dummy3, $dummy4, $longkeyid, $dummy6, $dummy7, $dummy8, $dummy9, $dummy10, $dummy11, $flags) = split /:/, pop @publine;
+	my $can_encrypt = $flags =~ /E/;
+	unless (defined $longkeyid) {
+		warn ("Didn't find public keyid in edit dialog of key $keyid.\n");
+		next;
+	};
+
+	# export the key
+	################
+	my $asciikey = export_key(undef, $keyid);
+	if ($asciikey eq '') {
+		warn ("No data from gpg for export $keyid\n");
+		next;
+	};
+
+	my @UIDS;
+	my $uid_number = 0;
+	my $this_uid_text = '';
+	$uid_number++;
+	debug("Doing key $keyid, uid $uid_number");
+
+	# import into temporary gpghome
+	###############################
+	my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
+	$gpg = GnuPG::Interface->new();
+	$gpg->options->hash_init( 'homedir' => $tempdir );
+	$gpg->options->meta_interactive( 0 );
+	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$pid = $gpg->import_keys(handles => $handles);
+	($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
+		warn ("Could not import $keyid into temporary gnupg.\n");
+		next;
+	};
+
+	# prune it
+	##########
+	$gpg = GnuPG::Interface->new();
+	$gpg->options->hash_init(
+		'homedir' => $tempdir,
+		'extra_args' => [ '--with-colons', '--fixed-list-mode', '--command-fd=0', '--no-tty' ] );
+	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$pid = $gpg->wrap_call(
+		commands     => [ '--edit' ],
+		command_args => [ $keyid ],
+		handles      => $handles );
+
+	debug("Starting edit session");
+	($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+
+	# mark all uids
+	###################
+	my $number_of_subkeys = 0;
+	my $i = 1;
+	my $have_one = 0;
+	my $is_uat = 0;
+	my $delete_some = 0;
+	debug("Parsing stdout output.");
+	for my $line (split /\n/, $stdout) {
+		debug("Checking line $line");
+		my ($type, $dummy2, $dummy3, $dummy4, $dummy5, $dummy6, $dummy7, $dummy8, $dummy9, $uidtext) = split /:/, $line;
+		if ($type eq 'sub') {
+			$number_of_subkeys++;
+		};
+		next unless ($type eq 'uid' || $type eq 'uat');
+		debug("line is interesting.");
+		debug("mark uid.");
+		readwrite_gpg("$i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		$i++;
+	};
+	debug("Parsing stdout output done.");
+
+	# delete subkeys
+	################
+	if ($number_of_subkeys > 0) {
+		for (my $i=1; $i<=$number_of_subkeys; $i++) {
+			readwrite_gpg("key $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		};
+		readwrite_gpg("delkey\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
+		readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+	};
+
+	# delete signatures
+	###################
+	my $signed_by_me = 0;
+	($stdout, $stderr, $status) =
+		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+
+	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
+		# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
+		my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+		$stdout =~ s/\n/\\n/g;
+		notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
+		my $line = pop @sigline;
+		my $answer = "no";
+		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
+			debug("[sigremoval] doing line $line.");
+			my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
+			if ($signer eq $longkeyid) {
+				debug("[sigremoval] selfsig ($signer).");
+				$answer = "no";
+			} else {
+				debug("[sigremoval] not interested in that sig ($signer).");
+				$answer = "yes";
+			};
+		} else {
+			debug("[sigremoval] no sig line here, only got: ".$stdout);
+		};
+		($stdout, $stderr, $status) =
+			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
+	};
+	readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	$asciikey = export_key($tempdir, $longkeyid);
+	if ($asciikey eq '') {
+		warn ("No data from gpg for export $longkeyid\n");
+		next;
+	};
+
+
+	print $asciikey;
+}

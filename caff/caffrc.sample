@@ -15,6 +15,7 @@ $CONFIG{'keyid'}       = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 $CONFIG{'also-encrypt-to'} = 'DE7AAF6E94C09C7F';
 $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 
-$CONFIG{'gpg-delsig'}    = '/home/weasel/tmp/gpg/gnupg-1.3.92/g10/gpg';
+# $CONFIG{'gpg-delsig'}    = '/home/weasel/tmp/gpg/gnupg-1.3.92/g10/gpg';
 
-$CONFIG{'secret-keyring'} = '/tmp/gpg/secring.gpg';
+# defaults to ~/.gnupg/secring.gpg
+# $CONFIG{'secret-keyring'} = '/tmp/gpg/secring.gpg';
