@@ -684,6 +684,7 @@ for my $keyid (@keyids_ok) {
 		while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 			# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
 			my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+			notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!?.") if scalar @sigline >= 2; # XXX
 			my $line = pop @sigline;
 			my $answer = "no";
 			debug("[sigremoval] doing line $line.");
