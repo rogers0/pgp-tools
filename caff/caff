@@ -687,8 +687,8 @@ for my $keyid (@keyids_ok) {
 			notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!?.") if scalar @sigline >= 2; # XXX
 			my $line = pop @sigline;
 			my $answer = "no";
-			debug("[sigremoval] doing line $line.");
 			if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
+				debug("[sigremoval] doing line $line.");
 				my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
 				if ($signer eq $longkeyid) {
 					debug("[sigremoval] selfsig ($signer).");
@@ -701,6 +701,9 @@ for my $keyid (@keyids_ok) {
 					debug("[sigremoval] not interested in that sig ($signer).");
 					$answer = "yes";
 				};
+			} else {
+				$stdout =~ s/\n/\\n/g;
+				debug("[sigremoval] no sig line here, only got: ".$stdout);
 			};
 			($stdout, $stderr, $status) =
 				readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
