@@ -2,8 +2,8 @@
 
 # $Id$
 
-$CONFIG{'owner'}       = 'Peter Palfrader';
-$CONFIG{'email'}       = 'peter@palfrader.org';
+$CONFIG{'owner'}       = 'John Doe';
+$CONFIG{'email'}       = 'user@example.com';
 
 # you can get your long keyid from
 #   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>

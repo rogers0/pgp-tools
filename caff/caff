@@ -75,8 +75,9 @@ The configuration file is a perl script that sets values in the hash B<%CONFIG>.
 
 Example:
 
-	$CONFIG{'owner'}       = 'Peter Palfrader';
-	$CONFIG{'email'}       = 'peter@palfrader.org';
+	$CONFIG{owner} = q{Peter Palfrader};
+	$CONFIG{email} = q{peter@palfrader.org};
+	$CONFIG{keyid} = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 
 =head2 Valid keys
 
@@ -147,6 +148,10 @@ If true, then skip the signing step. Default: B<0>.
 
 Peter Palfrader <peter@palfrader.org>
 
+=head1 WEBSITE
+
+http://pgp-tools.alioth.debian.org/
+
 =cut
 
 use strict;
@@ -166,7 +171,7 @@ my $VERSION = "0.0.0.$REVISION_NUMER";
 
 sub load_config() {
 	my $config = $ENV{'HOME'} . '/.caffrc';
-	-f $config or die "No file $config present.  See caffrc(5).\n";
+	-f $config or die "No file $config present.  See caff(1).\n";
 	unless (scalar eval `cat $config`) {
 		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
 	};
@@ -501,6 +506,32 @@ for my $keyid (@ARGV) {
 };
 
 
+
+#################
+# import own keys
+#################
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'homedir' => $GNUPGHOME,
+		'extra_args' => '--keyserver='.$CONFIG{'keyserver'} );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fixed-list-mode' ] );
+	my $pid = $gpg->list_public_keys(handles => $handles, command_args => $CONFIG{'keyid'});
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+	if ($stdout eq '') {
+		warn ("No data from gpg for list-key\n");
+		next;
+	};
+	print $stdout;
+	foreach my $keyid (@{$CONFIG{'keyid'}}) {
+		unless ($stdout =~ /^pub:(?:[^:]*:){3,3}$keyid:/m) {
+			info("Importing $keyid");
+			system "gpg --export $keyid | gpg --import --homedir $GNUPGHOME";
+		}
+	}
 
 #############################
 # receive keys from keyserver

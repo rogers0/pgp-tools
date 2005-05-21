@@ -33,31 +33,30 @@
 
 =head1 NAME
 
-caff -- CA - Fire and Forget
+pgp-clean -- remove all non-self signatures from key
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<caff> [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
+=item B<pgp-clean> I<keyid> [I<keyid> ...]
 
 =back
 
 =head1 DESCRIPTION
 
-CA Fire and Forget is a script that helps you in keysigning.  It takes a list
-of keyids on the command line, fetches them from a keyserver and calls GnuPG so
-that you can sign it.  It then mails each key to all its email addresses - only
-including the one UID that we send to in each mail, pruned from all but self
-sigs and sigs done by you.
+B<pgp-clean> takes a list of keyids on the command line and outputs an
+ascii-armored keyring on stdout for each key with all signatures except
+self-signatures stripped.  Its use is to reduce the size of keys sent out after
+signing (e.g. with B<caff>).
 
 =head1 OPTIONS
 
 =over
 
-=item B<-u> I<yourkeyid>
+=item I<keyid>
 
-Select the key that is used for signing, in case you have more than one key.
+Use this key.
 
 =back
 
@@ -65,87 +64,19 @@ Select the key that is used for signing, in case you have more than one key.
 
 =over
 
-=item $HOME/.caffrc  -  configuration file
+=item $HOME/.gnupg/pubring.gpg  -  default GnuPG keyring
 
 =back
 
-=head1 CONFIGURATION FILE OPTIONS
+=head1 SEE ALSO
 
-The configuration file is a perl script that sets values in the hash B<%CONFIG>.
-
-Example:
-
-	$CONFIG{'owner'}       = 'Peter Palfrader';
-	$CONFIG{'email'}       = 'peter@palfrader.org';
-
-=head2 Valid keys
-
-=over
-
-=item B<caffhome> [string]
-
-Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
-
-=item B<owner> [string]
-
-Your name.  B<REQUIRED>.
-
-=item B<email> [string]
-
-Your email address, used in From: lines.  B<REQUIRED>.
-
-=item B<keyid> [list of keyids]
-
-A list of your keys.  This is used to determine which signatures to keep
-in the pruning step.  If you select a key using B<-u> it has to be in
-this list.  B<REQUIRED>.
-
-=item B<export-sig-age> [seconds]
-
-Don't export UIDs by default, on which your latest signature is older
-than this age.  Default: B<24*60*60> (i.e. one day).
-
-=item B<keyserver> [string]
-
-Keyserver to download keys from.  Default: B<subkeys.pgp.net>.
-
-=item B<gpg> [string]
-
-Path to the GnuPG binary.  Default: B<gpg>.
-
-=item B<gpg-sign> [string]
-
-Path to the GnuPG binary which is used to sign keys.  Default: what
-B<gpg> is set to.
-
-=item B<gpg-delsig> [string]
-
-Path to the GnuPG binary which is used to split off signatures.  This is
-needed while the upstream GnuPG is not fixed  (there are 2 bugs in the
-Debian Bug Tracking System).  Default: what B<gpg> is set to.
-
-=item B<secret-keyring> [string]
-
-Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
-
-=item B<also-encrypt-to> [keyid]
-
-An additional keyid to encrypt messages to. Default: none.
-
-=item B<no-download> [boolean]
-
-If true, then skip the step of fetching keys from the keyserver.
-Default: B<0>.
-
-=item B<no-sign> [boolean]
-
-If true, then skip the signing step. Default: B<0>.
-
-=back
+caff(1), gpg(1).
 
 =head1 AUTHOR
 
 Peter Palfrader <peter@palfrader.org>
+
+This manpage was written in POD by Christoph Berg <cb@df7cb.de>.
 
 =cut
 
@@ -172,7 +103,7 @@ sub info($) {
 };
 sub debug($) {
 	my ($line) = @_;
-	print STDERR "[DEBUG] $line\n";
+	#print STDERR "[DEBUG] $line\n";
 };
 sub trace($) {
 	my ($line) = @_;
@@ -324,6 +255,7 @@ sub usage() {
 usage() unless scalar @ARGV >= 1;
 my @KEYIDS;
 for my $keyid (@ARGV) {
+	$keyid =~ s/^0x//i;
 	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage();
