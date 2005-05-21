@@ -1,67 +1,93 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2004 Uli Martens <uli@youam.net>
-# Copyright (c) 2004 Peter Palfrader <peter@palfrader.org>
-# Copyright (c) 2004 Christoph Berg <cb@df7cb.de>
-#
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-#
+# See the pod documentation at the end of this file for author,
+# copyright, and licence information.
 #
 # Depends: 
 # 	   libintl-perl (Locale::Recode)
 # 	OR libtext-iconv-perl (Text::Iconv),
 # 	OR the "recode" binary
+#
+# Changelog:
+# 0.1
+# 0.2 2005-05-14 cb:
+#   * use the user's normal keyring to find signatures
+#   * support for multiple user keys
+#   * better charset conversion
+#   * pod documentation
 
+my $VERSION = "0.2";
 
 use strict;
 use warnings;
-use File::Temp qw{tempdir};
 use English;
 use IPC::Open3;
+use Getopt::Long;
 
-my $r;
-my $i;
-if (eval "require Locale::Recode") {
-	$r = Locale::Recode->new (from => 'UTF-8',
-                             to   => 'ISO-8859-1');
-} elsif (eval "require Text::Iconv") {
-	$i = Text::Iconv->new("UTF-8", "ISO-8859-1");
+
+sub version
+{
+	print STDERR <<EOF;
+gpgsigs $VERSION - http://pgp-tools.alioth.debian.org/
+  (c) 2004 Uli Martens <uli\@youam.net>
+  (c) 2004 Peter Palfrader <peter\@palfrader.org>
+  (c) 2004, 2005 Christoph Berg <cb\@df7cb.de>
+EOF
 }
 
-sub myrecode($) {
+sub usage
+{
+	version();
+	print STDERR <<EOF;
+
+Usage: $PROGRAM_NAME [-r] [-t <charset>] <keyid> <keytxt> [<outfile>]
+
+keyid is a long or short keyid (e.g. DE7AAF6E94C09C7F or 94C09C7F)
+separate multiple keyids with ','
+-r            call gpg --recv-keys before proceeding
+-f <charset>  convert <keytxt> from charset
+-t <charset>  convert UIDs to charset in output
+EOF
+	exit shift;
+}
+
+
+my ($fromcharset, $charset, $recv_keys);
+GetOptions(
+	f => \$fromcharset,
+	t => \$charset,
+	r => \$recv_keys,
+	help => sub { usage(0); },
+	version => sub { version(); exit 0;},
+) or usage(1);
+
+
+# charset conversion
+$fromcharset ||= "ISO-8859-1";
+$charset ||= $ENV{LC_ALL} || $ENV{LC_CTYPE} || $ENV{LANG} || "ISO-8859-1";
+$charset = "ISO-8859-1" unless $charset =~ /[\.-]/;
+$charset =~ s/.*\.//;
+$charset =~ s/@.*//;
+ 
+my ($rf, $rt, $if, $it);
+if (eval "require Locale::Recode") {
+	$rf = Locale::Recode->new (from => $fromcharset, to => $charset) if $fromcharset;
+	$rt = Locale::Recode->new (from => 'UTF-8', to => $charset);
+} elsif (eval "require Text::Iconv") {
+	$if = Text::Iconv->new($fromcharset, $charset) if $fromcharset;
+	$it = Text::Iconv->new("UTF-8", $charset);
+}
+
+sub myfromrecode($) {
 	my ($text) = @_;
-	if (defined $r) {
+	if (defined $rf) {
 		my $orig = $text;
-		$r->recode($text);
-#printf STDERR "perl:  $orig to $text\n";
+		$rf->recode($text);
 		return $text;
-	} elsif (defined $i) {
-		$text = $i->convert($text);
+	} elsif (defined $if) {
+		return $if->convert($text);
 	} else {
-		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', 'utf8..iso8859-1');
+		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "$fromcharset..$charset");
 		print WTRFH $text;
 		close WTRFH;
 		local $/ = undef;
@@ -69,58 +95,83 @@ sub myrecode($) {
 		close RDRFH;
 		close ERRFH;
 		waitpid $pid, 0;
-
 		die ("'recode' failed, is it installed?\n") unless defined $result;
-#printf STDERR "manual:  $text to $result\n";
 		return $result;
-	};
+	}
+}
+
+sub myrecode($) {
+	my ($text) = @_;
+	if (defined $rt) {
+		my $orig = $text;
+		$rt->recode($text);
+		return $text;
+	} elsif (defined $it) {
+		return $it->convert($text);
+	} else {
+		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "utf8..$charset");
+		print WTRFH $text;
+		close WTRFH;
+		local $/ = undef;
+		my $result = <RDRFH>;
+		close RDRFH;
+		close ERRFH;
+		waitpid $pid, 0;
+		die ("'recode' failed, is it installed?\n") unless defined $result;
+		return $result;
+	}
 }
 
 
-my $EXPECTED_MD5 = '90 43 B8 1B';
-
+# parse options
 my $mykey = uc(shift @ARGV);
-my $keyring = shift @ARGV;
-my $keytxt = shift @ARGV;
-my $outfile = shift @ARGV;
+my $keytxt = (shift @ARGV) || usage(1);
+my $outfile = (shift @ARGV) || '-';
 
-$keyring = 'ksp-lt2k4.asc' unless defined $keyring;
-$keytxt = 'ksp-lt2k4.txt' unless defined $keytxt;
-$outfile = 'ksp-lt2k4-annotated.txt' unless defined $outfile;
+my @mykeys = split /,/, $mykey;
+map { s/^0x//i; } @mykeys;
 
-if (!defined $mykey || scalar @ARGV || ($mykey !~ /^[0-9A-F]{16,16}$/  && $mykey !~ /^[0-9A-F]{8,8}$/)) {
-	print STDERR "Usage: $PROGRAM_NAME keyid [<keyring> [<keytxt> [<outfile]]]\n";
-	print STDERR "\n";
-	print STDERR "keyid is a long or short keyid (e.g. DE7AAF6E94C09C7F or 94C09C7F\n";
-	exit 1;
+if (!@mykeys || scalar @ARGV) {
+	usage(1);
+}
+if (!grep { /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys) {
+	print STDERR "Invalid keyid given\n";
+	usage(1);
 }
 
--r $keyring or die ("$keyring does not exist\n");
 -r $keytxt or die ("$keytxt does not exist\n");
 
 
-my $sigs;
+# get list of keys in file
+my @keys;
+open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
+while (<TXT>) {
+	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
+		push @keys, $1;
+	}
+}
+close TXT;
 
 
-my $tempdir = tempdir( "gpgsigs-XXXXX", DIR => '/tmp/', CLEANUP => 1);
-$ENV{'GNUPGHOME'} = $tempdir;
-print STDERR "Creating a temporary gnupghome and importing keys\n";
-system(qw{gpg --import}, $keyring);
+# get all known signatures
+if ($recv_keys) {
+	print STDERR "Requesting keys from keyserver\n";
+	system "gpg --recv-keys @keys";
+}
 
-print STDERR "Running --list-sigs, this will take a while\n";
-open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs 2>/dev/null |"
+print STDERR "Running --list-sigs, this will take a while ";
+open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @keys 2>/dev/null |"
 	or die "can't get gpg listing";
 
-my $key;
-my $uid;
+my ($key, $uid, $sigs);
 while (<SIGS>) {
 	if ( m/^pub:(?:.*?:){3,3}([0-9A-F]{16,16}):/ ) {
 		$key = $1;
+		print STDERR ".";
 		next;
 	}
-	if ( m/^uid:(?:.*?:){8,8}(.*):/ ) {
-		$uid = $1;
-		$uid = myrecode($uid);
+	if ( m/^uid:(?:.*?:){8,8}(.*):/s ) {
+		$uid = myrecode($1);
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){3,3}(.*):.*?:/ ) {
@@ -136,6 +187,7 @@ while (<SIGS>) {
 	warn "unknown value: '$_', key: ".(defined $key ? $key :'none')."\n";
 }	
 close SIGS;
+print STDERR "\n";
 
 for my $k ( keys %{$sigs} ) {
 	if ( $k =~ m/^[0-9A-F]{8}([0-9A-F]{8})$/ ) {
@@ -144,6 +196,7 @@ for my $k ( keys %{$sigs} ) {
 }
 
 
+# read checksums
 open MD, "gpg --print-md md5 $keytxt|" or warn "can't get gpg md5";
 my $MD5 = <MD>;
 close MD;
@@ -157,50 +210,158 @@ my $metatxt = quotemeta($keytxt);
 $MD5 =~ s/^$metatxt:\s*//;
 $SHA1 =~ s/^$metatxt:\s*//;
 
-if (defined $MD5) {
-	warn ("md5 of $keytxt does not begin with $EXPECTED_MD5") unless ($MD5 =~ /^$EXPECTED_MD5/);
-};
+
+# write out result
+sub print_tag
+{
+	my ($key, $uid) = @_;
+	if (! defined $sigs->{$key}->{$uid}) {
+		warn "uid '$uid' not found on key $key";
+		return;
+	}
+	my $r = '(';
+	foreach my $mykey (@mykeys) {
+		$r .= defined $sigs->{$key}->{$uid}->{$mykey} ? "S" : " ";
+	}
+	$r .= ')';
+	return $r;
+}
 
 print STDERR "Annotating $keytxt, writing into $outfile\n";
 open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
 while (<TXT>) {
-	if (/^MD5 Checksum:  __ __ __ __ __ __ __ __    __ __ __ __ __ __ __ __/ && defined $MD5) {
-		print WRITE "MD5 Checksum:  $MD5     [ ]\n";
+	$_ = myfromrecode($_);
+	if (/^MD5 Checksum:/ && defined $MD5) {
+		s/_[_ ]+_/$MD5/;
 	}
-	elsif (/^SHA1 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____/ && defined $SHA1) {
-		print WRITE "SHA1 Checksum: $SHA1   [ ]\n";
-	} else {
-		print WRITE;
-	};
-	if ( m/^([0-9]{3})  \[ \] Fingerprint OK        \[ \] ID OK$/ ) {
-		$_ = <TXT>;
-		if ( m/^pub  ( 768|1024|2048|4096)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} (.*)/ ) {
-			my $l2 = $_;
-			my $uid = $3;
-			my $keyid = $2;
-			if ( ! defined $sigs->{$keyid}->{$uid} ) {
-				warn "uid '$uid' not found on key $keyid";
-			};
-			print WRITE ( defined $sigs->{$keyid}->{$uid}->{$mykey} ? "(S)" : "( )" );
-			print WRITE "  $l2";
-			$_ = <TXT>;
-			print WRITE $_;
-			while (<TXT>) {
-				my $l3 = $_;
-				if ( m/^uid     (.*)$/ ) {
-					print WRITE defined $sigs->{$keyid}->{$1}
-						? ( defined $sigs->{$keyid}->{$1}->{$mykey} ? "(S)" : "( )" )
-						: "   ";
-					print WRITE "  $l3";
-				} else {
-					print WRITE "$l3";
-					last;
-				}
-			}
-		} else {
-			print WRITE "$_";
+	if (/^SHA1 Checksum:/ && defined $SHA1) {
+		s/_[_ ]+_/$SHA1/;
+	}
+	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
+		$key = $1;
+		$uid = $2;
+		if ($uid) { # in gpg 1.2, the first uid is here
+			print WRITE print_tag($key, $uid) . " $_";
+			next;
 		}
 	}
+	if ( m/^uid +(.*)$/ ) {
+		$uid = $1;
+		print WRITE print_tag($key, $uid) . " $_";
+		next;
+	}
+	print WRITE;
 }
-close TXT
+
+print WRITE "Legend:\n";
+foreach my $i (0 .. @mykeys - 1) {
+	print WRITE '('. ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i]\n";
+}
+close TXT;
+
+__END__
+
+=head1 NAME
+
+B<gpgsigs> - annotate list of GnuPG keys with already done signatures
+
+=head1 SYNOPSIS
+
+B<gpgsigs> [-r] [-f I<charset>] [-t I<charset>] I<keyid> F<keytxt> [F<outfile>]
+
+=head1 DESCRIPTION
+
+B<gpgsigs> was written to assist the user in signing keys during a keysigning
+party. It takes as input a file containing keys in C<gpg --list-keys> format
+and prepends every line with a tag indicating if the user has already signed
+that uid. When the file contains C<MD5 Checksum:> or C<SHA1 Checksum:> lines
+and placeholders (C<__ __>), the checksum is inserted.
+
+=head1 OPTIONS
+
+=over
+
+=item -r
+
+Call I<gpg --recv-keys> before creating the output.
+
+=item -f I<charset>
+
+Convert F<keytxt> from I<charset>. The default is ISO-8859-1.
+
+=item -t I<charset>
+
+Convert UIDs to I<charset>. The default is derived from LC_ALL, LC_CTYPE, and
+LANG, and if all these are unset, the default is ISO-8859-1.
+
+=item I<keyid>
+
+Use this keyid (8 or 16 byte) for annotation. Multiple keyids can be separated
+by I<,>.
+
+=item F<keytxt>
+
+Read input from F<keytxt>.
+
+=item F<outfile>
+
+Write output to F<outfile>. Default is stdout.
+
+=back
+
+=head1 EXAMPLES
+
+The following key signing parties are using B<gpgsigs>:
+
+http://www.palfrader.org/ksp-lt2k4.html
+
+http://www.palfrader.org/ksp-lt2k5.html
+
+=head1 BUGS
+
+B<GnuPG> is known to change its output format quite often. This version has
+been tested with gpg 1.2.5 and gpg 1.4.1. YMMV.
+
+=head1 SEE ALSO
+
+gpg(1), caff(1).
+
+http://pgp-tools.alioth.debian.org/
+
+=head1 AUTHORS AND COPYRIGHT
+
+(c) 2004 Uli Martens <uli@youam.net>
+
+(c) 2004 Peter Palfrader <peter@palfrader.org>
+
+(c) 2004, 2005 Christoph Berg <cb@df7cb.de>
+
+=head1 LICENSE
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+3. The name of the author may not be used to endorse or promote products
+derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

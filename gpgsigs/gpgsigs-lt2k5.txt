@@ -1,0 +1,100 @@
+Saturday, June 25th, 2005;  14:00                                   Room R 2.05
+                                          Peter Palfrader <peter@palfrader.org>
+
+
+
+
+                ########  ########     ###    ######## ########
+                ##     ## ##     ##   ## ##   ##          ##
+                ##     ## ##     ##  ##   ##  ##          ##
+                ##     ## ########  ##     ## ######      ##
+                ##     ## ##   ##   ######### ##          ##
+                ##     ## ##    ##  ##     ## ##          ##
+                ########  ##     ## ##     ## ##          ##
+
+
+
+
+
+             L I N U X T A G   K E Y S I G N I N G P A R T Y
+
+                     List of Participants  (v 0.0)
+
+
+Here's what you have to do with this file:
+(1) Print this file to paper.
+(2) Compute this file's MD5 checksum and optionally also its SHA1 checksum.
+   gpg --print-md md5 ksp-lt2k5.txt   (or use md5sum)
+   gpg --print-md sha1 ksp-lt2k5.txt  (or use sha1sum)
+(3) fill in the hash values on the printout.
+(4) Bring the printout, a pen, and proof of identity to the keysigningparty (and be on time!).
+
+MD5 Checksum:  __ __ __ __ __ __ __ __    __ __ __ __ __ __ __ __           [ ]
+
+
+
+SHA1 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____         [ ]
+
+
+
+
+001  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/CD15A883 2002-09-28
+      Key fingerprint = 02DF 08F5 FD35 6BF2 7F5F  7B83 8921 B5DC CD15 A883
+uid   Alexander Schmehl (privat) <alexander@schmehl.info>
+uid   Alexander Schmehl (private) <tolimar@schmehl.info>
+uid   Alexander Schmehl (knOEpix) <alexander@knoepix.org>
+uid   Alexander Schmehl (Skolelinux) <alexander@skolelinux.de>
+uid   Alexander Schmehl (university) <schmehl@cs.uni-frankfurt.de>
+uid   Alexander Schmehl (university) <schmehl@informatik.uni-frankfurt.de>
+uid   Alexander Schmehl (unused, but read) <alexander.schmehl@schlundmail.de>
+
+002  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/00D8CD16 2002-09-28
+      Key fingerprint = 46CD D292 0692 D5A2 8F81  2E48 0717 74E0 00D8 CD16
+uid   Alexander Schmehl (university) <schmehl@cs.uni-frankfurt.de>
+uid   Alexander Schmehl (privat) <alexander@schmehl.info>
+uid   Alexander Schmehl (university) <schmehl@informatik.uni-frankfurt.de>
+
+003  [ ] Fingerprint OK        [ ] ID OK
+pub   1024R/6D8ABE71 1998-07-25
+      Key fingerprint = 09 9D 09 8F 89 52 24 12  FE C2 31 9D FE F8 5C 03
+uid   Christoph Berg <cb@df7cb.de>
+uid   Christoph Berg <cb@cs.uni-sb.de>
+
+004  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/58510B5A 2004-04-17
+      Key fingerprint = D224 C8B0 7E63 A694 6DA3  2E07 C5AF 774A 5851 0B5A
+uid   Christoph Berg <cb@df7cb.de>
+
+005  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/514B3E7C 2003-07-19
+      Key fingerprint = 34F8 7997 8BC1 03F0 9C43  F3D7 B375 3E4D 514B 3E7C
+uid   Florian Ernst <florian@uni-hd.de>
+uid   Florian Ernst <florian@debian.org>
+uid   Florian Ernst <florian_ernst@gmx.net>
+uid   Florian Ernst <fernst@ix.urz.uni-heidelberg.de>
+
+006  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/7E7B8AC9 2002-05-11
+      Key fingerprint = DF7D EB2F DB28 FD2B A9FB  FA6D 715E D6A0 7E7B 8AC9
+uid   Joerg Jaspert <joerg@debian.org>
+uid   Joerg Jaspert <joerg@ganneff.de>
+uid   Joerg Jaspert <joerg@german.ath.cx>
+uid   Joerg Jaspert <joerg@goliathbbs.dnsalias.net>
+
+007  [ ] Fingerprint OK        [ ] ID OK
+pub   1024D/94C09C7F 1999-11-10
+      Key fingerprint = 5B00 C96D 5D54 AEE1 206B  AF84 DE7A AF6E 94C0 9C7F
+uid   Peter Palfrader
+uid   Weasel <weasel@netalive.org>
+uid   Peter Palfrader <weasel@debian.org>
+uid   Peter Palfrader <peter@palfrader.org>
+uid   Peter Palfrader <ppalfrad@cosy.sbg.ac.at>
+
+008  [ ] Fingerprint OK        [ ] ID OK
+pub   4096R/C82E0039 2003-03-24
+      Key fingerprint = 25FC 1614 B8F8 7B52 FF2F  99B9 62AF 4031 C82E 0039
+uid   Peter Palfrader
+uid   Peter Palfrader <peter@palfrader.org>
+
