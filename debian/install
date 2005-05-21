@@ -1,0 +1,4 @@
+caff/caff usr/bin
+caff/pgp-clean usr/bin
+caff/caffrc.sample usr/share/doc/pgp-tools/examples
+gpgsigs/gpgsigs usr/bin

@@ -1,0 +1,21 @@
+Source: pgp-tools
+Section: utils
+Priority: optional
+Maintainer: N. N. <nn@debian.org>
+Uploaders: Peter Palfrader <weasel@debian.org>, Christoph Berg <cb@df7cb.de>
+Build-Depends: debhelper (>> 4.0.0)
+Standards-Version: 3.6.1
+
+Package: pgp-tools
+Architecture: all
+Depends: gnupg (>= 1.3.92), perl, libgnupg-interface-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
+Recommends: libtext-iconv-perl | libintl-perl | recode
+Description: tools for signing GnuPG keys
+ PGP Tools is a collection for all kinds of PGP related things, including
+ signing scripts, party preparation scripts, etc.
+ .
+  * caff: CA - Fire and Forget signs and mails a key
+  * gpgsigs: annotates list of GnuPG keys with already done signatures
+  * pgp-clean: removes all non-self signatures from key
+ .
+ http://pgp-tools.alioth.debian.org/
