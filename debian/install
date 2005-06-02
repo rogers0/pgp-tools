@@ -2,3 +2,5 @@ caff/caff usr/bin
 caff/pgp-clean usr/bin
 caff/caffrc.sample usr/share/doc/pgp-tools/examples
 gpgsigs/gpgsigs usr/bin
+gpg-key2ps/gpg-key2ps usr/bin
+gpg-mailkeys/gpg-mailkeys usr/bin
