@@ -1,6 +1,78 @@
-pgp-tools (0.0.20050521) unstable; urgency=low
+signing-party (0.4.0-1) unstable; urgency=low
 
-  * First Debian upload.
+  * Merging signing-party with pgp-tools, now contains caff
+    and gpgsigs aswell.
 
- -- Christoph Berg <cb@df7cb.de>  Sat, 21 May 2005 23:34:45 +0200
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Fri,  3 Jun 2005 01:15:09 +0200
+
+signing-party (0.3.0-1) unstable; urgency=low
+
+  * New maintainer, Simon is moving to co-maintenance.
+  * New upstream release:
+    + Fix missing section number from manpages.
+      (fixes Lintian warnings)
+    + Add more documentation (README, and in gpg-mailkeys).
+    + In gpg-key2ps:
+      - Add handling for 'tru' and 'uat' packets. (Closes: #222664)
+      - Change env.var PAPERCONF to PAPERSIZE due to changed behaviour since
+        libpaper-1.1.13. (Closes: #172698)
+      - Truncate too long UIDs so they don't mess up the keys next to them.
+        (Closes: #171846)
+    + In gpg-mailkeys:
+      - Send the key as an attachment. (Closes: #176245)
+      - Make gpg-mailkeys messages more customizable. (Closes: #200070)
+      - By default, let sendmail determine the From-line (more reliable).
+  * Update to Standards-Version 3.6.1 (no changes neccessary).
+  * Depend on libpaper-utils >= 1.1.13.
+  * Clarify copyright / maintainer documentation.
+
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Sat,  5 Mar 2005 14:39:24 +0100
+
+signing-party (0.2.3-2) unstable; urgency=low
+
+  * Added handling for 'tru' packets
+
+ -- Simon Richter <sjr@debian.org>  Mon,  8 Dec 2003 21:54:50 +0100
+
+signing-party (0.2.3-1) unstable; urgency=low
+
+  * New upstream release (Closes: #180455)
+
+ -- Simon Richter <sjr@debian.org>  Sat, 15 Feb 2003 16:09:27 +0100
+
+signing-party (0.2.2.1-1) unstable; urgency=low
+
+  * Upstream bugfix release (some changes from 0.2 to 0.2.1 dropped out of
+    0.2.2 again)
+
+ -- Simon Richter <sjr@debian.org>  Fri,  1 Nov 2002 12:15:15 +0100
+
+signing-party (0.2.2-1) unstable; urgency=low
+
+  * Fixed manpage bug (Closes: #137924, #137937)
+  * Upstream changelog now contains data (Closes: #158854)
+  * Finally wrote a real description
+
+ -- Simon Richter <sjr@debian.org>  Fri,  4 Oct 2002 22:41:50 +0200
+
+signing-party (0.2.1-1) unstable; urgency=low
+
+  * New release
+
+ -- Simon Richter <sjr@debian.org>  Thu, 29 Aug 2002 17:12:29 +0200
+
+signing-party (0.2-1) unstable; urgency=low
+
+  * New release
+  * Can now print multiple keys
+  * Supports alternate paper sizes (Closes: #134975)
+  * New script: gpg-mailkeys
+
+ -- Simon Richter <sjr@debian.org>  Thu, 21 Feb 2002 22:24:09 +0100
+
+signing-party (0.1-1) unstable; urgency=low
+
+  * Initial Release (Closes: #117977).
+
+ -- Simon Richter <sjr@debian.org>  Fri,  2 Nov 2001 19:33:42 +0100
 
