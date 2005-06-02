@@ -1,0 +1,21 @@
+.TH GPG-MAILKEYS 1 "February 15, 2003"
+.SH NAME
+gpg\-mailkeys \- sends emails containing keys to their owners
+.SH SYNOPSIS
+.B gpg-mailkeys
+.RI id ...
+.SH DESCRIPTION
+.B gpg-mailkeys
+sends the owners of the keys listed on the command line a mail each,
+containing their public key. After signing, you can use this tool to send
+everyone the new signatures they just got.
+.SH OPTIONS
+None
+.SH ENVIRONMENT
+.TP 13
+.I EMAIL
+Set the email address to use when sending messages
+.SH SEE ALSO
+.BR gpg (1)
+.SH AUTHOR
+This manual page was written by Simon Richter <sjr@debian.org>.

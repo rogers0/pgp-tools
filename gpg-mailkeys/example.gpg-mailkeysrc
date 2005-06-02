@@ -1,0 +1,17 @@
+# ~/.gpg-mailkeysrc
+
+# Sender name
+NAME="Your name here"
+
+# Sender address (don't use "<...>"!)
+EMAIL="your.address@example.org"
+
+# Subject
+SUBJECT="Your signed key"
+
+# Text to be included in the message body
+TEXT="
+Hi, here you are: your signed key.
+
+See you!
+"

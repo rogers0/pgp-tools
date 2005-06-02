@@ -1,0 +1,99 @@
+#! /bin/sh
+
+set -e
+
+VERSION="0.3.1"
+
+if [ -z "$*" ]; then
+	echo "Send people their newly signed GPG key by mail."
+	echo "Usage: $0 keyid ..."
+	exit 1
+fi
+
+if [ -e ~/.gpg-mailkeysrc ] ; then
+	. ~/.gpg-mailkeysrc
+fi
+if [ -n "$EMAIL" ]; then
+	FROM="$EMAIL"
+fi
+if [ -z "$SUBJECT" ]; then
+	SUBJECT="Your signed GPG key"
+fi
+if [ -z "$NAME" ]; then
+	NAME=`getent passwd $USER | cut -d: -f5 | cut -d, -f1`
+fi
+if [ -z "$TEXT" ]; then
+	TEXT="Hi,
+
+Here is your signed GPG key.
+
+Enjoy,
+$NAME"
+fi
+
+FAILKEYS=
+
+while [ -n "$1" ]; do
+	echo -n "[$1] "
+	TEMPFILE=`mktemp -t gpg2mail.XXXXXX`
+	ADDR=`gpg --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^re][^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
+	if [ -z "$ADDR" ]; then
+		echo "(no usable user ids)"
+		FAILKEYS="$FAILKEYS:$1"
+		shift 1
+		continue
+	fi
+	BOUNDARY="ksp-$$-boundary-$RANDOM"
+	
+	echo -n "$ADDR:"
+	if [ $FROM ]; then
+		echo >$TEMPFILE "From: $NAME <$FROM>"
+	fi
+cat << EOM >> $TEMPFILE
+To: $ADDR
+Subject: $SUBJECT
+User-Agent: gpg-mailkeys/$VERSION
+MIME-Version: 1.0
+Content-Type: multipart/mixed; micalg=pgp-sha1;
+    protocol="application/pgp-signature"; boundary="$BOUNDARY"
+Content-Disposition: inline
+
+
+
+--$BOUNDARY
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+ 
+
+$TEXT
+
+EOM
+
+if [ -f ~/.signature ]; 
+	then echo "--=20" >> $TEMPFILE 
+	cat ~/.signature >> $TEMPFILE
+fi
+
+cat << EOM >> $TEMPFILE
+
+--$BOUNDARY
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: attachment; filename="$1.sig"
+
+`gpg --armor --export $1`
+
+--$BOUNDARY--
+EOM
+	echo -n " sending"
+	/usr/sbin/sendmail -t <$TEMPFILE
+	rm $TEMPFILE
+	echo " done."
+	shift 1
+done
+
+if [ -n "$FAILKEYS" ]; then
+	echo
+	echo "Note: The following keys could not be sent:"
+	echo "$FAILKEYS" | tr ':' '\n' | sed -e '/^ *$/d' -e 's/^/  /'
+fi

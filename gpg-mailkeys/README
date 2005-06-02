@@ -1,0 +1,41 @@
+gpg-mailkeys
+------------
+
+Given one or more key-id's, gpg-mailkeys mails these keys to their owners. You
+use this after you've signed them. By default, the mails contain a standard
+text and your name and address as the From (as determined by the sendmail
+command).
+
+You can modify how this script behaves by putting a .gpg-mailkeysrc file in
+your homedir. An example of this file is provided with this document.
+
+
+CREDITS
+-------
+
+This script comes from the original Signing-Party package which has been
+originally created and maintained by Simon Richter <sjr@debian.org> and
+Thijs Kinkhorst <kink@squirrelmail.org>.
+
+
+COPYRIGHT & LICENSE
+-------------------
+
+Copyright (C) 2001-2005  Simon Richter and Thijs Kinkhorst
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in file /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+
+

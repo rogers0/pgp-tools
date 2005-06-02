@@ -1,0 +1,40 @@
+.TH GPG-KEY2PS 1 "February 11, 2001"
+.SH NAME
+gpg\-key2ps \- generates a PS file from a GnuPG keyring
+.SH SYNOPSIS
+.B gpg-key2ps
+.I [-p paper]
+.I [-r revoked-style]
+.RI id
+.SH DESCRIPTION
+.B gpg-key2ps
+generates a PostScript file with your OpenPGP key fingerprint (repeated as
+often as it fits) useful for keysigning parties. The only argument is the same
+as you would pass to GPG's list-keys command, either a key-id or a (partial)
+name. The PS data is written to stdout.
+.SH OPTIONS
+.TP 13
+.I \-p paper
+Select the output paper size. Default is to look into /etc/papersize or A4 if
+libpaper isn't installed
+.TP
+.I \-r revoked-style
+Select how to mark revoked UIDs. Five styles are available:
+.B hide
+(don't show at all),
+.B show
+(show normally),
+.B grey
+(display in 50% grey),
+.B note
+(add a note),
+.B strike
+(strike through).
+.SH BUGS
+.B gpg-key2ps
+does not check whether it would be better to print just one column, and wastes
+space with "-r hide".
+.SH SEE ALSO
+.BR gpg (1)
+.SH AUTHOR
+This manual page was written by Simon Richter <sjr@debian.org>.
