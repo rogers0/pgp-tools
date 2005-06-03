@@ -2,8 +2,10 @@ signing-party (0.4.0-1) unstable; urgency=low
 
   * Merging signing-party with pgp-tools, now contains caff
     and gpgsigs aswell.
+  * Update gpg-mailkeys man page to list environment vars
+    introduced in 0.3.0 (Closes: #310418).
 
- -- Thijs Kinkhorst <kink@squirrelmail.org>  Fri,  3 Jun 2005 01:15:09 +0200
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Fri,  3 Jun 2005 11:12:48 +0200
 
 signing-party (0.3.0-1) unstable; urgency=low
 
