@@ -1,0 +1,14 @@
+signing-party (0.4.0-1) unstable; urgency=low
+
+  * Signing-party has now been merged with the (never released) pgp-tools
+    package. It now includes two new tools. The package will be extended
+    further in the near future.
+    
+  * New: caff -- CA - fire and forget:
+    caff takes a list of keyids on the command line, fetches them from a
+    keyserver and calls GnuPG so that you can sign it. It then mails each
+    key to all its email addresses - only including the one UID that we
+    send to in each mail.
+  * New: gpgsigs -- annotates a list of GPG keys with already done signatures.
+
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Fri,  3 Jun 2005 11:18:36 +0200
