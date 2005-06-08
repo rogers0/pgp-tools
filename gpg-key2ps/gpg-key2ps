@@ -1,4 +1,8 @@
 #! /bin/sh
+#
+# gpg-key2ps: convert a PGP/GnuPG key into paper slips.
+#
+# $Id$
 
 set -e
 

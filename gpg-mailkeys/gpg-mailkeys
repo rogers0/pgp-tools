@@ -1,4 +1,8 @@
 #! /bin/sh
+#
+# gpg-mailkeys: mail out just signed keys to their owners
+#
+# $Id$
 
 set -e
 
