@@ -1,7 +1,7 @@
 gpg-mailkeys
 ------------
 
-Given one or more key-id's, gpg-mailkeys mails these keys to their owners. You
+Given one or more key-ids, gpg-mailkeys mails these keys to their owners. You
 use this after you've signed them. By default, the mails contain a standard
 text and your name and address as the From (as determined by the sendmail
 command).
