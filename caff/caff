@@ -491,6 +491,7 @@ if ($ARGV[0] eq '-u') {
 	usage() unless scalar @ARGV >= 3;
 	shift @ARGV;
 	$USER = shift @ARGV;
+	$USER =~ s/^0x//i;
 	unless ($USER =~ /^[A-Za-z0-9]{8,8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "-u $USER is not a keyid.\n";
 		usage();
@@ -498,6 +499,7 @@ if ($ARGV[0] eq '-u') {
 	$USER = uc($USER);
 };
 for my $keyid (@ARGV) {
+	$keyid =~ s/^0x//i;
 	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage();
@@ -525,7 +527,6 @@ for my $keyid (@ARGV) {
 		warn ("No data from gpg for list-key\n");
 		next;
 	};
-	print $stdout;
 	foreach my $keyid (@{$CONFIG{'keyid'}}) {
 		unless ($stdout =~ /^pub:(?:[^:]*:){3,3}$keyid:/m) {
 			info("Importing $keyid");
