@@ -1,7 +1,7 @@
 signing-party (0.4.0-1) unstable; urgency=low
 
   * Merging signing-party with pgp-tools, now contains caff
-    and gpgsigs aswell.
+    and gpgsigs as well.
   * Update gpg-mailkeys man page to list environment vars
     introduced in 0.3.0 (Closes: #310418).
 
