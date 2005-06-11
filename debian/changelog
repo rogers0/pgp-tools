@@ -4,8 +4,6 @@ signing-party (0.4.0-1) unstable; urgency=low
     and gpgsigs as well.
   * Update gpg-mailkeys man page to list environment vars
     introduced in 0.3.0 (Closes: #310418).
-  * gpg-key2ps: be a bit more liberal w.r.t. subkeys, so some
-    don't break the PS output (Closes: #311990).
 
  -- Thijs Kinkhorst <kink@squirrelmail.org>  Wed,  8 Jun 2005 19:49:11 +0200
 
