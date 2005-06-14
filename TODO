@@ -1,0 +1,9 @@
+TODO
+
+- Get Simon's new gpg-key2ps script into the repo, and fix it up so it
+  provides at least the functionality that gpg-key2ps now has.
+- Integrate documentation of all different parts.
+
+
+
+$Id$
