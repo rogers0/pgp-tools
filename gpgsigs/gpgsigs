@@ -199,10 +199,10 @@ for my $k ( keys %{$sigs} ) {
 
 
 # read checksums
-open MD, "gpg --print-md md5 $keytxt|" or warn "can't get gpg md5";
+open MD, "gpg --print-md md5 $keytxt|" or warn "can't get gpg md5\n";
 my $MD5 = <MD>;
 close MD;
-open MD, "gpg --print-md sha1 $keytxt|" or warn "can't get gpg sha1";
+open MD, "gpg --print-md sha1 $keytxt|" or warn "can't get gpg sha1\n";
 my $SHA1 = <MD>;
 close MD;
 
@@ -218,7 +218,7 @@ sub print_tag
 {
 	my ($key, $uid) = @_;
 	if (! defined $sigs->{$key}->{$uid}) {
-		warn "uid '$uid' not found on key $key";
+		warn "uid '$uid' not found on key $key\n";
 		return '(_)';
 	}
 	my $r = '(';
