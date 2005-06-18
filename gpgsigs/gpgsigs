@@ -107,7 +107,9 @@ sub myrecode($) {
 		$rt->recode($text);
 		return $text;
 	} elsif (defined $it) {
-		return $it->convert($text);
+		my $result = $it->convert($text);
+		warn ("Could not convert '$text'\n") unless defined $result;
+		return (defined $result) ? $result : $text
 	} else {
 		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "utf8..$charset");
 		print WTRFH $text;
@@ -117,8 +119,8 @@ sub myrecode($) {
 		close RDRFH;
 		close ERRFH;
 		waitpid $pid, 0;
-		die ("'recode' failed, is it installed?\n") unless defined $result;
-		return $result;
+		warn ("'recode' failed, is it installed?\n") unless defined $result;
+		return (defined $result) ? $result : $text
 	}
 }
 
@@ -217,7 +219,7 @@ sub print_tag
 	my ($key, $uid) = @_;
 	if (! defined $sigs->{$key}->{$uid}) {
 		warn "uid '$uid' not found on key $key";
-		return;
+		return '(_)';
 	}
 	my $r = '(';
 	foreach my $mykey (@mykeys) {
@@ -241,13 +243,16 @@ while (<TXT>) {
 	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
 		$uid = $2;
-		if ($uid) { # in gpg 1.2, the first uid is here
-			print WRITE print_tag($key, $uid) . " $_";
-			next;
-		}
+		#if ($uid) { # in gpg 1.2, the first uid is here
+		#	print WRITE print_tag($key, $uid) . " $_";
+		#	next;
+		#}
 	}
 	if ( m/^uid +(.*)$/ ) {
 		$uid = $1;
+		die "key is undefined" unless defined $key;
+		die "uid is undefined, key $key" unless defined $uid;
+		die "bad tag from $key | $uid" unless defined (print_tag($key, $uid));
 		print WRITE print_tag($key, $uid) . " $_";
 		next;
 	}
