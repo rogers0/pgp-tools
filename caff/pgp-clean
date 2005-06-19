@@ -247,7 +247,7 @@ my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 
 sub usage() {
-	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
+	print STDERR "pgp-clean $VERSION - (c) 2004, 2005 Peter Palfrader\n";
 	print STDERR "Usage: $PROGRAM_NAME <keyid> [<keyid> ...]\n";
 	exit 1;
 };
