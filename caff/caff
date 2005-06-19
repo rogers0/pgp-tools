@@ -121,9 +121,9 @@ B<gpg> is set to.
 
 =item B<gpg-delsig> [string]
 
-Path to the GnuPG binary which is used to split off signatures.  This is
-needed while the upstream GnuPG is not fixed  (there are 2 bugs in the
-Debian Bug Tracking System).  Default: what B<gpg> is set to.
+Path to the GnuPG binary which is used to split off signatures.  This was
+needed while the upstream GnuPG was not fixed.  Default: what B<gpg>
+is set to.
 
 =item B<secret-keyring> [string]
 
