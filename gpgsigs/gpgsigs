@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# $Id$
+
 # See the pod documentation at the end of this file for author,
 # copyright, and licence information.
 #
@@ -16,7 +18,7 @@
 #   * better charset conversion
 #   * pod documentation
 
-my $VERSION = "0.2";
+my $VERSION = '$Rev$';
 
 use strict;
 use warnings;
@@ -25,20 +27,24 @@ use IPC::Open3;
 use Getopt::Long;
 
 
-sub version
+sub version($)
 {
-	print STDERR <<EOF;
+	my ($fd) = @_;
+
+	print $fd <<EOF;
 gpgsigs $VERSION - http://pgp-tools.alioth.debian.org/
   (c) 2004 Uli Martens <uli\@youam.net>
-  (c) 2004 Peter Palfrader <peter\@palfrader.org>
+  (c) 2004, 2005 Peter Palfrader <peter\@palfrader.org>
   (c) 2004, 2005 Christoph Berg <cb\@df7cb.de>
 EOF
 }
 
-sub usage
+sub usage($$)
 {
-	version();
-	print STDERR <<EOF;
+	my ($fd, $error) = @_;
+
+	version($fd);
+	print $fd <<EOF;
 
 Usage: $PROGRAM_NAME [-r] [-t <charset>] <keyid> <keytxt> [<outfile>]
 
@@ -48,7 +54,7 @@ separate multiple keyids with ','
 -f <charset>  convert <keytxt> from charset
 -t <charset>  convert UIDs to charset in output
 EOF
-	exit shift;
+	exit $error;
 }
 
 
@@ -57,9 +63,9 @@ GetOptions(
 	f => \$fromcharset,
 	t => \$charset,
 	r => \$recv_keys,
-	help => sub { usage(0); },
-	version => sub { version(); exit 0;},
-) or usage(1);
+	help => sub { usage(*STDOUT, 0); },
+	version => sub { version(*STDOUT); exit 0;},
+) or usage(*STDERR, 1);
 
 
 # charset conversion
@@ -127,18 +133,18 @@ sub myrecode($) {
 
 # parse options
 my $mykey = uc(shift @ARGV);
-my $keytxt = (shift @ARGV) || usage(1);
+my $keytxt = (shift @ARGV) || usage(*STDERR, 1);
 my $outfile = (shift @ARGV) || '-';
 
 my @mykeys = split /,/, $mykey;
 map { s/^0x//i; } @mykeys;
 
 if (!@mykeys || scalar @ARGV) {
-	usage(1);
+	usage(*STDERR, 1);
 }
 if (!grep { /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys) {
 	print STDERR "Invalid keyid given\n";
-	usage(1);
+	usage(*STDERR, 1);
 }
 
 -r $keytxt or die ("$keytxt does not exist\n");
@@ -273,7 +279,7 @@ B<gpgsigs> - annotate list of GnuPG keys with already done signatures
 
 =head1 SYNOPSIS
 
-B<gpgsigs> [-r] [-f I<charset>] [-t I<charset>] I<keyid> F<keytxt> [F<outfile>]
+B<gpgsigs> [-r] [-f I<charset>] [-t I<charset>] I<keyid>I<[>B<,>I<keyidI<[>B<,>I<...>I<]>>I<]> F<keytxt> [F<outfile>]
 
 =head1 DESCRIPTION
 
@@ -303,7 +309,7 @@ LANG, and if all these are unset, the default is ISO-8859-1.
 =item I<keyid>
 
 Use this keyid (8 or 16 byte) for annotation. Multiple keyids can be separated
-by I<,>.
+by a comma (B<,>).
 
 =item F<keytxt>
 
@@ -338,7 +344,7 @@ http://pgp-tools.alioth.debian.org/
 
 (c) 2004 Uli Martens <uli@youam.net>
 
-(c) 2004 Peter Palfrader <peter@palfrader.org>
+(c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 
 (c) 2004, 2005 Christoph Berg <cb@df7cb.de>
 
