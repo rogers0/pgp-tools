@@ -18,7 +18,7 @@
 #   * better charset conversion
 #   * pod documentation
 
-my $VERSION = '$Rev$';
+my $VERSION = qq$Rev$;
 
 use strict;
 use warnings;
@@ -32,7 +32,7 @@ sub version($)
 	my ($fd) = @_;
 
 	print $fd <<EOF;
-gpgsigs $VERSION - http://pgp-tools.alioth.debian.org/
+gpgsigs $VERSION- http://pgp-tools.alioth.debian.org/
   (c) 2004 Uli Martens <uli\@youam.net>
   (c) 2004, 2005 Peter Palfrader <peter\@palfrader.org>
   (c) 2004, 2005 Christoph Berg <cb\@df7cb.de>
@@ -225,7 +225,7 @@ sub print_tag
 	my ($key, $uid) = @_;
 	if (! defined $sigs->{$key}->{$uid}) {
 		warn "uid '$uid' not found on key $key\n";
-		return '(_)';
+		return '(' . (' ' x @mykeys) . ')';
 	}
 	my $r = '(';
 	foreach my $mykey (@mykeys) {
@@ -241,10 +241,10 @@ open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
 while (<TXT>) {
 	$_ = myfromrecode($_);
 	if (/^MD5 Checksum:/ && defined $MD5) {
-		s/_[_ ]+_/$MD5/;
+		s/[_[:xdigit:]][_ [:xdigit:]]+_/$MD5/;
 	}
 	if (/^SHA1 Checksum:/ && defined $SHA1) {
-		s/_[_ ]+_/$SHA1/;
+		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA1/;
 	}
 	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
