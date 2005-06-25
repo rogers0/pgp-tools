@@ -6,7 +6,7 @@
 
 set -e
 
-VERSION="0.4.0"
+VERSION='$Rev$'
 
 if [ -z "$*" ]; then
 	echo "Send people their newly signed GPG key by mail."
