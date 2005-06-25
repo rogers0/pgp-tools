@@ -119,7 +119,7 @@ cat <<EOF
 } def
 
 /showAlgorithm {
-  << 16 (g) 17 (D) 1 (R) >> exch get
+  << 1 (R) 2 (r) 3 (s) 16 (g) 20 (G) 17 (D) >> exch get
   show
 } def
 
