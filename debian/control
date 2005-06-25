@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Thijs Kinkhorst <kink@squirrelmail.org>
 Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, Christoph Berg <cb@df7cb.de>
 Build-Depends: debhelper (>> 4.0.0)
-Standards-Version: 3.6.1
+Standards-Version: 3.6.2
 
 Package: signing-party
 Architecture: all
@@ -16,8 +16,8 @@ Description: tools for signing GnuPG keys
  .
   * caff: CA - Fire and Forget signs and mails a key
   * pgp-clean: removes all non-self signatures from key
-  * gpg-mailkeys -- simply mail out a signed key to its owner
-  * gpg-key2ps -- generate PostScript file with fingerprint paper strips
+  * gpg-mailkeys: simply mail out a signed key to its owner
+  * gpg-key2ps: generate PostScript file with fingerprint paper strips
   * gpgsigs: annotates list of GnuPG keys with already done signatures
  .
- http://pgp-tools.alioth.debian.org/
+ Homepage: http://pgp-tools.alioth.debian.org/
