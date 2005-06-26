@@ -1,0 +1,20 @@
+Running caff with gpg-agent
+---------------------------
+
+gpg-agent is part of GnuPG 2 (aka 1.9), but runs also with gpg 1.x binaries.
+
+0. Debian users apt-get install gnupg-agent and one of the pinentry-* packages.
+
+1. Put "use-agent" in ~/.caff/gnupghome/gpg.conf.
+
+2. Optionally edit ~/.gnupg/gpg-agent.conf, e.g.:
+   default-cache-ttl 600
+   pinentry-program /usr/bin/pinentry-gtk-2
+
+2. Start the agent:
+   $ eval `gpg-agent --daemon`
+
+3. Run caff.
+
+ -- Christoph Berg <cb@df7cb.de>  Mon, 27 Jun 2005 01:31:27 +0200
+
