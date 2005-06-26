@@ -39,7 +39,7 @@ caff -- CA - Fire and Forget
 
 =over
 
-=item B<caff> [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
+=item B<caff> [-mMR] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
 
 =back
 
@@ -54,6 +54,14 @@ sigs and sigs done by you.
 =head1 OPTIONS
 
 =over
+
+=item B<-m> B<-M>
+
+Send/do not send mail after signing. Default is to ask the user for each uid.
+
+=item B<-R>
+
+Do not retrieve the key to be signed from a keyserver.
 
 =item B<-u> I<yourkeyid>
 
@@ -162,6 +170,7 @@ use File::Temp qw{tempdir};
 use MIME::Entity;
 use Fcntl;
 use IO::Select;
+use Getopt::Std;
 use GnuPG::Interface;
 
 my %CONFIG;
@@ -368,7 +377,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 sub usage() {
 	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
-	print STDERR "Usage: $PROGRAM_NAME [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+	print STDERR "Usage: $PROGRAM_NAME [-mMR] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
 	exit 1;
 };
 
@@ -485,12 +494,13 @@ sub sanitize_uid($) {
 
 my $USER;
 my @KEYIDS;
+my %opt;
+
+getopts('mMRu:', \%opt);
 
 usage() unless scalar @ARGV >= 1;
-if ($ARGV[0] eq '-u') {
-	usage() unless scalar @ARGV >= 3;
-	shift @ARGV;
-	$USER = shift @ARGV;
+if ($opt{u}) {
+	$USER = $opt{u};
 	$USER =~ s/^0x//i;
 	unless ($USER =~ /^[A-Za-z0-9]{8,8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "-u $USER is not a keyid.\n";
@@ -539,7 +549,7 @@ for my $keyid (@ARGV) {
 #############################
 my @keyids_ok;
 my @keyids_failed;
-if ($CONFIG{'no-download'}) {
+if ($CONFIG{'no-download'} or $opt{R}) {
 	@keyids_ok = @KEYIDS;
 } else {
 	my $gpg = GnuPG::Interface->new();
@@ -798,7 +808,9 @@ for my $keyid (@keyids_ok) {
 	if (scalar @UIDS == 0) {
 		info("found no signed uids for $keyid");
 	} else {
-		my @attached ;
+		next if $opt{M}; # do not send mail
+
+		my @attached;
 		for my $uid (@UIDS) {
 			trace("UID: $uid->{'text'}\n");
 			unless ($uid->{'text'} =~ /@/) {
@@ -812,8 +824,7 @@ for my $keyid (@keyids_ok) {
 			if ($uid->{'text'} =~ /@/) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				my $send = ask("Send mail to '$address' for $uid->{'text'}?", 1);
-				if ($send) {
+				if ($opt{m} or ask("Send mail to '$address' for $uid->{'text'}?", 1)) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
