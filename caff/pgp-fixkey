@@ -33,22 +33,21 @@
 
 =head1 NAME
 
-pgp-clean -- remove all non-self signatures from key
+pgp-fixkey -- remove broken packets from keys
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<pgp-clean> I<keyid> [I<keyid> ...]
+=item B<pgp-fixkey> I<keyid> [I<keyid> ...]
 
 =back
 
 =head1 DESCRIPTION
 
-B<pgp-clean> takes a list of keyids on the command line and outputs an
-ascii-armored keyring on stdout for each key with all signatures except
-self-signatures stripped.  Its use is to reduce the size of keys sent out after
-signing (e.g. with B<caff>).
+B<pgp-fixkey> removes broken packets from keys in the GnuPG keyring that make
+GnuPG spew ugly warnings.  It takes a list of keyids on the command line and
+only cleans those keys.
 
 =head1 OPTIONS
 
@@ -75,8 +74,6 @@ caff(1), gpg(1).
 =head1 AUTHOR
 
 Peter Palfrader <peter@palfrader.org>
-
-This manpage was written in POD by Christoph Berg <cb@df7cb.de>.
 
 =cut
 
@@ -230,7 +227,7 @@ my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 
 sub usage() {
-	print STDERR "pgp-clean $VERSION - (c) 2004, 2005 Peter Palfrader\n";
+	print STDERR "pgp-fixkey $VERSION - (c) 2004, 2005 Peter Palfrader\n";
 	print STDERR "Usage: $PROGRAM_NAME <keyid> [<keyid> ...]\n";
 	exit 1;
 };
@@ -247,9 +244,6 @@ for my $keyid (@ARGV) {
 };
 
 
-##################
-# export and prune
-##################
 KEYS:
 for my $keyid (@KEYIDS) {
 	# get key listing
