@@ -325,7 +325,7 @@ for my $keyid (@KEYIDS) {
 		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
 			debug("[sigremoval] doing line $line.");
 			my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
-			if ($signer eq ('-1' x 16)) {
+			if ($signer eq ('0' x 16)) {
 				debug("[sigremoval] not interested in that sig ($signer).");
 				$answer = "yes";
 			};
