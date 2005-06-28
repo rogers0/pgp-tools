@@ -641,6 +641,10 @@ for my $keyid (@keyids_ok) {
 		next;
 	};
 	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	if (scalar @publine == 0) {
+		warn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).\n");
+		next;
+	};
 	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
 	if (scalar @publine > 0) {
 		warn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint\n");
