@@ -39,15 +39,15 @@ pgp-fixkey -- remove broken packets from keys
 
 =over
 
-=item B<pgp-fixkey> I<keyid> [I<keyid> ...]
+=item B<pgp-fixkey> [I<keyid> [I<keyid> ...]]
 
 =back
 
 =head1 DESCRIPTION
 
 B<pgp-fixkey> removes broken packets from keys in the GnuPG keyring that make
-GnuPG spew ugly warnings.  It takes a list of keyids on the command line and
-only cleans those keys.
+GnuPG spew ugly warnings.  It optionally takes a list of keyids on the command
+line and only cleans those keys.
 
 =head1 OPTIONS
 
@@ -99,7 +99,7 @@ sub info($) {
 };
 sub debug($) {
 	my ($line) = @_;
-	print STDERR "[DEBUG] $line\n";
+	#print STDERR "[DEBUG] $line\n";
 };
 sub trace($) {
 	my ($line) = @_;
@@ -228,11 +228,10 @@ my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 sub usage() {
 	print STDERR "pgp-fixkey $VERSION - (c) 2004, 2005 Peter Palfrader\n";
-	print STDERR "Usage: $PROGRAM_NAME <keyid> [<keyid> ...]\n";
+	print STDERR "Usage: $PROGRAM_NAME [<keyid> [<keyid> ...]]\n";
 	exit 1;
 };
 
-usage() unless scalar @ARGV >= 1;
 my @KEYIDS;
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
@@ -243,6 +242,35 @@ for my $keyid (@ARGV) {
 	push @KEYIDS, uc($keyid);
 };
 
+# find a list of all interesting keys.
+if (scalar @KEYIDS == 0) {
+	my $gpg = GnuPG::Interface->new();
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fast-list-mode', '--fixed-list-mode' ] );
+	my $pid = $gpg->list_sigs(handles => $handles);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+	if ($stdout eq '') {
+		die ("No data from gpg for list-sigs\n");
+	};
+
+	my $thiskey = undef;
+	for my $line (split /\n/, $stdout) {
+		debug("Checking line $line");
+		my ($type, undef, undef, undef, $keyid, $created, undef, undef, undef, undef) = split /:/, $line;
+		if ($type eq 'pub') {
+			$thiskey = $keyid;
+			debug("Found key $thiskey");
+		} elsif ($type eq 'sig' || $type eq 'rev') {
+			if (($keyid eq '0' x 16) && ($created == 0)) {
+				push @KEYIDS, $thiskey if defined $thiskey;
+				info("Adding $thiskey");
+				$thiskey = undef;
+			};
+		};
+	};
+}
 
 KEYS:
 for my $keyid (@KEYIDS) {
@@ -261,7 +289,7 @@ for my $keyid (@KEYIDS) {
 	};
 	my $keyinfo = $stdout;
 	my @publine = grep { /^pub/ } (split /\n/, $stdout);
-	my ($dummy1, $dummy2, $dummy3, $dummy4, $longkeyid, $dummy6, $dummy7, $dummy8, $dummy9, $dummy10, $dummy11, $flags) = split /:/, pop @publine;
+	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
 	my $can_encrypt = $flags =~ /E/;
 	unless (defined $longkeyid) {
 		warn ("Didn't find public keyid in edit dialog of key $keyid.\n");
@@ -298,7 +326,7 @@ for my $keyid (@KEYIDS) {
 	debug("Parsing stdout output.");
 	for my $line (split /\n/, $stdout) {
 		debug("Checking line $line");
-		my ($type, $dummy2, $dummy3, $dummy4, $dummy5, $dummy6, $dummy7, $dummy8, $dummy9, $uidtext) = split /:/, $line;
+		my ($type, undef, undef, undef, undef, undef, undef, undef, undef, $uidtext) = split /:/, $line;
 		if ($type eq 'sub') {
 			$number_of_subkeys++;
 		};
@@ -324,7 +352,7 @@ for my $keyid (@KEYIDS) {
 		my $answer = "no";
 		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
 			debug("[sigremoval] doing line $line.");
-			my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
+			my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
 			if ($signer eq ('0' x 16)) {
 				debug("[sigremoval] not interested in that sig ($signer).");
 				$answer = "yes";
