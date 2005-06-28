@@ -240,7 +240,7 @@ sub readwrite_gpg($$$$$%) {
 
 	trace("Entering readwrite_gpg.");
 
-	my ($first_line, $dummy) = split /\n/, $in;
+	my ($first_line, undef) = split /\n/, $in;
 	debug("readwrite_gpg sends ".(defined $first_line ? $first_line : "<nothing>"));
 
 	local $INPUT_RECORD_SEPARATOR = undef;
@@ -632,7 +632,7 @@ for my $keyid (@keyids_ok) {
 	};
 	my $keyinfo = $stdout;
 	my @publine = grep { /^pub/ } (split /\n/, $stdout);
-	my ($dummy1, $dummy2, $dummy3, $dummy4, $longkeyid, $dummy6, $dummy7, $dummy8, $dummy9, $dummy10, $dummy11, $flags) = split /:/, pop @publine;
+	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
 	my $can_encrypt = $flags =~ /E/;
 	unless (defined $longkeyid) {
 		warn ("Didn't find public keyid in edit dialog of key $keyid.\n");
@@ -697,7 +697,7 @@ for my $keyid (@keyids_ok) {
 		debug("Parsing stdout output.");
 		for my $line (split /\n/, $stdout) {
 			debug("Checking line $line");
-			my ($type, $dummy2, $dummy3, $dummy4, $dummy5, $dummy6, $dummy7, $dummy8, $dummy9, $uidtext) = split /:/, $line;
+			my ($type, undef, undef, undef, undef, undef, undef, undef, undef, $uidtext) = split /:/, $line;
 			if ($type eq 'sub') {
 				$number_of_subkeys++;
 			};
@@ -757,7 +757,7 @@ for my $keyid (@keyids_ok) {
 			my $answer = "no";
 			if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
 				debug("[sigremoval] doing line $line.");
-				my ($dummy1, $dummy2, $dummy3, $dummy4, $signer, $created, $dummy7, $dummy8, $dummy9) = split /:/, $line;
+				my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
 				if ($signer eq $longkeyid) {
 					debug("[sigremoval] selfsig ($signer).");
 					$answer = "no";
