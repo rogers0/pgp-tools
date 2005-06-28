@@ -814,7 +814,7 @@ for my $keyid (@keyids_ok) {
 			-d $keydir  || mkpath($keydir , 0, 0700) or die ("Cannot create $keydir $!\n");
 
 			my $keyfile = "$keydir/$longkeyid.key.$uid_number.".sanitize_uid($this_uid_text).".asc";
-			open (KEY, ">$keyfile") or die ("Cannot open $keyfile\n");
+			open (KEY, ">$keyfile") or die ("Cannot open $keyfile: $!\n");
 			print KEY $asciikey;
 			close KEY;
 
@@ -850,7 +850,7 @@ for my $keyid (@keyids_ok) {
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
 					my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
-					open (KEY, ">$mailfile") or die ("Cannot open $mailfile\n");
+					open (KEY, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
 					print KEY $mail;
 					close KEY;
 				};
