@@ -510,7 +510,7 @@ if ($opt{u}) {
 };
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
-	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
+	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8}|[A-Za-z0-9]{32})?$/) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage();
 	};
@@ -573,19 +573,29 @@ if ($CONFIG{'no-download'} or $opt{R}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 		my $handled = 0;
 		for my $line (split /\n/, $status) {
-			if ($line =~ /^\[GNUPG:\] IMPORT_OK/) {
-				push @keyids_ok, shift @KEYIDS;
+			if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
+				my $imported_key = $1;
+				if ($keyid ne $imported_key &&
+				    $keyid ne substr($imported_key, -16) &&
+				    $keyid ne substr($imported_key, -8)) {
+				    warn("Imported unexpected key.  expected: $keyid; got: $imported_key.\n");
+				    next;
+				};
+				push @keyids_ok, $keyid;
+				shift @KEYIDS;
 				$handled = 1;
 				last;
 			} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
-				push @keyids_failed, shift @KEYIDS;
+				push @keyids_failed, $keyid;
+				shift @KEYIDS;
 				$handled = 1;
 				last;
 			};
 		};
 		unless ($handled) {
 			notice ("Huh, what's up with $keyid?");
-			push @keyids_failed, shift @KEYIDS;
+			push @keyids_failed, $keyid;
+			shift @KEYIDS;
 		};
 	};
 	die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
@@ -630,14 +640,21 @@ for my $keyid (@keyids_ok) {
 		warn ("No data from gpg for list-key $keyid\n");
 		next;
 	};
-	my $keyinfo = $stdout;
 	my @publine = grep { /^pub/ } (split /\n/, $stdout);
 	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
-	my $can_encrypt = $flags =~ /E/;
-	unless (defined $longkeyid) {
-		warn ("Didn't find public keyid in edit dialog of key $keyid.\n");
+	if (scalar @publine > 0) {
+		warn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint\n");
 		next;
 	};
+	unless (defined $longkeyid) {
+		warn ("Didn't find public keyid in --list-key of key $keyid.\n");
+		next;
+	};
+	unless (defined $flags) {
+		warn ("Didn't find flags in --list-key of key $keyid.\n");
+		next;
+	};
+	my $can_encrypt = $flags =~ /E/;
 
 	# export the key
 	################
@@ -778,9 +795,9 @@ for my $keyid (@keyids_ok) {
 		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 
-		my $asciikey = export_key($tempdir, $longkeyid);
+		my $asciikey = export_key($tempdir, $keyid);
 		if ($asciikey eq '') {
-			warn ("No data from gpg for export $longkeyid\n");
+			warn ("No data from gpg for export $keyid\n");
 			next;
 		};
 
