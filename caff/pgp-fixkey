@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
-# caff  --  CA - Fire and Forget
-# $Id: caff 37 2005-02-28 23:20:15Z weasel $
+# pgp-clean  --  remove all non-self signatures from key
+# $Id$
 #
 # Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 #
@@ -85,7 +85,7 @@ use Fcntl;
 use IO::Select;
 use GnuPG::Interface;
 
-my $REVISION = '$Rev: 37 $';
+my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
