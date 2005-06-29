@@ -55,15 +55,19 @@ sigs and sigs done by you.
 
 =over
 
-=item B<-m> B<-M>
+=item B<-m>, B<--mail>
 
-Send/do not send mail after signing. Default is to ask the user for each uid.
+Send mail after signing. Default is to ask the user for each uid.
 
-=item B<-R>
+=item B<-M>, B<--no-mail>
+
+Do not send mail after signing. Default is to ask the user for each uid.
+
+=item B<-R>, B<--no-download>
 
 Do not retrieve the key to be signed from a keyserver.
 
-=item B<-u> I<yourkeyid>
+=item B<-u> I<yourkeyid>, B<--local-user> I<yourkeyid>
 
 Select the key that is used for signing, in case you have more than one key.
 
@@ -193,7 +197,7 @@ use Text::Template;
 use MIME::Entity;
 use Fcntl;
 use IO::Select;
-use Getopt::Std;
+use Getopt::Long;
 use GnuPG::Interface;
 
 my %CONFIG;
@@ -416,10 +420,17 @@ my  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($NOW);
 my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 
-sub usage() {
-	print STDERR "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
-	print STDERR "Usage: $PROGRAM_NAME [-mMR] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
-	exit 1;
+sub version($) {
+	my ($fd) = @_;
+	print $fd "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
+};
+
+sub usage($$) {
+	my ($fd, $exitcode) = @_;
+	version($fd);
+	print $fd "Usage: $PROGRAM_NAME [-mMR] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+	print $fd "Consult the manual page for more information.\n";
+	exit $exitcode;
 };
 
 sub export_key($$) {
@@ -529,29 +540,58 @@ sub sanitize_uid($) {
 
 my $USER;
 my @KEYIDS;
-my %opt;
+my $params;
 
-getopts('mMRu:', \%opt);
+Getopt::Long::config('bundling');
+if (!GetOptions (
+	'-h'              =>  \$params->{'help'},
+	'--help'          =>  \$params->{'help'},
+	'--version'       =>  \$params->{'version'},
+	'-V'              =>  \$params->{'version'},
+	'-u=s'            =>  \$params->{'local-user'},
+	'--local-user=s'  =>  \$params->{'local-user'},
+	'-m'              =>  \$params->{'mail'},
+	'--mail'          =>  \$params->{'mail'},
+	'-M'              =>  \$params->{'no-mail'},
+	'--no-mail'       =>  \$params->{'no-mail'},
+	'-R'              =>  \$params->{'no-download'},
+	'--no-download'   =>  \$params->{'no-download'},
+	)) {
+	usage(\*STDERR, 1);
+};
+if ($params->{'help'}) {
+	usage(\*STDOUT, 0);
+};
+if ($params->{'version'}) {
+	version(\*STDOUT);
+	exit(0);
+};
+usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
-usage() unless scalar @ARGV >= 1;
-if ($opt{u}) {
-	$USER = $opt{u};
+
+
+if ($params->{'local-user'}) {
+	$USER = $params->{'local-user'};
 	$USER =~ s/^0x//i;
 	unless ($USER =~ /^[A-Za-z0-9]{8,8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "-u $USER is not a keyid.\n";
-		usage();
+		usage(\*STDERR, 1);
 	};
 	$USER = uc($USER);
 };
+
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
 	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8}|[A-Za-z0-9]{32})?$/) {
 		print STDERR "$keyid is not a keyid.\n";
-		usage();
+		usage(\*STDERR, 1);
 	};
 	push @KEYIDS, uc($keyid);
 };
 
+$CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
+$CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
+$CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
 
 
 #################
@@ -584,7 +624,7 @@ for my $keyid (@ARGV) {
 #############################
 my @keyids_ok;
 my @keyids_failed;
-if ($CONFIG{'no-download'} or $opt{R}) {
+if ($CONFIG{'no-download'}) {
 	@keyids_ok = @KEYIDS;
 } else {
 	my $gpg = GnuPG::Interface->new();
@@ -864,7 +904,7 @@ for my $keyid (@keyids_ok) {
 	if (scalar @UIDS == 0) {
 		info("found no signed uids for $keyid");
 	} else {
-		next if $opt{M}; # do not send mail
+		next if $CONFIG{'no-mail'}; # do not send mail
 
 		my @attached;
 		for my $uid (@UIDS) {
@@ -880,7 +920,7 @@ for my $keyid (@keyids_ok) {
 			if ($uid->{'text'} =~ /@/) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				if ($opt{m} or ask("Send mail to '$address' for $uid->{'text'}?", 1)) {
+				if ($CONFIG{'mail'} or ask("Send mail to '$address' for $uid->{'text'}?", 1)) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
