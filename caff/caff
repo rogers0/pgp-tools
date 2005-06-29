@@ -150,6 +150,28 @@ Default: B<0>.
 
 If true, then skip the signing step. Default: B<0>.
 
+=item B<mail-template> [string]
+
+Email template which is used as the body text for the email sent out.
+instead of the default text if specified. The following perl variables
+can be used in the template:
+
+=over
+
+=item B<{owner}> [string]
+
+Your name as specified in the L<B<owner>|/item_owner__5bstring_5d> setting.
+
+=item B<{key}> [string]
+
+The keyid of the key you signed.
+
+=item B<{@uids}> [array]
+
+The UIDs for which signatures are included in the mail.
+
+=back
+
 =back
 
 =head1 AUTHOR
@@ -167,6 +189,7 @@ use IO::Handle;
 use English;
 use File::Path;
 use File::Temp qw{tempdir};
+use Text::Template;
 use MIME::Entity;
 use Fcntl;
 use IO::Select;
@@ -202,6 +225,24 @@ sub load_config() {
 	$CONFIG{'secret-keyring'} = $ENV{'HOME'}.'/.gnupg/secring.gpg' unless defined $CONFIG{'secret-keyring'};
 	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
 	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
+	$CONFIG{'mail-template'} = <<'EOM' unless defined $CONFIG{'mail-template'};
+Hi,
+
+please find attached the user id{(scalar @uids >= 2 ? 's' : '')}.
+{foreach $uid (@uids) {
+    $OUT .= "\t".$uid."\n";
+};} of your key {$key} signed by me.
+
+Note that I did not upload your key to any keyservers. If you want this
+new signature to be available to others, please upload it yourself.
+With GnuPG this can be done using
+	gpg --keyserver subkeys.pgp.net --send-key {$key}
+
+If you have any questions, don't hesitate to ask.
+
+Regards,
+{$owner}
+EOM
 };
 
 sub notice($) {
@@ -402,24 +443,18 @@ sub export_key($$) {
 sub send_mail($$$@) {
 	my ($address, $can_encrypt, $key_id, @keys) = @_;
 
-	my $message = "Hi,\n\n";
+	my $template = Text::Template->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'})
+	    or die "Error creating template: $Text::Template::ERROR";
 
-	$message .= 'please find attached the user id'.(scalar @keys >= 2 ? 's' : '')."\n";
+	my @uids;
 	for my $key (@keys) {
-		$message .= "\t".$key->{'text'}."\n";
+	    push @uids, $key->{'text'};
 	};
-	$message .= qq{of your key $key_id signed by me.
+	my $message = $template->fill_in(HASH => { key => $key_id,
+						   uids => \@uids,
+						   owner => $CONFIG{'owner'}})
+	    or die "Error filling template in: $Text::Template::ERROR";
 
-Note that I did not upload your key to any keyservers. If you want this
-new signature to be available to others, please upload it yourself.
-With GnuPG this can be done using
-	gpg --keyserver subkeys.pgp.net --send-key $key_id
-
-If you have any questions, don't hesitate to ask.
-
-Regards,
-$CONFIG{'owner'}
-};
 	my $message_entity = MIME::Entity->build(
 		Type        => "text/plain",
 		Charset     => "utf-8",

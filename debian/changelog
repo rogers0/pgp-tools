@@ -1,3 +1,9 @@
+signing-party (0.4.1-XXX) unreleased; urgency=low
+
+  * Depend on libtext-template-perl as caff needs it.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 29 Jun 2005 16:36:08 +0200
+
 signing-party (0.4.1-1) unstable; urgency=low
 
   * gpg-key2ps now works with revoked subkeys, thanks Christof Douma
