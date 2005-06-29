@@ -263,7 +263,7 @@ if (scalar @KEYIDS == 0) {
 			$thiskey = $keyid;
 			debug("Found key $thiskey");
 		} elsif ($type eq 'sig' || $type eq 'rev') {
-			if (($keyid eq '0' x 16) && ($created == 0)) {
+			if (($keyid eq '0' x 16) || ($created == 0)) {
 				push @KEYIDS, $thiskey if defined $thiskey;
 				info("Adding $thiskey");
 				$thiskey = undef;
@@ -353,8 +353,8 @@ for my $keyid (@KEYIDS) {
 		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
 			debug("[sigremoval] doing line $line.");
 			my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
-			if ($signer eq ('0' x 16)) {
-				debug("[sigremoval] not interested in that sig ($signer).");
+			if (($signer eq '0' x 16) || ($created == 0)) {
+				debug("[sigremoval] not interested in that sig ($signer, created: $created).");
 				$answer = "yes";
 			};
 		} else {
