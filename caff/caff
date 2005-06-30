@@ -4,6 +4,7 @@
 # $Id$
 #
 # Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
+# Copyright (c) 2005 Christoph Berg <cb@df7cb.de>
 #
 # All rights reserved.
 #
@@ -91,13 +92,9 @@ Example:
 	$CONFIG{email} = q{peter@palfrader.org};
 	$CONFIG{keyid} = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 
-=head2 Valid keys
+=head2 Required basic settings
 
 =over
-
-=item B<caffhome> [string]
-
-Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
 =item B<owner> [string]
 
@@ -113,14 +110,13 @@ A list of your keys.  This is used to determine which signatures to keep
 in the pruning step.  If you select a key using B<-u> it has to be in
 this list.  B<REQUIRED>.
 
-=item B<export-sig-age> [seconds]
+=head2 General settings
 
-Don't export UIDs by default, on which your latest signature is older
-than this age.  Default: B<24*60*60> (i.e. one day).
+=item B<caffhome> [string]
 
-=item B<keyserver> [string]
+Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
-Keyserver to download keys from.  Default: B<subkeys.pgp.net>.
+=head2 GnuPG settings
 
 =item B<gpg> [string]
 
@@ -145,14 +141,38 @@ Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
 
 An additional keyid to encrypt messages to. Default: none.
 
+=head2 Keyserver settings
+
+=item B<keyserver> [string]
+
+Keyserver to download keys from.  Default: B<subkeys.pgp.net>.
+
 =item B<no-download> [boolean]
 
 If true, then skip the step of fetching keys from the keyserver.
 Default: B<0>.
 
+=head2 Signing settings
+
 =item B<no-sign> [boolean]
 
 If true, then skip the signing step. Default: B<0>.
+
+=item B<export-sig-age> [seconds]
+
+Don't export UIDs by default, on which your latest signature is older
+than this age.  Default: B<24*60*60> (i.e. one day).
+
+=head2 Mail settings
+
+=item B<mail> [boolean]
+
+Do not prompt for sending mail, just do it. Default: B<0>.
+
+=item B<no-mail> [boolean]
+
+Do not prompt for sending mail. The messages are still written to
+$CONFIG{caffhome}/keys/. Default: B<0>.
 
 =item B<mail-template> [string]
 
@@ -183,9 +203,15 @@ Default: none.
 
 =back
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Peter Palfrader <peter@palfrader.org>
+=over
+
+=item Peter Palfrader <peter@palfrader.org>
+
+=item Christoph Berg <cb@df7cb.de>
+
+=back
 
 =head1 WEBSITE
 
@@ -412,7 +438,7 @@ my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET
 my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 load_config;
-my $USER_AGENT = "caff $VERSION - (c) 2004, 2005 Peter Palfrader";
+my $USER_AGENT = "caff $VERSION - (c) 2004, 2005 Peter Palfrader et al.";
 
 my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
 my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
@@ -427,7 +453,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 sub version($) {
 	my ($fd) = @_;
-	print $fd "caff $VERSION - (c) 2004, 2005 Peter Palfrader\n";
+	print $fd "caff $VERSION - (c) 2004, 2005 Peter Palfrader et al.\n";
 };
 
 sub usage($$) {
