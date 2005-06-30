@@ -869,7 +869,7 @@ for my $keyid (@keyids_ok) {
 			} else {
 				debug("keep it.");
 				$have_one = 1;
-				$this_uid_text = ($type eq 'uid') ? $uidtext : 'attribute';
+				$this_uid_text = ($type eq 'uid') ? $uidtext : '[attribute]';
 				$is_uat = $type eq 'uat';
 			};
 			$i++;
@@ -930,7 +930,7 @@ for my $keyid (@keyids_ok) {
 			print KEY $asciikey;
 			close KEY;
 
-			push @UIDS, { text => $this_uid_text, key => $asciikey, serial => $uid_number };
+			push @UIDS, { text => $this_uid_text, key => $asciikey, serial => $uid_number, "is_uat" => $is_uat };
 
 			info("$longkeyid $uid_number $this_uid_text done.");
 		} else {
@@ -946,7 +946,10 @@ for my $keyid (@keyids_ok) {
 		my @attached;
 		for my $uid (@UIDS) {
 			trace("UID: $uid->{'text'}\n");
-			unless ($uid->{'text'} =~ /@/) {
+			if ($uid->{'is_uat'}) {
+				my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email sent?", 1);
+				push @attached, $uid if $attach;
+			} elsif ($uid->{'text'} !~ /@/) {
 				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email sent?", 1);
 				push @attached, $uid if $attach;
 			};
@@ -954,7 +957,7 @@ for my $keyid (@keyids_ok) {
 
 		notice("Key has no encryption capabilities, mail will be sent unencrypted") unless $can_encrypt;
 		for my $uid (@UIDS) {
-			if ($uid->{'text'} =~ /@/) {
+			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
 				if ($CONFIG{'mail'} or ask("Send mail to '$address' for $uid->{'text'}?", 1)) {
