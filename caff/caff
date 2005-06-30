@@ -433,6 +433,9 @@ sub usage($$) {
 	exit $exitcode;
 };
 
+######
+# export key $keyid from $gnupghome
+######
 sub export_key($$) {
 	my ($gnupghome, $keyid) = @_;
 
@@ -450,6 +453,34 @@ sub export_key($$) {
 	return $stdout;
 };
 
+######
+# import a key from the scalar $asciikey into a gpg homedirectory in $tempdir
+######
+sub import_key($$) {
+	($gnupghome, $asciikey) = @_;
+
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init( 'homedir' => $gnupghome );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my $pid = $gpg->import_keys(handles => $handles);
+	my ($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
+		return undef;
+	};
+	return 1;
+};
+
+
+######
+# Send an email to $address.  If $can_encrypt is true then the mail
+# will be PGP/MIME encrypted to $longkeyid.
+#
+# $longkeyid, $uid, and @attached will be used in the email and the template.
+######
 #send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 sub send_mail($$$@) {
 	my ($address, $can_encrypt, $key_id, @keys) = @_;
@@ -529,6 +560,9 @@ sub send_mail($$$@) {
 	$message_entity->stringify();
 };
 
+######
+# clean up a UID so that it can be used on the FS.
+######
 sub sanitize_uid($) {
 	my ($uid) = @_;
 
@@ -537,6 +571,43 @@ sub sanitize_uid($) {
 	trace2("[sanitize_uid] changed UID from $uid to $good_uid.\n") if $good_uid ne $uid;
 	return $good_uid;
 };
+
+sub delete_signatures($$$$$) {
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $keyids) =@_;
+
+	my ($stdout, $stderr, $status) =
+		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+
+	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
+		# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
+		my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+		$stdout =~ s/\n/\\n/g;
+		notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
+		my $line = pop @sigline;
+		my $answer = "no";
+		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
+			debug("[sigremoval] doing line $line.");
+			my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
+			if ($signer eq $longkeyid) {
+				debug("[sigremoval] selfsig ($signer).");
+				$answer = "no";
+			} elsif (grep { $signer eq $_ } @{$keyids}) {
+				debug("[sigremoval] signed by us ($signer).");
+				$answer = "no";
+				$signed_by_me = $signed_by_me > $created ? $signed_by_me : $created;
+			} else {
+				debug("[sigremoval] not interested in that sig ($signer).");
+				$answer = "yes";
+			};
+		} else {
+			debug("[sigremoval] no sig line here, only got: ".$stdout);
+		};
+		($stdout, $stderr, $status) =
+			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
+	};
+};
+
+
 
 my $USER;
 my @KEYIDS;
@@ -749,20 +820,12 @@ for my $keyid (@keyids_ok) {
 		my $this_uid_text = '';
 		$uid_number++;
 		debug("Doing key $keyid, uid $uid_number");
+		my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
 
 		# import into temporary gpghome
 		###############################
-		my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
-		my $gpg = GnuPG::Interface->new();
-		$gpg->call( $CONFIG{'gpg'} );
-		$gpg->options->hash_init( 'homedir' => $tempdir );
-		$gpg->options->meta_interactive( 0 );
-		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-		my $pid = $gpg->import_keys(handles => $handles);
-		my ($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
-		waitpid $pid, 0;
-
-		if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
+		my $result = import_key($tempdir, $asciikey);
+		unless ($result) {
 			warn ("Could not import $keyid into temporary gnupg.\n");
 			next;
 		};
@@ -841,36 +904,10 @@ for my $keyid (@keyids_ok) {
 		###################
 		my $signed_by_me = 0;
 		readwrite_gpg("1\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-		($stdout, $stderr, $status) =
-			readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $CONFIG{'keyid'});
 
-		while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
-			# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
-			my @sigline = grep { /^sig/ } (split /\n/, $stdout);
-			$stdout =~ s/\n/\\n/g;
-			notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
-			my $line = pop @sigline;
-			my $answer = "no";
-			if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
-				debug("[sigremoval] doing line $line.");
-				my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
-				if ($signer eq $longkeyid) {
-					debug("[sigremoval] selfsig ($signer).");
-					$answer = "no";
-				} elsif (grep { $signer eq $_ } @{$CONFIG{'keyid'}}) {
-					debug("[sigremoval] signed by us ($signer).");
-					$answer = "no";
-					$signed_by_me = $signed_by_me > $created ? $signed_by_me : $created;
-				} else {
-					debug("[sigremoval] not interested in that sig ($signer).");
-					$answer = "yes";
-				};
-			} else {
-				debug("[sigremoval] no sig line here, only got: ".$stdout);
-			};
-			($stdout, $stderr, $status) =
-				readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
-		};
+
+
 		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 
