@@ -457,7 +457,7 @@ sub export_key($$) {
 # import a key from the scalar $asciikey into a gpg homedirectory in $tempdir
 ######
 sub import_key($$) {
-	($gnupghome, $asciikey) = @_;
+	my ($gnupghome, $asciikey) = @_;
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
@@ -572,8 +572,10 @@ sub sanitize_uid($) {
 	return $good_uid;
 };
 
-sub delete_signatures($$$$$) {
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $keyids) =@_;
+sub delete_signatures($$$$$$) {
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $keyids) =@_;
+
+	my $signed_by_me = 0;
 
 	my ($stdout, $stderr, $status) =
 		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
@@ -605,6 +607,8 @@ sub delete_signatures($$$$$) {
 		($stdout, $stderr, $status) =
 			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
 	};
+
+	return $signed_by_me;
 };
 
 
@@ -865,7 +869,7 @@ for my $keyid (@keyids_ok) {
 			if ($uid_number != $i) {
 				debug("mark for deletion.");
 				readwrite_gpg("$i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-				$delete_some = 1;
+				$delete_some++;
 			} else {
 				debug("keep it.");
 				$have_one = 1;
@@ -880,12 +884,30 @@ for my $keyid (@keyids_ok) {
 			info("key $keyid done.");
 			last;
 		};
+
+		my $prune_some_sigs_on_uid;
+		my $prune_all_sigs_on_uid;
 		if ($is_uat) {
-			notice("Can't handle attribute userid of key $keyid.");
-			next;
+			debug("handling attribute userid of key $keyid.");
+			if ($uid_number == 1) {
+				debug(" attribute userid is #1, unmarking #2 for deletion.");
+				readwrite_gpg("2\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				$delete_some--;
+				$prune_some_sigs_on_uid = 1;
+				$prune_all_sigs_on_uid = 2;
+			} else {
+				debug("attribute userid is not #1, unmarking #1 for deletion.");
+				readwrite_gpg("1\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				$delete_some--;
+				$prune_some_sigs_on_uid = 2;
+				$prune_all_sigs_on_uid = 1;
+			};
+		} else {
+			$prune_some_sigs_on_uid = 1;
 		};
+
 		if ($delete_some) {
-			debug("need to delete a few uids.");
+			debug("need to delete $delete_some uids.");
 			readwrite_gpg("deluid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
 			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 		};
@@ -902,10 +924,14 @@ for my $keyid (@keyids_ok) {
 
 		# delete signatures
 		###################
-		my $signed_by_me = 0;
-		readwrite_gpg("1\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $CONFIG{'keyid'});
-
+		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
+		my $signed_by_me = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $CONFIG{'keyid'});
+		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark uid from delsig
+		if (defined $prune_all_sigs_on_uid) {
+			readwrite_gpg("$prune_all_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
+			delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, []);
+			readwrite_gpg("$prune_all_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark uid from delsig
+		};
 
 
 		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
