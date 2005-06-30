@@ -875,14 +875,14 @@ for my $keyid (@keyids_ok) {
 			$i++;
 		};
 		debug("Parsing stdout output done.");
-		if ($is_uat) {
-			notice("Can't handle attribute userid of key $keyid.");
-			next;
-		};
 		unless ($have_one) {
 			debug("Uid ".($uid_number-1)." was the last, there is no $uid_number.");
 			info("key $keyid done.");
 			last;
+		};
+		if ($is_uat) {
+			notice("Can't handle attribute userid of key $keyid.");
+			next;
 		};
 		if ($delete_some) {
 			debug("need to delete a few uids.");
