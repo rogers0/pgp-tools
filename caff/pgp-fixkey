@@ -262,9 +262,11 @@ if (scalar @KEYIDS == 0) {
 		if ($type eq 'pub') {
 			$thiskey = $keyid;
 			debug("Found key $thiskey");
+		} elsif (!defined $thiskey) {
+			next;
 		} elsif ($type eq 'sig' || $type eq 'rev') {
 			if (($keyid eq '0' x 16) || ($created == 0)) {
-				push @KEYIDS, $thiskey if defined $thiskey;
+				push @KEYIDS, $thiskey;
 				info("Adding $thiskey");
 				$thiskey = undef;
 			};
