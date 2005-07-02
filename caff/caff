@@ -706,7 +706,7 @@ usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 if ($params->{'local-user'}) {
 	$USER = $params->{'local-user'};
 	$USER =~ s/^0x//i;
-	unless ($USER =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{32}|[A-Z0-9]{40})$/i) {
+	unless ($USER =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{40})$/i) {
 		print STDERR "-u $USER is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -715,7 +715,7 @@ if ($params->{'local-user'}) {
 
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
-	unless ($keyid =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{32}|[A-Z0-9]{40})$/i) {
+	unless ($keyid =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}||[A-Z0-9]{40})$/i) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -761,9 +761,6 @@ if ($CONFIG{'no-download'}) {
 	@keyids_ok = @KEYIDS;
 } else {
 	info ("fetching keys, this will take a while...");
-	if (grep { /^[A-Z0-9]{32}$/ } @KEYIDS) {
-		info ("found v3 key fingerprints in argument list - note that HKP keyservers do not support retrieving v3 keys by fingerprint");
-	}
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
@@ -782,18 +779,21 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	for my $line (split /\n/, $status) {
-		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{8})([0-9A-F]{16})([0-9A-F]{8})([0-9A-F]{0,8})/) {
-			my $imported_key;
-			$imported_key = $1.$2.$3    if $local_keyids{$1.$2.$3}; # v3 key
-			$imported_key = $1.$2.$3.$4 if $local_keyids{$1.$2.$3.$4};
-			$imported_key =       $3.$4 if $local_keyids{      $3.$4};
-			$imported_key =          $4 if $local_keyids{         $4};
-			unless ($imported_key) {
-			    notice ("Imported unexpected key; got: $1$2$3$4. (This is normal for v3 keys.)\n");
+		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
+			my $imported_key = $1;
+			my $whole_fpr = $imported_key;
+			my $long_keyid = substr($imported_key, -16);
+			my $short_keyid = substr($imported_key, -8);
+			my $speced_key;
+			for my $spec (($whole_fpr, $long_keyid, $short_keyid)) {
+				$speced_key = $spec if $local_keyids{$spec};
+			};
+			unless ($speced_key) {
+			    notice ("Imported unexpected key; got: $imported_key\n");
 			    next;
 			};
-			debug ("Imported $imported_key");
-			delete $local_keyids{$imported_key};
+			debug ("Imported $imported_key for $speced_key");
+			delete $local_keyids{$speced_key};
 			unshift @keyids_ok, $imported_key;
 		} elsif ($line =~ /^\[GNUPG:\] (NODATA|IMPORT_RES|IMPORTED) /) {
 		} else {
