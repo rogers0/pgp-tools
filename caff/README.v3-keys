@@ -1,0 +1,24 @@
+v3 keys are evil
+----------------
+
+The good thing about v4 keys is that the fingerprint ends contains the 8 byte
+(16 char) key id at the and and that the 8 byte key id likewise ends in the 4
+byte key id. For v3 keys it does not. This, and some issues with HKP key
+servers make the handling of v3 a PITA.
+
+To sign v3 keys with caff, do the following:
+
+$ caff <keyid>
+
+The key will be imported from the keyserver, but caff thinks it failed. Now run
+caff again with -R:
+
+$ caff -R <keyid>
+
+Since the key is already there, caff will proceed.
+
+
+Of course, this could be automated... patches welcome :)
+
+ -- Christoph Berg <cb@df7cb.de>  Sat,  2 Jul 2005 21:34:48 +0200
+
