@@ -176,7 +176,7 @@ $CONFIG{caffhome}/keys/. Default: B<0>.
 
 =item B<mail-template> [string]
 
-Email template which is used as the body text for the email sent out.
+Email template which is used as the body text for the email sent out
 instead of the default text if specified. The following perl variables
 can be used in the template:
 
