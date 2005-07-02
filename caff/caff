@@ -40,7 +40,7 @@ caff -- CA - Fire and Forget
 
 =over
 
-=item B<caff> [-mMR] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
+=item B<caff> [-eEmMRS] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
 
 =back
 
@@ -56,17 +56,22 @@ sigs and sigs done by you.
 
 =over
 
-=item B<-m>, B<--mail>
+=item B<-e>, B<--export>, B<-E>, B<--no-export>
 
-Send mail after signing. Default is to ask the user for each uid.
+Export/do not export old signatures. Default is to ask the user for each old
+signature.
 
-=item B<-M>, B<--no-mail>
+=item B<-m>, B<--mail>, B<-M>, B<--no-mail>
 
-Do not send mail after signing. Default is to ask the user for each uid.
+Send/do not send mail after signing. Default is to ask the user for each uid.
 
 =item B<-R>, B<--no-download>
 
 Do not retrieve the key to be signed from a keyserver.
+
+=item B<-S>, B<--no-sign>
+
+Do not sign the keys.
 
 =item B<-u> I<yourkeyid>, B<--local-user> I<yourkeyid>
 
@@ -140,6 +145,10 @@ Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
 =item B<also-encrypt-to> [keyid]
 
 An additional keyid to encrypt messages to. Default: none.
+
+=item B<gpg-sign-args> [string]
+
+Additional arguments to pass to gpg. Default: none.
 
 =head2 Keyserver settings
 
@@ -410,8 +419,11 @@ sub readwrite_gpg($$$$$%) {
 	return ($stdout, $stderr, $status);
 };
 
-sub ask($$) {
-	my ($question, $default) = @_;
+sub ask($$;$$) {
+	my ($question, $default, $forceyes, $forceno) = @_;
+	return $default if $forceyes and $forceno;
+	return 1 if $forceyes;
+	return 0 if $forceno;
 	my $answer;
 	while (1) {
 		print $question,' ',($default ? '[Y/n]' : '[y/N]'), ' ';
@@ -459,7 +471,7 @@ sub version($) {
 sub usage($$) {
 	my ($fd, $exitcode) = @_;
 	version($fd);
-	print $fd "Usage: $PROGRAM_NAME [-mMR] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+	print $fd "Usage: $PROGRAM_NAME [-eEmMRS] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
 	print $fd "Consult the manual page for more information.\n";
 	exit $exitcode;
 };
@@ -657,12 +669,18 @@ if (!GetOptions (
 	'-V'              =>  \$params->{'version'},
 	'-u=s'            =>  \$params->{'local-user'},
 	'--local-user=s'  =>  \$params->{'local-user'},
+	'-e'              =>  \$params->{'export'},
+	'--export'        =>  \$params->{'export'},
+	'-E'              =>  \$params->{'no-export'},
+	'--no-export'     =>  \$params->{'no-export'},
 	'-m'              =>  \$params->{'mail'},
 	'--mail'          =>  \$params->{'mail'},
 	'-M'              =>  \$params->{'no-mail'},
 	'--no-mail'       =>  \$params->{'no-mail'},
 	'-R'              =>  \$params->{'no-download'},
 	'--no-download'   =>  \$params->{'no-download'},
+	'-S'              =>  \$params->{'no-sign'},
+	'--no-sign'       =>  \$params->{'no-sign'},
 	)) {
 	usage(\*STDERR, 1);
 };
@@ -699,6 +717,7 @@ for my $keyid (@ARGV) {
 $CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
 $CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
 $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
+$CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
 
 
 #################
@@ -733,6 +752,11 @@ my @keyids_ok;
 if ($CONFIG{'no-download'}) {
 	@keyids_ok = @KEYIDS;
 } else {
+	info ("fetching keys, this will take a while...");
+	if (grep { /^[A-Z0-9]{32}$/ } @KEYIDS) {
+		info ("found v3 key fingerprints in argument list - note that HKP keyservers do not support retrieving v3 keys by fingerprint");
+	}
+
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
@@ -740,9 +764,6 @@ if ($CONFIG{'no-download'}) {
 		'extra_args' => '--keyserver='.$CONFIG{'keyserver'} );
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	
-	my %local_keyids = map { $_ => 1 } @KEYIDS;
-	info ("fetching keys, this will take a while...");
 	my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
 	waitpid $pid, 0;
@@ -751,20 +772,37 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] NODATA 1
 # [GNUPG:] NODATA 1
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
+	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	for my $line (split /\n/, $status) {
-		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
-			my $imported_key = $1;
-			if (not exists $local_keyids{$imported_key}) {
+		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{8})([0-9A-F]{16})([0-9A-F]{8})([0-9A-F]{0,8})/) {
+			my $imported_key;
+			$imported_key = $1.$2.$3    if $local_keyids{$1.$2.$3}; # v3 key
+			$imported_key = $1.$2.$3.$4 if $local_keyids{$1.$2.$3.$4};
+			$imported_key =       $3.$4 if $local_keyids{      $3.$4};
+			$imported_key =          $4 if $local_keyids{         $4};
+			unless ($imported_key) {
 			    warn("Imported unexpected key; got: $imported_key.\n");
 			    next;
 			};
-			info ("Imported $imported_key");
+			debug ("Imported $imported_key");
 			delete $local_keyids{$imported_key};
 			unshift @keyids_ok, $imported_key;
+		} elsif ($line =~ /^\[GNUPG:\] NODATA 1$/) {
+		} elsif ($line =~ /^\[GNUPG:\] IMPORT_RES /) {
+		} else {
+			notice ("got unknown reply from gpg: $line");
 		}
 	};
-	notice ("Import failed for: ". (join ' ', keys %local_keyids).".") if scalar %local_keyids;
+	if (scalar %local_keyids) {
+		notice ("Import failed for: ". (join ' ', keys %local_keyids).".");
+		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
+	}
 };
+
+unless (@keyids_ok) {
+	notice ("No keys to sign found");
+	exit 0;
+}
 
 ###########
 # sign keys
@@ -777,8 +815,10 @@ unless ($CONFIG{'no-sign'}) {
 		push @command, '--local-user', $USER if (defined $USER);
 		push @command, "--homedir=$GNUPGHOME";
 		push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+		push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 		push @command, '--edit', $keyid;
 		push @command, 'sign';
+		push @command, 'save';
 		print join(' ', @command),"\n";
 		system (@command);
 	};
@@ -959,7 +999,7 @@ for my $keyid (@keyids_ok) {
 
 		if ($signed_by_me) {
 			if ($NOW - $signed_by_me > $CONFIG{'export-sig-age'} ) {
-				my $write = ask("Signature on $this_uid_text is old.  Export?", 0);
+				my $write = ask("Signature on $this_uid_text is old.  Export?", 0, $params->{export}, $params->{'no-export'});
 				next unless $write;
 			};
 			my $keydir = "$KEYSBASE/$DATE_STRING";
@@ -1000,7 +1040,7 @@ for my $keyid (@keyids_ok) {
 			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				if ($CONFIG{'mail'} or ask("Send mail to '$address' for $uid->{'text'}?", 1)) {
+				if (ask("Send mail to '$address' for $uid->{'text'}?", 1, $CONFIG{'mail'})) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
