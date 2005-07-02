@@ -19,11 +19,16 @@ Some hints to get the signing done faster:
 
   V3 keys (pgp 2.6x keys) are deprecated.  Not only do they rely on md5 for
   their fingerprint and signatures, they also use the patented IDEA algorithm
-  for encryption.  Many people (like caff's author) refuse to sign v3 keys
-  these days.
+  for encryption.  Also, there are several attacks that make creating new keys
+  with the same keyid trivial.  Others make it possible to create different
+  keys with the same fingerprint (tho the key will not actually contain valid
+  RSA parameters).
 
-  If you want to sign v3 keys, sign v3 separately. Batch processing does not
-  work. See README.v3-keys.
+  Because of these problems a lot of people (like caff's author) refuse to sign
+  v3 keys these days.
+
+  If you still want to sign v3 keys, sign v3 separately. Batch processing does
+  not work. See README.v3-keys.
 
 * Use multiple passes.
 
