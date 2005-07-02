@@ -680,7 +680,7 @@ usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 if ($params->{'local-user'}) {
 	$USER = $params->{'local-user'};
 	$USER =~ s/^0x//i;
-	unless ($USER =~ /^[A-Za-z0-9]{8,8}([A-Za-z0-9]{8})?$/) {
+	unless ($USER =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{32}|[A-Z0-9]{40})$/i) {
 		print STDERR "-u $USER is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -689,7 +689,7 @@ if ($params->{'local-user'}) {
 
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
-	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8}|[A-Za-z0-9]{32})?$/) {
+	unless ($keyid =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{32}|[A-Z0-9]{40})$/i) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -730,7 +730,6 @@ $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
 # receive keys from keyserver
 #############################
 my @keyids_ok;
-my @keyids_failed;
 if ($CONFIG{'no-download'}) {
 	@keyids_ok = @KEYIDS;
 } else {
@@ -742,46 +741,29 @@ if ($CONFIG{'no-download'}) {
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	
-	my @local_keyids = @KEYIDS;
-	for my $keyid (@local_keyids) {
-		info ("fetching $keyid...");
-		my $pid = $gpg->recv_keys(handles => $handles, command_args => [ $keyid ]);
-		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-		waitpid $pid, 0;
+	my %local_keyids = map { $_ => 1 } @KEYIDS;
+	info ("fetching keys, this will take a while...");
+	my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
 
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
 # [GNUPG:] NODATA 1
 # [GNUPG:] NODATA 1
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
-		my $handled = 0;
-		for my $line (split /\n/, $status) {
-			if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
-				my $imported_key = $1;
-				if ($keyid ne $imported_key &&
-				    $keyid ne substr($imported_key, -16) &&
-				    $keyid ne substr($imported_key, -8)) {
-				    warn("Imported unexpected key.  expected: $keyid; got: $imported_key.\n");
-				    next;
-				};
-				push @keyids_ok, $keyid;
-				shift @KEYIDS;
-				$handled = 1;
-				last;
-			} elsif ($line =~ /^\[GNUPG:\] NODATA/) {
-				push @keyids_failed, $keyid;
-				shift @KEYIDS;
-				$handled = 1;
-				last;
+	for my $line (split /\n/, $status) {
+		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
+			my $imported_key = $1;
+			if (not exists $local_keyids{$imported_key}) {
+			    warn("Imported unexpected key; got: $imported_key.\n");
+			    next;
 			};
-		};
-		unless ($handled) {
-			notice ("Huh, what's up with $keyid?");
-			push @keyids_failed, $keyid;
-			shift @KEYIDS;
-		};
+			info ("Imported $imported_key");
+			delete $local_keyids{$imported_key};
+			unshift @keyids_ok, $imported_key;
+		}
 	};
-	die ("Still keys in \@KEYIDS.  This should not happen.") if scalar @KEYIDS;
-	notice ("Import failed for: ". (join ' ', @keyids_failed).".") if scalar @keyids_failed;
+	notice ("Import failed for: ". (join ' ', keys %local_keyids).".") if scalar %local_keyids;
 };
 
 ###########
