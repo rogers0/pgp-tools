@@ -781,14 +781,13 @@ if ($CONFIG{'no-download'}) {
 			$imported_key =       $3.$4 if $local_keyids{      $3.$4};
 			$imported_key =          $4 if $local_keyids{         $4};
 			unless ($imported_key) {
-			    warn("Imported unexpected key; got: $imported_key.\n");
+			    notice ("Imported unexpected key; got: $1$2$3$4. (This is normal for v3 keys.)\n");
 			    next;
 			};
 			debug ("Imported $imported_key");
 			delete $local_keyids{$imported_key};
 			unshift @keyids_ok, $imported_key;
-		} elsif ($line =~ /^\[GNUPG:\] NODATA 1$/) {
-		} elsif ($line =~ /^\[GNUPG:\] IMPORT_RES /) {
+		} elsif ($line =~ /^\[GNUPG:\] (NODATA|IMPORT_RES|IMPORTED) /) {
 		} else {
 			notice ("got unknown reply from gpg: $line");
 		}
