@@ -17,23 +17,29 @@ Some hints to get the signing done faster:
 
 * v3 keys are evil.
 
-  Sign v3 separately. Batch processing does not work. See README.v3-keys.
+  V3 keys (pgp 2.6x keys) are deprecated.  Not only do they rely on md5 for
+  their fingerprint and signatures, they also use the patented IDEA algorithm
+  for encryption.  Many people (like caff's author) refuse to sign v3 keys
+  these days.
+
+  If you want to sign v3 keys, sign v3 separately. Batch processing does not
+  work. See README.v3-keys.
 
 * Use multiple passes.
 
   Going through retrieving, signing, and mailing keys can help, e.g.:
 
-  $ caff -SEM `cat ksp-fingerprints.txt`
-  $ caff -REM `cat ksp-fingerprints.txt`
-  $ caff -RSE `cat ksp-fingerprints.txt`
+  $ caff --no-sign --no-export-old --no-mail `cat ksp-fingerprints.txt`
+  $ caff --no-download --no-export-old --no-mail `cat ksp-fingerprints.txt`
+  $ caff --no-download --no-sign --no-export-old `cat ksp-fingerprints.txt`
 
 * If you have multiple local keys, only send mail once after signing with all.
 
   caff will send out all previously done signatures in the message. (Of course
   you have to configure $CONFIG{'keyid'} to contain all your key ids.)
 
-  $ caff -EM -u <mykey1> <other_key>
-  $ caff -RE -u <mykey2> <other_key>
+  $ caff --no-export-old --no-mail -u <mykey1> <other_key>
+  $ caff --no-download --no-export-old -u <mykey2> <other_key>
 
 * Use gpg-agent.
 
