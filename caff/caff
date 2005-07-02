@@ -56,14 +56,22 @@ sigs and sigs done by you.
 
 =over
 
-=item B<-e>, B<--export>, B<-E>, B<--no-export>
+=item B<-e>, B<--export-old>
 
-Export/do not export old signatures. Default is to ask the user for each old
+Export old signatures. Default is to ask the user for each old signature.
+
+=item B<-E>, B<--no-export-old>
+
+Do not export old signatures. Default is to ask the user for each old
 signature.
 
-=item B<-m>, B<--mail>, B<-M>, B<--no-mail>
+=item B<-m>, B<--mail>
 
-Send/do not send mail after signing. Default is to ask the user for each uid.
+Send mail after signing. Default is to ask the user for each uid.
+
+=item B<-M>, B<--no-mail>
+
+Do not send mail after signing. Default is to ask the user for each uid.
 
 =item B<-R>, B<--no-download>
 
@@ -669,10 +677,10 @@ if (!GetOptions (
 	'-V'              =>  \$params->{'version'},
 	'-u=s'            =>  \$params->{'local-user'},
 	'--local-user=s'  =>  \$params->{'local-user'},
-	'-e'              =>  \$params->{'export'},
-	'--export'        =>  \$params->{'export'},
-	'-E'              =>  \$params->{'no-export'},
-	'--no-export'     =>  \$params->{'no-export'},
+	'-e'              =>  \$params->{'export-old'},
+	'--export-old'    =>  \$params->{'export-old'},
+	'-E'              =>  \$params->{'no-export-old'},
+	'--no-export-old' =>  \$params->{'no-export-old'},
 	'-m'              =>  \$params->{'mail'},
 	'--mail'          =>  \$params->{'mail'},
 	'-M'              =>  \$params->{'no-mail'},
@@ -998,7 +1006,7 @@ for my $keyid (@keyids_ok) {
 
 		if ($signed_by_me) {
 			if ($NOW - $signed_by_me > $CONFIG{'export-sig-age'} ) {
-				my $write = ask("Signature on $this_uid_text is old.  Export?", 0, $params->{export}, $params->{'no-export'});
+				my $write = ask("Signature on $this_uid_text is old.  Export?", 0, $params->{'export-old'}, $params->{'no-export-old'});
 				next unless $write;
 			};
 			my $keydir = "$KEYSBASE/$DATE_STRING";
