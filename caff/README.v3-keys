@@ -10,6 +10,8 @@ To sign v3 keys with caff, do the following:
 
 $ caff <keyid>
 
+[note that caff does not accept fingerprints for v3 keys, use keyids]
+
 The key will be imported from the keyserver, but caff thinks it failed. Now run
 caff again with -R:
 
