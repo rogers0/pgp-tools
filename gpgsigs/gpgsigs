@@ -196,8 +196,19 @@ while (<SIGS>) {
 		} else {
 			$class = 's';
 		};
-		$sigs->{$key}->{$uid}->{$1.$2} = $class;
-		$sigs->{$key}->{$uid}->{$2} = $class;
+		# Handle the case where one UID was signed multiple times
+		# with different signature classes.
+		my $before = $sigs->{$key}->{$uid}->{$1.$2};
+		if (defined $before) {
+			if ($before eq 'S' || $before eq 's') {
+				$sigs->{$key}->{$uid}->{$1.$2} = $class;
+			} elsif ($before < $class) {
+				$sigs->{$key}->{$uid}->{$1.$2} = $class;
+			};
+		} else {
+			$sigs->{$key}->{$uid}->{$1.$2} .= $class;
+		};
+		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2}
 		next;
 	}
 	if ( m/^uat:/ ) {
