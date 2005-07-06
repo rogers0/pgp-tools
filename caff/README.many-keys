@@ -50,5 +50,14 @@ Some hints to get the signing done faster:
 
   See README.gpg-agent.
 
- -- Christoph Berg <cb@df7cb.de>  Sat,  2 Jul 2005 21:22:07 +0200
+* Use gpg-sign-args.
 
+  $CONFIG{'gpg-sign-args'} = "save";
+
+  This automatically saves the key after signing in gpg. The advantage is that
+  you do not have to type "save" for each key. The disadvantage is that you
+  cannot choose which UIDs to sign by answering "no" at the "Really sign?"
+  prompt any more; you will have *not* to send out some mails. (And you have
+  unwanted signatures lingering around in ~/.caff/gnupghome/pubring.gpg.)
+
+ -- Christoph Berg <cb@df7cb.de>  Wed,  6 Jul 2005 13:46:16 +0200

@@ -156,7 +156,7 @@ An additional keyid to encrypt messages to. Default: none.
 
 =item B<gpg-sign-args> [string]
 
-Additional arguments to pass to gpg. Default: none.
+Additional arguments to pass to gpg.  Default: none.
 
 =head2 Keyserver settings
 
@@ -822,9 +822,9 @@ unless ($CONFIG{'no-sign'}) {
 		push @command, '--local-user', $USER if (defined $USER);
 		push @command, "--homedir=$GNUPGHOME";
 		push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-		push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 		push @command, '--edit', $keyid;
 		push @command, 'sign';
+		push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 		print join(' ', @command),"\n";
 		system (@command);
 	};
