@@ -202,13 +202,15 @@ while (<SIGS>) {
 		if (defined $before) {
 			if ($before eq 'S' || $before eq 's') {
 				$sigs->{$key}->{$uid}->{$1.$2} = $class;
+			} elsif ($class eq 'S' || $class eq 's') {
+				# intentionall left blank
 			} elsif ($before < $class) {
 				$sigs->{$key}->{$uid}->{$1.$2} = $class;
 			};
 		} else {
 			$sigs->{$key}->{$uid}->{$1.$2} .= $class;
 		};
-		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2}
+		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2};
 		next;
 	}
 	if ( m/^uat:/ ) {
