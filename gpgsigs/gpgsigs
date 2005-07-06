@@ -76,44 +76,19 @@ $charset = "ISO-8859-1" unless $charset =~ /[\.-]/;
 $charset =~ s/.*\.//;
 $charset =~ s/@.*//;
  
-my ($rf, $rt, $if, $it);
-if (eval "require Locale::Recode") {
-	$rf = Locale::Recode->new (from => $fromcharset, to => $charset) if $fromcharset;
-	$rt = Locale::Recode->new (from => 'UTF-8', to => $charset);
-} elsif (eval "require Text::Iconv") {
-	$if = Text::Iconv->new($fromcharset, $charset) if $fromcharset;
-	$it = Text::Iconv->new("UTF-8", $charset);
-}
 
-sub myfromrecode($) {
-	my ($text) = @_;
-	if (defined $rf) {
-		my $orig = $text;
-		$rf->recode($text);
-		return $text;
-	} elsif (defined $if) {
-		return $if->convert($text);
-	} else {
-		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "$fromcharset..$charset");
-		print WTRFH $text;
-		close WTRFH;
-		local $/ = undef;
-		my $result = <RDRFH>;
-		close RDRFH;
-		close ERRFH;
-		waitpid $pid, 0;
-		die ("'recode' failed, is it installed?\n") unless defined $result;
-		return $result;
-	}
-}
+sub myrecode($$$) {
+	my ($text, $from, $to) = @_;
 
-sub myrecode($) {
-	my ($text) = @_;
-	if (defined $rt) {
+	if (eval "require Locale::Recode") {
+		my $rt = Locale::Recode->new (from => $from, to => $to);
+
 		my $orig = $text;
 		$rt->recode($text);
 		return $text;
-	} elsif (defined $it) {
+	} elsif (eval "require Text::Iconv") {
+		my $it = Text::Iconv->new($from, $to);
+
 		my $result = $it->convert($text);
 		warn ("Could not convert '$text'\n") unless defined $result;
 		return (defined $result) ? $result : $text
@@ -180,7 +155,7 @@ while (<SIGS>) {
 		next;
 	}
 	if ( m/^uid:(?:.*?:){8,8}(.*):/s ) {
-		$uid = myrecode($1);
+		$uid = myrecode($1, "UTF-8", $charset);
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
@@ -269,7 +244,7 @@ open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
 while (<TXT>) {
 	$line++;
-	$_ = myfromrecode($_);
+	$_ = myrecode($_, $fromcharset, $charset);
 	if (/^MD5 Checksum:/ && defined $MD5) {
 		s/[_[:xdigit:]][_ [:xdigit:]]+_/$MD5/;
 	}
