@@ -825,7 +825,6 @@ unless ($CONFIG{'no-sign'}) {
 		push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 		push @command, '--edit', $keyid;
 		push @command, 'sign';
-		push @command, 'save';
 		print join(' ', @command),"\n";
 		system (@command);
 	};
