@@ -182,9 +182,21 @@ while (<SIGS>) {
 		$uid = myrecode($1);
 		next;
 	}
-	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){3,3}(.*):.*?:/ ) {
-		$sigs->{$key}->{$uid}->{$1.$2} = $3;
-		$sigs->{$key}->{$uid}->{$2} = $3;
+	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
+		my $class = $3;
+		if ($class eq '10x') {
+			$class = 'S';
+		} elsif ($class eq '11x') {
+			$class = '1';
+		} elsif ($class eq '12x') {
+			$class = '2';
+		} elsif ($class eq '13x') {
+			$class = '3';
+		} else {
+			$class = 's';
+		};
+		$sigs->{$key}->{$uid}->{$1.$2} = $class;
+		$sigs->{$key}->{$uid}->{$2} = $class;
 		next;
 	}
 	if ( m/^uat:/ ) {
@@ -229,7 +241,7 @@ sub print_tag
 	}
 	my $r = '(';
 	foreach my $mykey (@mykeys) {
-		$r .= defined $sigs->{$key}->{$uid}->{$mykey} ? "S" : " ";
+		$r .= defined $sigs->{$key}->{$uid}->{$mykey} ? $sigs->{$key}->{$uid}->{$mykey} : ' ';
 	}
 	$r .= ')';
 	return $r;
