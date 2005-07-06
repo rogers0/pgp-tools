@@ -155,7 +155,9 @@ while (<SIGS>) {
 		next;
 	}
 	if ( m/^uid:(?:.*?:){8,8}(.*):/s ) {
-		$uid = myrecode($1, "UTF-8", $charset);
+		$uid = $1;
+		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
+		$uid = myrecode($uid, "UTF-8", $charset);
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
@@ -226,6 +228,9 @@ sub print_tag
 	my ($key, $uid) = @_;
 	if (! defined $sigs->{$key}->{$uid}) {
 		warn "uid '$uid' not found on key $key\n";
+		#for (keys %{ $sigs->{$key} }) {
+		#	print STDERR "only have $_\n";
+		#};
 		return '(' . (' ' x @mykeys) . ')';
 	}
 	my $r = '(';
