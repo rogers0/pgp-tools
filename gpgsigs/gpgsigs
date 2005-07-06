@@ -261,10 +261,14 @@ sub print_tag
 	return $r;
 }
 
+$key = undef;
+$uid = undef;
+my $line = 0;
 print STDERR "Annotating $keytxt, writing into $outfile\n";
 open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
 while (<TXT>) {
+	$line++;
 	$_ = myfromrecode($_);
 	if (/^MD5 Checksum:/ && defined $MD5) {
 		s/[_[:xdigit:]][_ [:xdigit:]]+_/$MD5/;
@@ -282,7 +286,10 @@ while (<TXT>) {
 	}
 	if ( m/^uid +(.*)$/ ) {
 		$uid = $1;
-		die "key is undefined" unless defined $key;
+		unless (defined $key) {
+			warn "key is undefined - input text is possibly malformed near line $line\n";
+			next;
+		};
 		die "uid is undefined, key $key" unless defined $uid;
 		die "bad tag from $key | $uid" unless defined (print_tag($key, $uid));
 		print WRITE print_tag($key, $uid) . " $_";
