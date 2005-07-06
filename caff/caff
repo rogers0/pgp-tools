@@ -285,9 +285,13 @@ please find attached the user id{(scalar @uids >= 2 ? 's' : '')}.
     $OUT .= "\t".$uid."\n";
 };} of your key {$key} signed by me.
 
-Note that I did not upload your key to any keyservers. If you want this
-new signature to be available to others, please upload it yourself.
-With GnuPG this can be done using
+Note that I did not upload your key to any keyservers.
+If you have multiple user ids, I sent the signature for each user id
+separately to that user id's associated email address. You can import
+the signatures by running each through `gpg --import`.
+
+If you want this new signature to be available to others, please upload
+it yourself. With GnuPG this can be done using
 	gpg --keyserver subkeys.pgp.net --send-key {$key}
 
 If you have any questions, don't hesitate to ask.
