@@ -59,9 +59,10 @@ EOF
 
 
 my ($fromcharset, $charset, $recv_keys);
+Getopt::Long::config('bundling');
 GetOptions(
-	f => \$fromcharset,
-	t => \$charset,
+	'-f=s' => \$fromcharset,
+	'-t=s' => \$charset,
 	r => \$recv_keys,
 	help => sub { usage(*STDOUT, 0); },
 	version => sub { version(*STDOUT); exit 0;},
@@ -142,8 +143,8 @@ map { s/^0x//i; } @mykeys;
 if (!@mykeys || scalar @ARGV) {
 	usage(*STDERR, 1);
 }
-if (!grep { /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys) {
-	print STDERR "Invalid keyid given\n";
+foreach my $falsekey (grep { $_ !~ /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys) {
+	print STDERR "Invalid keyid $falsekey given\n";
 	usage(*STDERR, 1);
 }
 
