@@ -1,10 +1,14 @@
 signing-party (0.4.1-XXX) unreleased; urgency=low
 
+  * New upstream release.
+    gpg-key2ps:
+     + handles revoked subkeys, thanks Christof Douma (Closes: #311990).
+    caff:
+     + now handles attribute UIDs (Closes: #316278).
+     + now detects all invalid keyids (Closes: #317754).
+     + allows to BCC the signer, thanks Joost van Baal (Closes: #316176).
   * Depend on libtext-template-perl as caff needs it.
-  * gpg-key2ps now works with revoked subkeys, thanks Christof Douma
-    (Closes: #311990).
   * Update to Standards-Version 3.6.2, no changes necessary.
-  * Fixed that caff did not detect all invalid keyids (Closes: #317754).
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 29 Jun 2005 16:36:08 +0200
 
