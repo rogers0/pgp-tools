@@ -266,7 +266,7 @@ sub load_config() {
 	die ("keyid is not defined.\n") unless defined $CONFIG{'keyid'};
 	die ("keyid is not an array ref\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
 	for my $keyid (@{$CONFIG{'keyid'}}) {
-		$keyid =~ /^[A-Fa-z0-9]{16}$/ or die ("key $keyid is not a long (16 digit) keyid.\n");
+		$keyid =~ /^[A-Fa-f0-9]{16}$/ or die ("key $keyid is not a long (16 digit) keyid.\n");
 	};
 	@{$CONFIG{'keyid'}} = map { uc } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
