@@ -175,6 +175,11 @@ Default: B<0>.
 
 If true, then skip the signing step. Default: B<0>.
 
+=item B<ask-sign> [boolean]
+
+If true, then pause before continuing to the signing step.
+This is useful for offline signing. Default: B<0>.
+
 =item B<export-sig-age> [seconds]
 
 Don't export UIDs by default, on which your latest signature is older
@@ -818,6 +823,10 @@ unless (@keyids_ok) {
 ###########
 # sign keys
 ###########
+if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
+	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
+}
+	
 unless ($CONFIG{'no-sign'}) {
 	info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 	for my $keyid (@keyids_ok) {

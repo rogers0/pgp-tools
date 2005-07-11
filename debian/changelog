@@ -7,6 +7,8 @@ signing-party (0.4.1-XXX) unreleased; urgency=low
      + now handles attribute UIDs (Closes: #316278).
      + now detects all invalid keyids (Closes: #317754).
      + allows to BCC the signer, thanks Joost van Baal (Closes: #316176).
+     + new option to pause before continuing to the signing step,
+       thanks Christof Douma (Closes: #316129).
   * Depend on libtext-template-perl as caff needs it.
   * Update to Standards-Version 3.6.2, no changes necessary.
 

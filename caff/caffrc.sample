@@ -30,11 +30,14 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 # Keyserver to download keys from. Default: subkeys.pgp.net.
 # $CONFIG{'keyserver'}      = 'keyserver.kjsl.com';
 
-# If true, then skip the step of fetching keys from the keyserver, or the signing.
-# Default: 0
+# Boolean options, all default to false (0).
+#
+# Skip fetching the keys from the keyserver.
 # $CONFIG{'no-download'}    = 1;
+# Skip signing the keys.
 # $CONFIG{'no-sign'}        = 1;
-
+# Ask to continue before starting the signing (for offline signing).
+# $CONFIG{'ask-sign'}       = 1;
 
 # $CONFIG{'mail-template'} = <<'EOM'
 # Hi,
@@ -44,10 +47,14 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 #     $OUT .= "\t".$uid."\n";
 # };} of your key {$key} signed by me.
 # 
-# Note that I did not upload your key to any keyservers. If you want this
-# new signature to be available to others, please upload it yourself.
-# With GnuPG this can be done using
-#         gpg --keyserver subkeys.pgp.net --send-key {$key}
+# Note that I did not upload your key to any keyservers.
+# If you have multiple user ids, I sent the signature for each user id
+# separately to that user id's associated email address. You can import
+# the signatures by running each through `gpg --import`.
+# 
+# If you want this new signature to be available to others, please upload
+# it yourself. With GnuPG this can be done using
+# 	gpg --keyserver subkeys.pgp.net --send-key {$key}
 # 
 # If you have any questions, don't hesitate to ask.
 # 
