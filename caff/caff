@@ -715,7 +715,7 @@ usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 if ($params->{'local-user'}) {
 	$USER = $params->{'local-user'};
 	$USER =~ s/^0x//i;
-	unless ($USER =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}|[A-Z0-9]{40})$/i) {
+	unless ($USER =~ /^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
 		print STDERR "-u $USER is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -724,7 +724,7 @@ if ($params->{'local-user'}) {
 
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
-	unless ($keyid =~ /^([A-Z0-9]{8}|[A-Z0-9]{16}||[A-Z0-9]{40})$/i) {
+	unless ($keyid =~ /^([A-F0-9]{8}|[A-F0-9]{16}||[A-F0-9]{40})$/i) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
