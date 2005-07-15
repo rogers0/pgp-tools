@@ -208,12 +208,22 @@ for my $k ( keys %{$sigs} ) {
 
 
 # read checksums
-open MD, "gpg --print-md md5 $keytxt|" or warn "can't get gpg md5\n";
+open MD, "gpg --with-colons --print-md md5 $keytxt|" or warn "can't get gpg md5\n";
 my $MD5 = <MD>;
 close MD;
-open MD, "gpg --print-md sha1 $keytxt|" or warn "can't get gpg sha1\n";
+open MD, "gpg --with-colons --print-md sha1 $keytxt|" or warn "can't get gpg sha1\n";
 my $SHA1 = <MD>;
 close MD;
+
+my @MD5 = split /:/, $MD5;
+my @SHA1 = split /:/, $SHA1;
+$MD5 = $MD5[2];
+$SHA1 = $SHA1[2];
+
+$MD5 =~ s/(.{16})/$1 /;
+$SHA1 =~ s/(.{20})/$1 /;
+$MD5 =~ s/([0-9A-Z]{2})/$1 /ig;
+$SHA1 =~ s/([0-9A-Z]{4})/$1 /ig;
 
 chomp $MD5;
 chomp $SHA1;
