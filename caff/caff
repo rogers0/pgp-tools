@@ -1083,7 +1083,7 @@ for my $keyid (@keyids_ok) {
 			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				if (ask("Send signature for $uid->{'text'} to '$address'?", 1, $CONFIG{'mail'})) {
+				if (ask("Mail signature for $uid->{'text'} to '$address'?", 1, $CONFIG{'mail'})) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
