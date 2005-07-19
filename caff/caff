@@ -438,12 +438,22 @@ sub readwrite_gpg($$$$$%) {
 
 sub ask($$;$$) {
 	my ($question, $default, $forceyes, $forceno) = @_;
-	return $default if $forceyes and $forceno;
-	return 1 if $forceyes;
-	return 0 if $forceno;
 	my $answer;
 	while (1) {
 		print $question,' ',($default ? '[Y/n]' : '[y/N]'), ' ';
+		if ($forceyes && $forceno) {
+			print "$default (from config/command line)\n";
+			return $default;
+		};
+		if ($forceyes) {
+			print "YES (from config/command line)\n";
+			return 1;
+		};
+		if ($forceno) {
+			print "NO (from config/command line)\n";
+			return 0;
+		};
+
 		$answer = <STDIN>;
 		chomp $answer;
 		last if ((defined $answer) && (length $answer <= 1));
