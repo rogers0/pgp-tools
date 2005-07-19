@@ -43,8 +43,8 @@ Some hints to get the signing done faster:
   caff will send out all previously done signatures in the message. (Of course
   you have to configure $CONFIG{'keyid'} to contain all your key ids.)
 
-  $ caff --no-export-old --no-mail -u <mykey1> <other_key>
-  $ caff --no-download --no-export-old -u <mykey2> <other_key>
+  $ caff --no-export-old --no-mail -u <mykey1> <keyids to sign>
+  $ caff --no-download --no-export-old -u <mykey2> <keyids to sign>
 
 * Use gpg-agent.
 
