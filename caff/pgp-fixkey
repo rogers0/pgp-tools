@@ -267,7 +267,7 @@ if (scalar @KEYIDS == 0) {
 		} elsif ($type eq 'sig' || $type eq 'rev') {
 			if (($keyid eq '0' x 16) || ($created == 0)) {
 				push @KEYIDS, $thiskey;
-				info("Adding $thiskey");
+				info("Key $thiskey needs cleaning.");
 				$thiskey = undef;
 			};
 		};
