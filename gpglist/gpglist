@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+
+# small script to show in an intuitive way who signed which of your user ids
+#
+# Copyright (c) 2004 Uli Martens <uli@youam.net>
+# Copyright (c) 2005 Peter Palfrader <peter@palfrader.org>
+# All rights reserved.
+#
+# Released under a BSD style license as given in http://www.debian.org/misc/bsd.license
+
+use strict;
+use warnings;
+
+my $key=shift @ARGV;
+if ( $key eq "" ) {
+	die
+}
+	
+open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs $key 2>/dev/null |"
+	or die "can't get gpg listing";
+
+my $uid = "";
+my @uids;
+my %sigs;
+my %rev;
+my %ids;
+my %unknownID;
+my $longkey;
+while (<SIGS>) {
+	if ( m/^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:(.*):$/ ) {
+		$uid = $1;
+		push @uids, $1;
+		next;
+	}
+	if ( m/^sig:[^:]*:[^:]*:[^:]*:([0-9A-F]*):[^:]*:[^:]*:[^:]*:[^:]*:(.*):[^:]*:$/ ) {
+		$2 eq "[User id not found]" ? $unknownID{$1} = $1 : $ids{$2} = $1;
+		$sigs{$1}->{$uid} = "x" unless defined $sigs{$1}->{$uid};
+		next;
+	}
+	if ( m/^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]*):[^:]*:[^:]*:[^:]*:[^:]*:(.*):[^:]*:$/ ) {
+		$rev{$uid} = "x" if ($longkey eq $1);
+		$sigs{$1}->{$uid} = "R";
+		next;
+	}		
+	if ( m/^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:(.*):$/ ) {
+		$uid = "Photo ID";
+		push @uids, $uid;
+		next;
+	}
+	if ( m/^pub:[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:(.*):$/ ) {
+		$longkey = $1;
+		next;
+	}
+	last if ( m/^(sub):/ );
+	next if ( m/^(tru):/ );
+	print STDERR "hi, i'm a bug. please report me to my owner";
+	die "input: $_, key: $key";
+}	
+close SIGS;
+
+my $n = scalar @uids -1;
+for ( my $a=0; $a <= $n; $a++ ) {
+	printf "|  " x ($a)
+	     . "+--"
+	     . "---" x ($n-$a)
+	     . (defined $rev{$uids[$a]} ? "R" : " ")
+	     . "%2i $uids[$a]\n", $a+1;
+}
+
+for ( my $a=0; $a <= $n; $a++ ) {
+	printf "%-2i ", $a+1;
+}
+print "\n";
+
+for my $id (sort keys %ids) {
+	print((defined $sigs{$ids{$id}}->{$_} ? $sigs{$ids{$id}}->{$_} : " ") . "  ") for (@uids);
+	print $ids{$id}." $id\n"; 
+}
+for my $id (sort keys %unknownID) {
+	print((defined $sigs{$id}->{$_} ? $sigs{$id}->{$_} : " ") . "  ") for (@uids);
+	print "$id [User id not found]\n";
+}
