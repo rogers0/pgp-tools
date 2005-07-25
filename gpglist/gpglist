@@ -16,7 +16,7 @@
 #    documentation and/or other materials provided with the distribution.
 # 3. The name of the author may not be used to endorse or promote products
 #    derived from this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -35,7 +35,7 @@ my $key=shift @ARGV;
 if ( $key eq "" ) {
 	die
 }
-	
+
 open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs $key 2>/dev/null |"
 	or die "can't get gpg listing";
 
@@ -61,7 +61,7 @@ while (<SIGS>) {
 		$rev{$uid} = "x" if ($longkey eq $1);
 		$sigs{$1}->{$uid} = "R";
 		next;
-	}		
+	}
 	if ( m/^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:(.*):$/ ) {
 		$uid = "Photo ID";
 		push @uids, $uid;
@@ -75,7 +75,7 @@ while (<SIGS>) {
 	next if ( m/^(tru):/ );
 	print STDERR "hi, i'm a bug. please report me to my owner";
 	die "input: $_, key: $key";
-}	
+}
 close SIGS;
 
 my $n = scalar @uids -1;
@@ -94,7 +94,7 @@ print "\n";
 
 for my $id (sort keys %ids) {
 	print((defined $sigs{$ids{$id}}->{$_} ? $sigs{$ids{$id}}->{$_} : " ") . "  ") for (@uids);
-	print $ids{$id}." $id\n"; 
+	print $ids{$id}." $id\n";
 }
 for my $id (sort keys %unknownID) {
 	print((defined $sigs{$id}->{$_} ? $sigs{$id}->{$_} : " ") . "  ") for (@uids);
