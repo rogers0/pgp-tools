@@ -78,6 +78,10 @@ while (<SIGS>) {
 }
 close SIGS;
 
+# XXX: Add an option for this
+my $c = 0;
+@uids = grep { ! defined $rev{$uids[$c++]} } @uids;
+
 my $n = scalar @uids -1;
 for ( my $a=0; $a <= $n; $a++ ) {
 	printf "|  " x ($a)
