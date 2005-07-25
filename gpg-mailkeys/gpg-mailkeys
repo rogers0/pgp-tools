@@ -90,7 +90,7 @@ Content-Disposition: attachment; filename="$1.sig"
 --$BOUNDARY--
 EOM
 	echo -n " sending"
-	/usr/sbin/sendmail -t <$TEMPFILE
+	/usr/sbin/sendmail -ti <$TEMPFILE
 	rm $TEMPFILE
 	echo " done."
 	shift 1

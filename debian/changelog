@@ -3,6 +3,9 @@ signing-party (0.4.1-XXX) unreleased; urgency=low
   * New upstream release.
     gpg-key2ps:
      + handles revoked subkeys, thanks Christof Douma (Closes: #311990).
+    gpg-mailkeys:
+     + add -i switch to sendmail to prevent lines with a dot causing
+       unexpected behaviour, thanks Stephen Gran (Closes: #319762).
     caff:
      + now handles attribute UIDs (Closes: #316278).
      + now detects all invalid keyids (Closes: #317754).
