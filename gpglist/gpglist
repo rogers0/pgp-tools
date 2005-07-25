@@ -32,10 +32,11 @@
 
 use strict;
 use warnings;
+use English;
 
 my $key=shift @ARGV;
-if ( $key eq "" ) {
-	die
+unless (defined $key) {
+	die "Usage: $PROGRAM_NAME <keyid>\n";
 }
 
 open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs $key 2>/dev/null |"
