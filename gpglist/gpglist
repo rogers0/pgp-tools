@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# $Id$
+
 # small script to show in an intuitive way who signed which of your user ids
 #
 # Copyright (c) 2004 Uli Martens <uli@youam.net>
