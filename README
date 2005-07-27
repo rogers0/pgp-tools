@@ -1,12 +1,13 @@
-This repository is home for several projects relating to OpenPGP.
+This is a collection of several projects relating to OpenPGP.
 
 * caff -- CA - fire and forget
 * gpgsigs -- annotate list of GnuPG keys with already done signatures
 * gpg-key2ps -- generate PostScript file with fingerprint paper strips
 * gpg-mailkeys -- simply mail out a signed key to its owner
 
-Please note that each individual project has its own license, please consult
-the licensing information in the subdirectories.
+For more information on each of these tools, please see their respective
+manpages. Please note that each individual project has its own license,
+consult the licensing information in the subdirectories.
 
 -- 
 Peter Palfrader, Tue, 29 Jun 2004 13:48:09 +0200

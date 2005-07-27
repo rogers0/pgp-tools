@@ -15,7 +15,7 @@ signing-party (0.4.1-XXX) unreleased; urgency=low
      + create unique attachment filenames, thanks Robin H. Johnson
        (Closes: #318469).
      + improve error when using xargs, thanks Lior Kaplan (Closes: #319519).
-     + let caff import keys from file, thanks Jon Åslund (Closes: #318744).
+     + let caff import keys from file, thanks Jon Ã…slund (Closes: #318744).
   * Depend on libtext-template-perl as caff needs it.
   * Update to Standards-Version 3.6.2, no changes necessary.
 
