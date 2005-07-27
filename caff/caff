@@ -588,9 +588,9 @@ sub send_mail($$$@) {
 			Type        => "application/pgp-keys",
 			Disposition => 'attachment',
 			Encoding    => "7bit",
-			Description => "PGP Key 0x$key_id, uid ".($key->{'text'}).' ('.($key->{'serial'}).')',
+			Description => "PGP Key 0x$key_id, uid ".($key->{'text'}).' ('.($key->{'serial'}).'), signed by 0x'.$CONFIG{'keyid'}[0],
 			Data        => $key->{'key'},
-			Filename    => "0x$key_id.".$key->{'serial'}.".asc");
+			Filename    => "0x$key_id.".$key->{'serial'}.".signed-by-0x".$CONFIG{'keyid'}[0].".asc");
 	};
 
 	if ($can_encrypt) {
