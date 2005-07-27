@@ -1,6 +1,6 @@
-signing-party (0.4.1-XXX) unreleased; urgency=low
+signing-party (0.4.1-1) unstable; urgency=low
 
-  * New upstream release.
+  * New upstream release. Lots of fixes and enhancements, including:
     gpg-key2ps:
      + handles revoked subkeys, thanks Christof Douma (Closes: #311990).
     gpg-mailkeys:
