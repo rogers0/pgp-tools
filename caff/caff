@@ -466,7 +466,7 @@ sub ask($$;$$) {
 		$answer = <STDIN>;
 		chomp $answer;
 		last if ((defined $answer) && (length $answer <= 1));
-		print "Error reading from STDIN (are you using caff with xargs?).\n";
+		print "grrrrrr.\n";
 		sleep 1;
 	};
 	my $result = $default;
