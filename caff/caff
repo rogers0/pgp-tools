@@ -448,8 +448,9 @@ sub readwrite_gpg($$$$$%) {
 sub ask($$;$$) {
 	my ($question, $default, $forceyes, $forceno) = @_;
 	my $answer;
+	my $yn = $default ? '[Y/n]' : '[y/N]';
 	while (1) {
-		print $question,' ',($default ? '[Y/n]' : '[y/N]'), ' ';
+		print $question,' ',$yn, ' ';
 		if ($forceyes && $forceno) {
 			print "$default (from config/command line)\n";
 			return $default;
@@ -464,9 +465,17 @@ sub ask($$;$$) {
 		};
 
 		$answer = <STDIN>;
+		if (!defined $answer) {
+			$OUTPUT_AUTOFLUSH = 1;
+			die "\n\n".
+			    "End of STDIN reached.  Are you using xargs?  Caff wants to read from STDIN,\n".
+			    "so you can't really use it with xargs.  A patch against caff to read from\n".
+			    "the terminal would be apprechiated.\n".
+			    "For now instead of   cat keys | xargs caff  do  caff `cat keys`\n";
+		};
 		chomp $answer;
-		last if ((defined $answer) && (length $answer <= 1));
-		print "grrrrrr.\n";
+		last if ((length $answer == 0) || ($answer =~ m/^[yYnN]$/) );
+		print "What about $yn is so hard to understand?\nAnswer with either 'n' or 'y' or just press enter for the default.\n";
 		sleep 1;
 	};
 	my $result = $default;
