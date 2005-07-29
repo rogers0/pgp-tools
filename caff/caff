@@ -470,7 +470,7 @@ sub ask($$;$$) {
 			die "\n\n".
 			    "End of STDIN reached.  Are you using xargs?  Caff wants to read from STDIN,\n".
 			    "so you can't really use it with xargs.  A patch against caff to read from\n".
-			    "the terminal would be apprechiated.\n".
+			    "the terminal would be appreciated.\n".
 			    "For now instead of   cat keys | xargs caff  do  caff `cat keys`\n";
 		};
 		chomp $answer;
