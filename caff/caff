@@ -266,9 +266,62 @@ my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
+sub generate_config() {
+	die "Error: \$LOGNAME is not set.\n" unless $ENV{LOGNAME};
+	my $gecos = (getpwnam($ENV{LOGNAME}))[6];
+	$gecos =~ s/,.*//;
+
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( 'gpg' );
+	$gpg->options->hash_init(
+		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ] );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
+	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+
+	if ($stdout eq '') {
+		warn ("No data from gpg for list-key\n"); # There should be at least 'tru:' everywhere.
+	};
+
+	my @keys;
+	unless (@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2,2}([^:]+):/mg)) {
+		die "Error: No keys were found using \"gpg --list-public-keys '$gecos'\".\n";
+	}
+	unless ($stdout =~ /^uid:.*<(.+@.+)>.*:/m) {
+		die "Error: No email address was found using \"gpg --list-public-keys '$gecos'\".\n";
+	}
+	my $email = $1;
+
+	return <<EOT;
+# .caffrc -- vim:syntax=perl:
+# This file is in perl(1) format - see caff(1) for details.
+
+\$CONFIG{'owner'}       = '$gecos';
+\$CONFIG{'email'}       = '$email';
+
+# you can get your long keyid from
+#   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>
+#
+# if you have a v4 key, it will simply be the last 16 digits of
+# your fingerprint.
+
+\$CONFIG{'keyid'}       = [ qw{@keys} ];
+EOT
+};
+
 sub load_config() {
 	my $config = $ENV{'HOME'} . '/.caffrc';
-	-f $config or die "No file $config present.  See caff(1).\n";
+	unless (-f $config) {
+		print "No configfile $config present, I will use this template:\n";
+		my $template = generate_config();
+		print "$template\nPress enter to continue.";
+		<STDIN>;
+		open F, ">$config" or die "$config: $!";
+		print F $template;
+		close F;
+	}
 	unless (scalar eval `cat $config`) {
 		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
 	};
