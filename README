@@ -1,6 +1,7 @@
 This is a collection of several projects relating to OpenPGP.
 
 * caff -- CA - fire and forget
+* gpglist -- show who signed which of your UIDs
 * gpgsigs -- annotate list of GnuPG keys with already done signatures
 * gpg-key2ps -- generate PostScript file with fingerprint paper strips
 * gpg-mailkeys -- simply mail out a signed key to its owner
