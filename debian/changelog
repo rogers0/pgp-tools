@@ -5,6 +5,7 @@ signing-party (0.4.1-2) unstable; urgency=low
      + note use of ~/.caff/gnupghome/gpg.conf in manpage (Closes: #321235).
      + allow adding a Reply-To: header (Closes: #321007, thanks to Joost van
        Baal for the patch).
+     + be more verbose when user tries to sign obsolete v3 crap.
 
  -- Christoph Berg <cb@df7cb.de>  Sun,  7 Aug 2005 22:50:43 +0200
 
