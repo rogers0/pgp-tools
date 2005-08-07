@@ -8,15 +8,13 @@ configure-stamp:
 build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
-	$(MAKE) -C caff
-	$(MAKE) -C gpgsigs
+	$(MAKE)
 	touch $@
 
 clean:
 	dh_testdir
 	dh_testroot
-	$(MAKE) -C caff clean
-	$(MAKE) -C gpgsigs clean
+	$(MAKE) clean
 	rm -f build-stamp configure-stamp
 	dh_clean
 
@@ -26,7 +24,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 	dh_install
-	dh_installman caff/*.1 gpgsigs/gpgsigs.1 gpg-key2ps/gpg-key2ps.1 gpg-mailkeys/gpg-mailkeys.1
+	dh_installman */*.1
 
 binary-indep: build install
 	dh_testdir

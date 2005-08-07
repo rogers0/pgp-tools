@@ -1,4 +1,4 @@
-signing-party (0.4.1-2) unstable; urgency=low
+signing-party (0.4.2-1) unstable; urgency=low
 
   * caff:
      + create configfile on first use (Closes: #316611).
@@ -6,8 +6,9 @@ signing-party (0.4.1-2) unstable; urgency=low
      + allow adding a Reply-To: header (Closes: #321007, thanks to Joost van
        Baal for the patch).
      + be more verbose when user tries to sign obsolete v3 crap.
+  * gpglist: added new script, thanks to Uli Martens.
 
- -- Christoph Berg <cb@df7cb.de>  Sun,  7 Aug 2005 22:50:43 +0200
+ -- Christoph Berg <cb@df7cb.de>  Mon,  8 Aug 2005 00:04:37 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 

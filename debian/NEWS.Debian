@@ -1,3 +1,9 @@
+signing-party (0.4.2-1) unstable; urgency=low
+
+  * New: gpglist -- show who signed which of your UIDs
+
+ -- Christoph Berg <cb@df7cb.de>  Mon,  8 Aug 2005 00:03:55 +0200
+
 signing-party (0.4.0-1) unstable; urgency=low
 
   * Signing-party has now been merged with the (never released) pgp-tools
