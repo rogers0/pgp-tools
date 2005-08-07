@@ -235,6 +235,10 @@ The UIDs for which signatures are included in the mail.
 
 =back
 
+=item B<reply-to> [string]
+
+Add a Reply-To: header to messages sent. Default: none.
+
 =item B<bcc> [string]
 
 Address to send blind carbon copies to when sending mail.
@@ -718,6 +722,7 @@ sub send_mail($$$@) {
 	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
 	$message_entity->head->add("To", $address);
 	$message_entity->head->add("From", '"'.$CONFIG{'owner'}.'" <'.$CONFIG{'email'}.'>');
+	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
 	$message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
 	$message_entity->head->add("User-Agent", $USER_AGENT);
 	$message_entity->send();
