@@ -927,6 +927,7 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] NODATA 1
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
+	my $had_v3_keys = 0;
 	for my $line (split /\n/, $status) {
 		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
 			my $imported_key = $1;
@@ -945,12 +946,16 @@ if ($CONFIG{'no-download'}) {
 			delete $local_keyids{$speced_key};
 			unshift @keyids_ok, $imported_key;
 		} elsif ($line =~ /^\[GNUPG:\] (NODATA|IMPORT_RES|IMPORTED) /) {
+		} elsif ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})/) {
+			my $imported_key = $1;
+			notice ("Imported key $1 is a version 3 key.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
+			$had_v3_keys = 1;
 		} else {
 			notice ("got unknown reply from gpg: $line");
 		}
 	};
 	if (scalar %local_keyids) {
-		notice ("Import failed for: ". (join ' ', keys %local_keyids).".");
+		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
 		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
 	}
 };
