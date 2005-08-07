@@ -333,11 +333,11 @@ sub load_config() {
 	unless (-f $config) {
 		print "No configfile $config present, I will use this template:\n";
 		my $template = generate_config();
-		print "$template\nPress enter to continue.";
-		<STDIN>;
+		print "$template\nPlease edit $config and run caff again.\n";
 		open F, ">$config" or die "$config: $!";
 		print F $template;
 		close F;
+		exit(1);
 	}
 	unless (scalar eval `cat $config`) {
 		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
