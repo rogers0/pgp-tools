@@ -97,11 +97,20 @@ Import keys from file. Can be supplied more than once.
 
 =item $HOME/.caffrc  -  configuration file
 
+=item $HOME/.caff/keys/yyyy-mm-dd/  -  processed keys
+
+=item $HOME/.caff/gnupghome/  -  caff's working dir for gpg
+
+=item $HOME/.caff/gnupghome/gpg.conf  -  gpg configuration
+
+useful options include use-agent, default-cert-level, etc.
+
 =back
 
 =head1 CONFIGURATION FILE OPTIONS
 
 The configuration file is a perl script that sets values in the hash B<%CONFIG>.
+The file is generated when it does not exist.
 
 Example:
 
@@ -246,6 +255,10 @@ Default: none.
 =head1 WEBSITE
 
 http://pgp-tools.alioth.debian.org/
+
+=head1 SEE ALSO
+
+gpg(1), pgp-clean(1), /usr/share/doc/signing-party/examples/caffrc.sample.
 
 =cut
 

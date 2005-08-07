@@ -2,8 +2,9 @@ signing-party (0.4.1-2) unstable; urgency=low
 
   * caff:
      + create configfile on first use (Closes: #316611).
+     + note use of ~/.caff/gnupghome/gpg.conf in manpage (Closes: #321235).
 
- -- Christoph Berg <cb@df7cb.de>  Sun,  7 Aug 2005 22:23:43 +0200
+ -- Christoph Berg <cb@df7cb.de>  Sun,  7 Aug 2005 22:41:43 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 
