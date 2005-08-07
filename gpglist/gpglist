@@ -30,6 +30,52 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+=pod
+
+=head1 NAME
+
+gpglist -- show who signed which of your UIDs
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<gpglist> I<keyid>
+
+=back
+
+=head1 DESCRIPTION
+
+B<gpglist> takes a keyid and creates a listing showing who signed your user IDs.
+
+	$ gpglist 6D8ABE71
+	+-----  1 Christoph Berg <cb@df7cb.de>
+	|  +--  2 Christoph Berg <cb@cs.uni-sb.de>
+	1  2  
+	x     7929AB90F7AC3AF0 Martin Helas <mhelas@helas.net>
+	x  x  29BE5D2268FD549F Martin Michlmayr <tbm@cyrius.com>
+	   x  7DDB2B8DB4B462C5 Martin Wanke <mawan@mawan.de>
+
+=head1 AUTHORS
+
+=over
+
+=item Uli Martens <uli@youam.net>
+
+=item Peter Palfrader <peter@palfrader.org>
+
+=back
+
+=head1 WEBSITE
+
+http://pgp-tools.alioth.debian.org/
+
+=head1 SEE ALSO
+
+gpgsigs(1), gpg(1), caff(1).
+
+=cut
+
 use strict;
 use warnings;
 use English;
