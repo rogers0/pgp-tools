@@ -8,6 +8,8 @@ signing-party (0.4.2-1) unstable; urgency=low
      + be more verbose when user tries to sign obsolete v3 crap.
      + install README.*.
   * gpglist: added new script, thanks to Uli Martens.
+  * gpg-key2ps:
+     + Convert from shell script to perl.
 
  -- Christoph Berg <cb@df7cb.de>  Mon,  8 Aug 2005 00:17:11 +0200
 
