@@ -1,21 +1,24 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 #
 # $Id$
 
-$version = '$Rev$';
+use strict;
+use Getopt::Std;
+
+my $version = '$Rev$';
 $version =~ s/\$Rev:\s*(\d+)\s*\$/$1/;
-$usage = "Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name\n";
-$keyids = "";
-$revokestyle="hide";
+my $usage = "Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name\n";
+my $keyids = "";
+my $revokestyle="hide";
 
 if ( $#ARGV < 0 ) {
 	print $usage;
 	exit 1;
 }
 
-use Getopt::Std;
+my %opts;
 getopt('pr', \%opts);
 if ( $opts{r} ) { $revokestyle = $opts{'r'}; }
 if ( $opts{p} ) { $ENV{'PAPERSIZE'} = $opts{'p'}; }
@@ -31,6 +34,7 @@ if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
 	exit 1;
 }
 
+my $w; my $h;
 if ( -x "/usr/bin/paperconf" ) {
 	$w=`paperconf -w`;
 	$h=`paperconf -h`;
@@ -40,6 +44,11 @@ if ( -x "/usr/bin/paperconf" ) {
 	# Default to A4.
 	$w=596;
 	$h=842;
+}
+
+if ( system( "gpg --fingerprint $keyids >/dev/null" ) != 0 ) {
+	print STDERR "Key not found. Try 'gpg --list-keys'\n";
+	exit 1;
 }
 
 open(GPG, "gpg --fingerprint --with-colons $keyids |");
@@ -144,13 +153,13 @@ print <<EOF;
 	noneedhline
 EOF
 
-$numlines = 0;
+my $numlines = 0;
 while(<GPG>) {
 	if ( /^(tru|uat):/ ) { next; }
 	if ( /^pub:/ ) { $numlines++; } 
 	s/^pub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:.*/	($5) ($4) ($3) $2 ($1) pub/;
 	if ( /^fpr:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/ ) {
-		$fpr = $1;
+		my $fpr = $1;
 		# v4 key
 		$fpr =~ s/(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})/$1 $2 $3 $4 $5  $6 $7 $8 $9 $10/;
 		# v3 key
@@ -164,8 +173,6 @@ while(<GPG>) {
 	$numlines++;
 	print;
 }
-$numlines -= 1;
-
 close(GPG);
 
 print <<EOF;
@@ -202,4 +209,5 @@ showpage
 %%EOF
 EOF
 
+exit 0;
 
