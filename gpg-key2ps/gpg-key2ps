@@ -1,95 +1,57 @@
-#! /bin/sh
+#!/usr/bin/perl
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 #
 # $Id$
 
-set -e
+$version = '$Rev$';
+$version =~ s/\$Rev:\s*(\d+)\s*\$/$1/;
+$usage = "Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name\n";
+$keyids = "";
+$revokestyle="hide";
 
-VERSION='$Rev$'
-USAGE="Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name"
+if ( $#ARGV < 0 ) {
+	print $usage;
+	exit 1;
+}
 
+use Getopt::Std;
+getopt('pr', \%opts);
+if ( $opts{r} ) { $revokestyle = $opts{'r'}; }
+if ( $opts{p} ) { $ENV{'PAPERSIZE'} = $opts{'p'}; }
+foreach (@ARGV) { $keyids .= $_ . " "; }
 
-if [ -z "$*" ]; then
-	echo $USAGE
-	exit 1
-fi
+if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
+	print STDERR "Unknown style \"$revokestyle\". Please use one of\n";
+	print STDERR "  grey   - Print text in grey\n";
+	print STDERR "  hide   - Don't show revoked uids\n";
+	print STDERR "  note   - Add \"(revoked)\"\n";
+	print STDERR "  show   - List revoked uids normally\n";
+	print STDERR "  strike - Strike through lines\n";
+	exit 1;
+}
 
-KEYIDS=
-REVOKESTYLE=hide
-
-while [ -n "$1" ]; do
-	case "$1" in
-	-p)
-		PAPERSIZE=$2
-		export PAPERSIZE
-		shift 2
-		;;
-	-p*)
-		PAPERSIZE=`echo $1 | sed -e 's/^-p//'`
-		export PAPERSIZE
-		shift 1
-		;;
-	-r)
-		REVOKESTYLE=$2
-		shift 2
-		;;
-	-r*)
-		REVOKESTYLE=`echo $1 | sed -e 's/^-r//'`
-		shift 1
-		;;
-	-*)
-		echo $USAGE
-		exit 1
-		;;
-	*)
-		KEYIDS=$1
-		shift 1
-		;;
-	esac
-done
-
-case "$REVOKESTYLE" in
-grey|hide|note|show|strike)
-	;;
-*)
-	echo >&2 "Unknown style \"$REVOKESTYLE\". Please use one of"
-	echo >&2 "  grey   - Print text in grey"
-	echo >&2 "  hide   - Don't show revoked uids"
-	echo >&2 "  note   - Add \"(revoked)\""
-	echo >&2 "  show   - List revoked uids normally"
-	echo >&2 "  strike - Strike through lines"
-	exit 1
-	;;
-esac
-
-TMPFILE=`mktemp -t gpg-key2ps.XXXXXX`
-
-if ! gpg --fingerprint --with-colons $KEYIDS 2>/dev/null >$TMPFILE; then
-	echo >&2 "Key not found. Try 'gpg --list-keys'"
-	rm $TMPFILE
-	exit 1
-fi
-
-NUMLINES=$((`wc -l <$TMPFILE` + `grep '^pub:' $TMPFILE | wc -l` - 1))
-
-if test -x /usr/bin/paperconf; then
-	w=`paperconf -w`
-	h=`paperconf -h`
-else
+if ( -x "/usr/bin/paperconf" ) {
+	$w=`paperconf -w`;
+	$h=`paperconf -h`;
+	chomp($w);
+	chomp($h);
+} else {
 	# Default to A4.
-	w=596
-	h=842
-fi
+	$w=596;
+	$h=842;
+}
 
-cat <<EOF
+open(GPG, "gpg --fingerprint --with-colons $keyids |");
+
+print <<EOF;
 %!PS-Adobe-3.0
 %%BoundingBox: 0 0 $w $h
 %%Title: 
-%%Creator: gpg-key2ps $VERSION
+%%Creator: gpg-key2ps $version
 EOF
-echo "%%CreationDate: `date`"
-cat <<EOF
+print "%%CreationDate: " . scalar(localtime) . "\n";
+print <<EOF;
 %%Pages: 1
 %%EndComments
 
@@ -146,36 +108,30 @@ cat <<EOF
 
 EOF
 
-case "$REVOKESTYLE" in
-grey)
-	echo "/revuid {"
-	echo "	.5 setgray"
-	echo "	uid"
-	echo "	0 setgray"
-	echo "} def"
-	;;
-hide)
-	echo "/revuid {} def"
-	;;
-note)
-	echo "/revuid {"
-	echo "	50 y moveto (uid) show"
-	echo "	200 y moveto show ([revoked]) show"
-	echo "	newline"
-	echo "} def"
-	;;
-show)	
-	echo "/revuid { uid } def"
-	;;
-strike)
-	echo "/revuid {"
-	echo "	uid"
-	echo "	45 y 9 add moveto h 2 div 45 sub y 18 add lineto stroke"
-	echo "} def"
-	;;
-esac
+if ( $revokestyle eq "grey" ) {
+	print "/revuid {\n";
+	print "	.5 setgray\n";
+	print "	uid\n";
+	print "	0 setgray\n";
+	print "} def\n";
+} elsif ( $revokestyle eq "hide" ) {
+	print "/revuid {} def\n";
+} elsif ( $revokestyle eq "note" ) {
+	print "/revuid {\n";
+	print "	50 y moveto (uid) show\n";
+	print "	200 y moveto show ([revoked]) show\n";
+	print "	newline\n";
+	print "} def\n";
+} elsif ( $revokestyle eq "show" ) {
+	print "/revuid { uid } def\n";
+} elsif ( $revokestyle eq "strike" ) {
+	print "/revuid {\n";
+	print "	uid\n";
+	print "	45 y 9 add moveto h 2 div 45 sub y 18 add lineto stroke\n";
+	print "} def\n";
+}
 
-cat <<EOF
+print <<EOF;
 
 /sbk {
 	50 y moveto (sub) show
@@ -187,24 +143,37 @@ cat <<EOF
 /key {
 	noneedhline
 EOF
-sed -e '/^tru:/d' \
-    -e '/^uat:/d' \
-    -e 's/^pub:[^:]*:\([^:]*\):\([0-9]*\):.\{8,8\}\(.\{8,8\}\):\([^:]*\):[^:]*:[^:]*:[^:]*:\([^:]*\):[^:]*:[^:]*:.*/	(\5) (\4) (\3) \2 (\1) pub/' \
-    -e 's/^fpr:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:]*\):.*/	(\1) fpr/' \
-    -e 's/(\(.\{16,16\}\)\(.\{16,16\}\)) fpr/(@split@\1@  @split@\2@) fpr/' \
-    -e 's/@split@\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)\(.\{2,2\}\)@/\1 \2 \3 \4 \5 \6 \7 \8/g' \
-    -e 's/(\(.\{20,20\}\)\(.\{20,20\}\)) fpr/(@split@\1@  @split@\2@) fpr/' \
-    -e 's/@split@\(.\{4,4\}\)\(.\{4,4\}\)\(.\{4,4\}\)\(.\{4,4\}\)\(.\{4,4\}\)@/\1 \2 \3 \4 \5/g' \
-    -e 's/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:]*\):.*/	(\1) uid/' \
-    -e 's/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:]*\):.*/	(\1) revuid/' \
-    -e 's/^sub:[^:]*:\([^:]*\):\([0-9]*\):.\{8,8\}\(.\{8,8\}\):\([^:]*\):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	(\4) (\3) \2 (\1) sbk/' \
-    <$TMPFILE
-cat <<EOF
+
+$numlines = 0;
+while(<GPG>) {
+	if ( /^(tru|uat):/ ) { next; }
+	if ( /^pub:/ ) { $numlines++; } 
+	s/^pub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:.*/	($5) ($4) ($3) $2 ($1) pub/;
+	if ( /^fpr:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/ ) {
+		$fpr = $1;
+		# v4 key
+		$fpr =~ s/(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})(\w{4})/$1 $2 $3 $4 $5  $6 $7 $8 $9 $10/;
+		# v3 key
+		$fpr =~ s/(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})/$1 $2 $3 $4 $5 $6 $7 $8  $9 $10 $11 $12 $13 $14 $15 $16/g;
+		$_ = "	($fpr) fpr\n";
+	}
+	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
+	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
+	s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/;
+	s/^sub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
+	$numlines++;
+	print;
+}
+$numlines -= 1;
+
+close(GPG);
+
+print <<EOF;
 } def
 
 EOF
-echo "/numlines $(($NUMLINES + 1)) def"
-cat <<EOF
+print "/numlines $numlines def\n";
+print <<EOF;
 /num w 16 sub 10 div numlines div def
 
 /column {
@@ -233,4 +202,4 @@ showpage
 %%EOF
 EOF
 
-rm $TMPFILE
+
