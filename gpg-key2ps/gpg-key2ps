@@ -1,6 +1,9 @@
 #!/usr/bin/perl -w
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
+# Copyright (C) 2001-2005  Simon Richter and Thijs Kinkhorst
+# Licenced under the GNU General Public License,
+# version 2 or later.
 #
 # $Id$
 
@@ -18,6 +21,7 @@ if ( $#ARGV < 0 ) {
 	exit 1;
 }
 
+# fetch command line parameters
 my %opts;
 getopt('pr', \%opts);
 if ( $opts{r} ) { $revokestyle = $opts{'r'}; }
@@ -34,6 +38,7 @@ if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
 	exit 1;
 }
 
+# determine default papersize through the paperconf tool
 my $w; my $h;
 if ( -x "/usr/bin/paperconf" ) {
 	$w=`paperconf -w`;
@@ -46,13 +51,18 @@ if ( -x "/usr/bin/paperconf" ) {
 	$h=842;
 }
 
+# check if key exists
+# can't check that accurately through the 'open' call below
+# so have to run gpg twice). Please supply a better way.
 if ( system( "gpg --fingerprint $keyids >/dev/null" ) != 0 ) {
 	print STDERR "Key not found. Try 'gpg --list-keys'\n";
 	exit 1;
 }
 
+# open a gpg process we'll be reading from below
 open(GPG, "gpg --fingerprint --with-colons $keyids |");
 
+# start the PostScript output
 print <<EOF;
 %!PS-Adobe-3.0
 %%BoundingBox: 0 0 $w $h
@@ -117,6 +127,7 @@ print <<EOF;
 
 EOF
 
+# output the desired display for revoked uids
 if ( $revokestyle eq "grey" ) {
 	print "/revuid {\n";
 	print "	.5 setgray\n";
@@ -153,11 +164,17 @@ print <<EOF;
 	noneedhline
 EOF
 
+# walk the output of gpg line by line
+# $numlines has the total number of lines so we'll know how many to put on page
 my $numlines = 0;
 while(<GPG>) {
+	# we don't use these
 	if ( /^(tru|uat):/ ) { next; }
+	# every primary uid causes an extra line because of the separator
 	if ( /^pub:/ ) { $numlines++; } 
+	# primary uid
 	s/^pub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:.*/	($5) ($4) ($3) $2 ($1) pub/;
+	# fingerprint, format it nicely with spaces
 	if ( /^fpr:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/ ) {
 		my $fpr = $1;
 		# v4 key
@@ -166,15 +183,20 @@ while(<GPG>) {
 		$fpr =~ s/(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})/$1 $2 $3 $4 $5 $6 $7 $8  $9 $10 $11 $12 $13 $14 $15 $16/g;
 		$_ = "	($fpr) fpr\n";
 	}
+	# user id's
 	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
 	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
+	# revoked user id
 	s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/;
+	# subkey
 	s/^sub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
 	$numlines++;
+	# print this line
 	print;
 }
 close(GPG);
 
+# output the remaining postscript
 print <<EOF;
 } def
 
@@ -209,5 +231,62 @@ showpage
 %%EOF
 EOF
 
+# done!
 exit 0;
+
+
+__END__
+
+=head1 NAME
+
+B<gpg-key2ps> - generates a PS file from a GnuPG keyring
+
+=head1 SYNOPSIS
+
+B<gpg-key2ps> [-r I<revoked-style>] [-p I<papersize>] I<keyid>I<[> I<keyidI<[> I<...>I<]>>I<]>
+
+=head1 DESCRIPTION
+
+gpg-key2ps generates a PostScript file with your OpenPGP key fingerprint (repeated
+as often as it fits) useful for keysigning parties. The only argument is the same
+as you would pass to GPG's list-keys command, either a key-id or a (partial) name.
+The PS data is written to stdout.
+
+=head1 OPTIONS
+
+=over
+
+=item -p I<paper-size>
+
+Select the output paper size. Default is to look into /etc/papersize or A4 if
+libpaper isn't installed.
+
+=item -r I<revoked-style>
+
+Select how to mark revoked UIDs. Five styles are available:
+B<hide> (don't show at all),
+B<show> (show normally),
+B<grey> (display in 50% grey),
+B<note> (add a note), and
+B<strike> (strike through).
+
+=item I<keyid>
+
+Keyid's to print. Multiple can be separated by spaces.
+
+
+=back
+
+
+=head1 SEE ALSO
+
+gpg(1)
+
+http://pgp-tools.alioth.debian.org/
+
+=head1 AUTHORS AND COPYRIGHT
+
+(c) 2001 - 2005 Simon Richter <sjr@debian.org>
+
+(c) 2005 Thijs Kinkhorst <thijs@kinkhorst.com>
 
