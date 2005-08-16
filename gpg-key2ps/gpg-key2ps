@@ -1,44 +1,82 @@
 #!/usr/bin/perl -w
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
-# Copyright (C) 2001-2005  Simon Richter and Thijs Kinkhorst
+# Copyright (C) 2001-2005  Simon Richter
+# Copyright (C) 2005  Thijs Kinkhorst
+# Copyright (C) 2005  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
 #
 # $Id$
 
 use strict;
-use Getopt::Std;
+use Getopt::Long;
 
 my $version = '$Rev$';
 $version =~ s/\$Rev:\s*(\d+)\s*\$/$1/;
-my $usage = "Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name\n";
-my $keyids = "";
-my $revokestyle="hide";
+my $revokestyle = "hide";
+my $creationdate = scalar(localtime);
 
-if ( $#ARGV < 0 ) {
-	print $usage;
-	exit 1;
+sub version($) {
+	my $fd = shift;
+	print $fd "gpg-key2ps $version - (c) 2001-2005 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
+}
+
+sub usage($$) {
+	my ($fd, $exitcode) = @_;
+	version ($fd);
+	print $fd <<EOF;
+Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name ...
+Options:
+ -p --paper-size
+ -r --revoked-style
+        hide   - Don't show revoked uids (default)
+        grey   - Print text in grey
+        note   - Add "[revoked]"
+        show   - List revoked uids normally
+        strike - Strike through lines
+ -h --help
+ -v --version
+EOF
+	exit $exitcode;
 }
 
 # fetch command line parameters
-my %opts;
-getopt('pr', \%opts);
-if ( $opts{r} ) { $revokestyle = $opts{'r'}; }
-if ( $opts{p} ) { $ENV{'PAPERSIZE'} = $opts{'p'}; }
-foreach (@ARGV) { $keyids .= $_ . " "; }
-
-if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
-	print STDERR "Unknown style \"$revokestyle\". Please use one of\n";
-	print STDERR "  grey   - Print text in grey\n";
-	print STDERR "  hide   - Don't show revoked uids\n";
-	print STDERR "  note   - Add \"(revoked)\"\n";
-	print STDERR "  show   - List revoked uids normally\n";
-	print STDERR "  strike - Strike through lines\n";
-	exit 1;
+my $opts;
+Getopt::Long::config('bundling');
+if (!GetOptions (
+	'-h'                => \$opts->{help},
+	'--help'            => \$opts->{help},
+	'-v'                => \$opts->{version},
+	'--version'         => \$opts->{version},
+	'-p=s'              => \$opts->{papersize},
+	'--paper-size=s'    => \$opts->{papersize},
+	'-r=s'              => \$opts->{revokestyle},
+	'--revoked-style=s' => \$opts->{revokestyle},
+)) {
+	usage(\*STDERR, 1);
 }
 
-# determine default papersize through the paperconf tool
+if ($opts->{help}) {
+	usage (\*STDOUT, 0);
+}
+
+if ($opts->{version}) {
+	version (\*STDOUT);
+	exit 0;
+}
+
+if ( $opts->{revokestyle} ) { $revokestyle = $opts->{revokestyle}; }
+if ( $opts->{papersize} ) { $ENV{'PAPERSIZE'} = $opts->{papersize}; }
+
+if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
+	print STDERR "Unknown revoked-style \"$revokestyle\".\n";
+	usage (\*STDERR, 1);
+}
+
+usage(\*STDERR, 1) unless scalar @ARGV >= 1;
+
+# determine the paper size through the paperconf tool
 my $w; my $h;
 if ( -x "/usr/bin/paperconf" ) {
 	$w=`paperconf -w`;
@@ -51,26 +89,18 @@ if ( -x "/usr/bin/paperconf" ) {
 	$h=842;
 }
 
-# check if key exists
-# can't check that accurately through the 'open' call below
-# so have to run gpg twice). Please supply a better way.
-if ( system( "gpg --fingerprint $keyids >/dev/null" ) != 0 ) {
-	print STDERR "Key not found. Try 'gpg --list-keys'\n";
-	exit 1;
-}
-
 # open a gpg process we'll be reading from below
-open(GPG, "gpg --fingerprint --with-colons $keyids |");
+map { s/'/'\\''/g; } @ARGV; # quote single quotes
+open(GPG, "gpg --fingerprint --with-colons '". (join "' '", @ARGV) ."' |");
 
+sub start_postscript {
 # start the PostScript output
 print <<EOF;
 %!PS-Adobe-3.0
 %%BoundingBox: 0 0 $w $h
 %%Title: 
 %%Creator: gpg-key2ps $version
-EOF
-print "%%CreationDate: " . scalar(localtime) . "\n";
-print <<EOF;
+%%CreationDate: $creationdate
 %%Pages: 1
 %%EndComments
 
@@ -139,7 +169,7 @@ if ( $revokestyle eq "grey" ) {
 } elsif ( $revokestyle eq "note" ) {
 	print "/revuid {\n";
 	print "	50 y moveto (uid) show\n";
-	print "	200 y moveto show ([revoked]) show\n";
+	print "	200 y moveto show ( [revoked]) show\n";
 	print "	newline\n";
 	print "} def\n";
 } elsif ( $revokestyle eq "show" ) {
@@ -163,15 +193,21 @@ print <<EOF;
 /key {
 	noneedhline
 EOF
+} # sub start_postscript
 
 # walk the output of gpg line by line
 # $numlines has the total number of lines so we'll know how many to put on page
 my $numlines = 0;
+my $started = 0;
 while(<GPG>) {
 	# we don't use these
 	if ( /^(tru|uat):/ ) { next; }
 	# every primary uid causes an extra line because of the separator
-	if ( /^pub:/ ) { $numlines++; } 
+	if ( /^pub:/ ) {
+		start_postscript() unless $started;
+		$started = 1;
+		$numlines++;
+	}
 	# primary uid
 	s/^pub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:.*/	($5) ($4) ($3) $2 ($1) pub/;
 	# fingerprint, format it nicely with spaces
@@ -183,8 +219,7 @@ while(<GPG>) {
 		$fpr =~ s/(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})(\w{2})/$1 $2 $3 $4 $5 $6 $7 $8  $9 $10 $11 $12 $13 $14 $15 $16/g;
 		$_ = "	($fpr) fpr\n";
 	}
-	# user id's
-	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
+	# user ids
 	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
 	# revoked user id
 	s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/;
@@ -196,13 +231,16 @@ while(<GPG>) {
 }
 close(GPG);
 
+unless ($started) {
+	print STDERR "No public key found.\n";
+	exit 1;
+}
+
 # output the remaining postscript
 print <<EOF;
 } def
 
-EOF
-print "/numlines $numlines def\n";
-print <<EOF;
+/numlines $numlines def
 /num w 16 sub 10 div numlines div def
 
 /column {
@@ -243,7 +281,7 @@ B<gpg-key2ps> - generates a PS file from a GnuPG keyring
 
 =head1 SYNOPSIS
 
-B<gpg-key2ps> [-r I<revoked-style>] [-p I<papersize>] I<keyid>I<[> I<keyidI<[> I<...>I<]>>I<]>
+B<gpg-key2ps> [B<-r> I<revoked-style>] [B<-p> I<papersize>] I<keyid-or-name> [ I<...> ]
 
 =head1 DESCRIPTION
 
@@ -256,24 +294,31 @@ The PS data is written to stdout.
 
 =over
 
-=item -p I<paper-size>
+=item B<-p> B<--paper-size> I<paper-size>
 
 Select the output paper size. Default is to look into /etc/papersize or A4 if
 libpaper isn't installed.
 
-=item -r I<revoked-style>
+=item B<-r> B<--revoked-style> I<revoked-style>
 
 Select how to mark revoked UIDs. Five styles are available:
-B<hide> (don't show at all),
-B<show> (show normally),
-B<grey> (display in 50% grey),
-B<note> (add a note), and
-B<strike> (strike through).
+ B<hide> don't show at all (default),
+ B<show> show normally,
+ B<grey> display in 50% grey,
+ B<note> add "[revoked]", and
+ B<strike> strike through.
 
 =item I<keyid>
 
-Keyid's to print. Multiple can be separated by spaces.
+Keyids to print. Multiple can be separated by spaces.
 
+=item B<-h> B<--help>
+
+Print usage and exit.
+
+=item B<-v> B<--version>
+
+Print version and exit.
 
 =back
 
@@ -289,4 +334,6 @@ http://pgp-tools.alioth.debian.org/
 (c) 2001 - 2005 Simon Richter <sjr@debian.org>
 
 (c) 2005 Thijs Kinkhorst <thijs@kinkhorst.com>
+
+(c) 2005 Christoph Berg <cb@df7cb.de>
 

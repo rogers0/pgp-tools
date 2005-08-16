@@ -9,6 +9,9 @@ signing-party (0.4.2-1) UNRELEASED; urgency=low
      + be more verbose when user tries to sign obsolete v3 crap.
      + install README.*.
   * gpglist: added new script, thanks to Uli Martens.
+  * gpg-key2ps:
+    + use Getopt::Long, general code cleanup.
+    + gpg-key2ps "my name" works now.
   * debian/control: move libpaper-utils to Recommends, remove redundant perl
     dependency.
 
