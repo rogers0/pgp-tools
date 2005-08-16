@@ -95,7 +95,7 @@ sub getHits($) {
 		push @ops, '--with-colons';
 		push @ops, '--fixed-list-mode';
 		push @ops, '--search';
-		push @ops, $options->{'search'};
+		push @ops, @{$options->{'search'}};
 		exec(@ops);
 		die ("Cannot exec GnuPG: $!\n");
 	};
@@ -345,10 +345,7 @@ sub version {
 
 	## Take all additional arguments to the program as a search target,
 	## escape the string for use in URLs.
-	$options{'search'} = join ' ', @ARGV;
-	$options{'search'} =~ s/ ( [^A-Za-z0-9] )
-	                       / '%' . unpack("H2", $1)
-		               /xeg;
+	$options{'search'} = \@ARGV;
 	my $keys = getHits( \%options );
 	my $keyids;
 
