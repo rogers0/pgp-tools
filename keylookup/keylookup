@@ -3,7 +3,7 @@
 # (c) 2000, 2002 Christian Kurz <shorty@debian.org>,
 #                Peter Palfrader <peter@palfrader.org>
 #
-# $Id: keylookup,v 1.34 2002/09/19 03:35:10 weasel Exp $
+# $Id$
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ use IO::Socket;
 use IPC::Open3;
 use Getopt::Long;
 
-my $version = '2.1 ($Id: keylookup,v 1.34 2002/09/19 03:35:10 weasel Exp $)';
+my $version = '2.1 ($Id$)';
 
 # The port to use for keyservers unless given otherwise.
 my $PORT=11371;
@@ -50,7 +50,7 @@ my $Whiptail = '/usr/bin/whiptail';
 
 # Strings to use in the dialog|whiptail frontend
 my $TITLE = 'Import Keys';
-my $BACKTITLE = 'KeyLookup $Revision: 1.34 $';
+my $BACKTITLE = 'KeyLookup $Revision$';
 my $INSTRUCTION = 'Select keys to import:';
 #
 my @TPUTCOL=('tput', 'cols');
