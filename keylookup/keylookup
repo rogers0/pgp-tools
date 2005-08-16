@@ -349,6 +349,10 @@ sub version {
 	my $keys = getHits( \%options );
 	my $keyids;
 
+	if (scalar keys %$keys == 0) {
+		print "GnuPG did not find any keys matching your search string.\n";
+		exit 0;
+	};
 	if ($options{'importall'}) {
 		my @allkeys = keys %$keys;
 		$keyids = \@allkeys;
