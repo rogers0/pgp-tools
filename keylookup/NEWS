@@ -3,6 +3,7 @@ $Id$
 Release notes for keylookup 3.0 (2005-08-16)
  * Make keylookup use gpg --search instead of querying the
    keyserver directly.
+ * Sort keys by creation date.
 
 Release notes for keylookup 2.2 (2002-09-24)
  * Some keyservers have started putting the key type (DSA or RSA)

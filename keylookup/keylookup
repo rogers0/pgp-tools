@@ -105,13 +105,10 @@ sub getHits($) {
 		my ($type, undef) = split /:/;
 		if ($type eq 'pub') {
 			my ($type, $keyid, $algo, $bits, $created, undef, $revoked) = split /:/;
-			my (undef,undef,undef,$mday,$mon,$year,undef,undef,undef) = localtime ($created);
 			$currentKey = { 'bits' => $bits,
 					'type' => (defined $ALGOS{$algo} ? $ALGOS{$algo} : '#'.$algo),
 					'keyid' => $keyid,
-					'year' => $year+1900,
-					'month' => $mon+1,
-					'day' => $mday,
+					'created' => $created,
 					'revoked' => $revoked,
 					'uid' => []
 				      };
@@ -169,13 +166,15 @@ sub prepareForDialog {
 	my $keys = shift;
 	my @keyargs = ();
 
-	for my $keyid (keys %$keys) {
+	for my $keyid (sort {- ($keys->{$a}->{'created'} <=> $keys->{$b}->{'created'})} keys %$keys) {
 		for (@{ $keys->{$keyid}->{'uid'} }) {
 			push @keyargs,
 				$keys->{$keyid}->{'keyid'},
 				length() <= $MAX_UID_FIELD_LEN ? $_ : substr($_, 0, $MAX_UID_FIELD_LEN-2) . '..',
 				'off';
 		};
+		my (undef,undef,undef,$mday,$mon,$year,undef,undef,undef) = localtime ($keys->{$keyid}->{'created'});
+		push @keyargs, $keys->{$keyid}->{'keyid'}, sprintf( "[created: %s-%s-%s]", $year+1900, $mon+1, $mday ), 'off';
 		push @keyargs, '-'x8, '-'x40, 'off';
 	};
 	pop @keyargs;
@@ -189,14 +188,13 @@ sub prepareForTXT {
 	my $keys = shift;
 	my @lines = ();
 
-	for my $keyid (keys %$keys) {
+	for my $keyid (sort {- ($keys->{$a}->{'created'} <=> $keys->{$b}->{'created'})} keys %$keys) {
+		my (undef,undef,undef,$mday,$mon,$year,undef,undef,undef) = localtime ($keys->{$keyid}->{'created'});
 		push @lines, sprintf( "%s%s/%s %s-%s-%s\n",
 		                      $keys->{$keyid}->{'bits'},
 		                      $keys->{$keyid}->{'type'},
 		                      $keys->{$keyid}->{'keyid'},
-		                      $keys->{$keyid}->{'year'},
-		                      $keys->{$keyid}->{'month'},
-		                      $keys->{$keyid}->{'day'} );
+		                      $year+1900, $mon+1, $mday );
 		push @lines, map { ' 'x26 . $_ . "\n" } @{ $keys->{$keyid}->{'uid'} };
 		push @lines, "\n";
 	};
