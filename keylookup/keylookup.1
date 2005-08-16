@@ -11,11 +11,11 @@ keylookup \- Fetch and Import GnuPG keys from keyservers.
 
 .SH DESCRIPTION
 .LP
-\fBkeylookup\fR is a perl script that queries a keyserver for keys 
-matching the \fIsearch-string\fP. It shows a list to the user and offers 
-her/him to select the keys for importing into her/his GnuPG keyring.
+\fBkeylookup\fR is a wrapper around gpg --search, allowing you to search
+for keys on a keyserver.  It presents the list of matching keys to the user
+and allows her to select the keys for importing into the GnuPG keyring.
 
-For the actual import of keys GnuPG itself is called.
+For the search and actual import of keys GnuPG itself is called.
 
 
 .SH OPTIONS
