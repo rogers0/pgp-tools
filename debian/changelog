@@ -1,5 +1,6 @@
 signing-party (0.4.2-1) unstable; urgency=low
 
+  [ Christoph Berg ]
   * caff:
      + create configfile on first use (Closes: #316611).
      + note use of ~/.caff/gnupghome/gpg.conf in manpage (Closes: #321235).
@@ -11,7 +12,10 @@ signing-party (0.4.2-1) unstable; urgency=low
   * gpg-key2ps:
      + Convert from shell script to perl.
 
- -- Christoph Berg <cb@df7cb.de>  Mon,  8 Aug 2005 00:17:11 +0200
+  [ Peter Palfrader ]
+  * Add keylookup: ncurses wrapper around gpg --search
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 16:29:54 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 

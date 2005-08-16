@@ -20,5 +20,6 @@ Description: tools for signing GnuPG keys
   * gpg-key2ps: generate PostScript file with fingerprint paper strips
   * gpglist: show who signed which of your UIDs
   * gpgsigs: annotates list of GnuPG keys with already done signatures
+  * keylookup: ncurses wrapper around gpg --search
  .
  Homepage: http://pgp-tools.alioth.debian.org/
