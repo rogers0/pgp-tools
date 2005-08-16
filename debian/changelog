@@ -1,4 +1,4 @@
-signing-party (0.4.2-1) unstable; urgency=low
+signing-party (0.4.2-1) UNRELEASED; urgency=low
 
   [ Christoph Berg ]
   * caff:
@@ -9,6 +9,10 @@ signing-party (0.4.2-1) unstable; urgency=low
      + be more verbose when user tries to sign obsolete v3 crap.
      + install README.*.
   * gpglist: added new script, thanks to Uli Martens.
+  * debian/control: move libpaper-utils to Recommends, remove redundant perl
+    dependency.
+
+  [ Thijs Kinkhorst ]
   * gpg-key2ps:
      + Convert from shell script to perl.
 
