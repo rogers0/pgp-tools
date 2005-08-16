@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
-# (c) 2000, 2002 Christian Kurz <shorty@debian.org>,
-#                Peter Palfrader <peter@palfrader.org>
+# Copyright (c) 2000, 2002 Christian Kurz <shorty@debian.org>,
+# Copyright (c) 2000, 2002, 2005 Peter Palfrader <peter@palfrader.org>
 #
 # $Id$
 #
