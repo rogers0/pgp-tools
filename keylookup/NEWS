@@ -1,0 +1,13 @@
+$Id: NEWS,v 1.4 2002/09/24 06:21:28 weasel Exp $
+
+Release notes for keylookup 2.2 (2002-09-24)
+ * Some keyservers have started putting the key type (DSA or RSA)
+   in their replies to searches. Keylookup now handles that.
+ * Untaint keyIDs before passing them to GnuPG as passing tainted
+   argumentes in exec() is now deprecated.
+   (closes: DebianBug #161392)
+
+Release notes for keylookup 2.1 (2002-06-17)
+ * Support newstyle gnupg config file (honor-proxy);
+   (closes: SavannahBug #523)
+ * Rewrote TODO in English; (closes: DebianBug #120861).

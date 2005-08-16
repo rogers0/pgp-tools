@@ -1,0 +1,448 @@
+#!/usr/bin/perl -Tw
+
+# (c) 2000, 2002 Christian Kurz <shorty@debian.org>,
+#                Peter Palfrader <peter@palfrader.org>
+#
+# $Id: keylookup,v 1.34 2002/09/19 03:35:10 weasel Exp $
+#
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2, or (at your option)
+#   any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software Foundation,
+#   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#
+# Keylookup homepage: http://www.palfrader.org/keylookup/
+#           CVS, BTS: http://savannah.gnu.org/projects/keylookup/
+
+delete @ENV{'IFS', 'CDPATH', 'ENV', 'BASH_ENV', 'PATH'};
+$|=1; # Always flush buffers
+
+
+use strict;
+use IO::Socket;
+use IPC::Open3;
+use Getopt::Long;
+
+my $version = '2.1 ($Id: keylookup,v 1.34 2002/09/19 03:35:10 weasel Exp $)';
+
+# The port to use for keyservers unless given otherwise.
+my $PORT=11371;
+# The default proxy port which is used unless the port is explicitly given
+# in the http_proxy environment variable.
+my $PROXY_PORT=3128;
+
+# Name of the GnuPG binary. The executeable must the in the PATH. This may
+# be overriden using the --gnupg= switch.
+my $GnuPG='gpg';
+# Where to find GnuPG's options file.
+my $GNUPGOPTIONS=(defined $ENV{GNUPGHOME} ? $ENV{GNUPGHOME} : $ENV{'HOME'}.'/.gnupg' ) . '/options';
+# Full path to the dialog and whiptail executeable.
+my $Dialog = '/usr/bin/dialog';
+my $Whiptail = '/usr/bin/whiptail';
+
+# Strings to use in the dialog|whiptail frontend
+my $TITLE = 'Import Keys';
+my $BACKTITLE = 'KeyLookup $Revision: 1.34 $';
+my $INSTRUCTION = 'Select keys to import:';
+#
+my @TPUTCOL=('tput', 'cols');
+my @TPUTROW=('tput', 'lines');
+my $DEFAULTCOLS = 80;
+my $DEFAULTROWS = 25;
+# Size of the dialog boxes, will be set in calcDialogSize;
+my $MAX_UID_FIELD_LEN;
+my @DIALOGSIZE;
+my @WHIPTAILSIZE;
+
+
+# Was the keyserver overriden|given on the command line?
+# This is used to find out wheter we need to instruct the user
+# to give the keyserver option to GnuPG.
+my $keyserverWasSetOnCmdLine = 0;
+
+
+# Queries a remote keyserver (using a proxy if requested) and returns
+# the keyservers anser. No module is used deliberatly to make this
+# script run on as many systems as possible.
+
+sub fetchIt($$$$) {
+	my $server = shift;
+	my $port = shift;
+	my $requestURL = shift;
+	my $honorproxy = shift;
+	
+	my $result;
+	my $remote;
+
+	if ($honorproxy && defined $ENV{'http_proxy'}) {
+		my $proxyserver;
+		my $proxyport;
+
+		if ( $ENV{'http_proxy'} =~ m#^http://(\S+):(\d+)/?$# ) {
+			$proxyserver = $1;
+			$proxyport   = $2;
+		} elsif ( $ENV{'http_proxy'} =~ m#^http://(\S+)/?$# ) {
+			$proxyserver = $1;
+			$proxyport   = $PROXY_PORT;
+		} else {
+			die ("Unkown http_proxy format");
+		};
+
+		$remote = IO::Socket::INET->new(
+			Proto           => 'tcp',
+			PeerAddr        => $proxyserver,
+			PeerPort	=> $proxyport
+		) || die ("Cannot connect to prox: $!");
+
+		my $URL=sprintf("http://%s:%s%s/", $server, $port, $requestURL);
+		printf $remote "GET %s HTTP/1.1\n\n", $URL;
+	} else {
+		$remote = IO::Socket::INET->new(
+			Proto		=> 'tcp',
+			PeerAddr	=> $server,
+			PeerPort	=> $port
+		) || die ("Cannot connect to keysever: $!");
+
+		printf $remote "GET %s HTTP/1.1\nHost: %s\n\n\n", $requestURL, $server;
+	};
+
+
+	{
+		local $/;
+		$/=undef;
+		$result = <$remote>;
+	};
+	return $result;
+};
+
+
+# getHits receives all options as a parameter, calls fetchIT to
+# query a keyserver, processes the output from the keyserver and
+# stores it in a datastructure for later use.
+sub getHits($) {
+	my $options = shift;
+
+	die ("$0: No keyserver given!\n") unless (defined $options->{'keyserver'});
+
+	my $result = fetchIt(
+		$options->{'keyserver'}, 
+		$options->{'port'}, 
+		sprintf("/pks/lookup?op=index&search=%s", $options->{'search'}),
+		$options->{'honor-http-proxy'}
+	);
+
+	$result =~ s/<.*?>//g;
+	$result =~ s/&gt;/>/g;
+	$result =~ s/&lt;/</g;
+	$result =~ s/&quot;/"/g;
+	$result =~ s/&amp;/&/g;
+
+	my @lines = split (/\r?\n/, $result);
+
+	shift @lines;
+	shift @lines;
+	shift @lines;
+	shift @lines;
+
+	my %keys;
+	my $currentKey;
+
+	for (@lines) {
+		if (/^pub /) {
+			m, ^pub			# pub at the start of the line
+			   \s+			# whitespace
+			   (\d+)		# bits			1024
+			   ([A-Za-z]*)		# optional type (R or D usually) D
+			   /			# a slash
+			   ([0-9A-Za-z]+)	# keyid			94C09C7F
+			   \s+			# whitespace
+			   (\d+)/(\d+)/(\d+)	# date			1999/11/10
+			   \s+			# whitespace
+			   (.*)			# primary user id	Peter Palfrader
+			   ,x or
+				warn ("Unexpected format: $_\n"), next;
+
+			$currentKey = { 'bits' => $1,
+					'type' => $2,
+					'keyid' => $3,
+					'year' => $4,
+					'month' => $5,
+					'day' => $6,
+					'uid' => [ $7 ]
+				      };
+			$keys{ $3 } = $currentKey;
+		} elsif (defined $currentKey) {
+			s/^\s+//;
+			push @{ $currentKey->{'uid'} }, $_;
+		};
+	};
+
+	return \%keys;
+};
+
+# returns the number of columns of the terminal
+sub getCols {
+	my $pid;
+	return $DEFAULTCOLS unless (defined ($pid = open(KID, "-|")));
+	unless ($pid) {
+		exec (@TPUTCOL);
+	};
+	my $cols = <KID>;
+	close KID;
+	wait;
+	return (defined $cols) ? $cols : $DEFAULTCOLS;
+};
+
+# returns the number of lines of the terminal
+sub getRows {
+	my $pid;
+	return $DEFAULTROWS unless (defined ($pid = open(KID, "-|")));
+	unless ($pid) {
+		exec (@TPUTROW);
+	};
+	my $rows = <KID>;
+	close KID;
+	wait;
+	return (defined $rows) ? $rows : $DEFAULTROWS;
+};
+
+# sets MAX_UID_FIELD_LEN, DIALOGSIZE, and WHIPTAILSIZE
+sub calcDialogSize {
+	my $COLS = &getCols();
+	my $ROWS = &getRows();
+	$MAX_UID_FIELD_LEN = $COLS - 27;
+	@DIALOGSIZE = ($ROWS-7, $COLS-7, $ROWS-14);
+	@WHIPTAILSIZE = ($ROWS-7, $COLS-7, $ROWS-14);
+}
+
+sub prepareForDialog {
+	my $keys = shift;
+	my @keyargs = ();
+
+	for my $keyid (keys %$keys) {
+		for (@{ $keys->{$keyid}->{'uid'} }) {
+			push @keyargs,
+				$keys->{$keyid}->{'keyid'},
+				length() <= $MAX_UID_FIELD_LEN ? $_ : substr($_, 0, $MAX_UID_FIELD_LEN-2) . '..',
+				'off';
+		};
+		push @keyargs, '-'x8, '-'x40, 'off';
+	};
+	pop @keyargs;
+	pop @keyargs;
+	pop @keyargs;
+
+	return \@keyargs;
+};
+
+sub prepareForTXT {
+	my $keys = shift;
+	my @lines = ();
+
+	for my $keyid (keys %$keys) {
+		push @lines, sprintf( "%s%s/%s %s-%s-%s\n",
+		                      $keys->{$keyid}->{'bits'},
+		                      $keys->{$keyid}->{'type'},
+		                      $keys->{$keyid}->{'keyid'},
+		                      $keys->{$keyid}->{'year'},
+		                      $keys->{$keyid}->{'month'},
+		                      $keys->{$keyid}->{'day'} );
+		push @lines, map { ' 'x26 . $_ . "\n" } @{ $keys->{$keyid}->{'uid'} };
+		push @lines, "\n";
+	};
+
+	return \@lines;
+};
+
+sub callDialog {
+	my $args = shift;
+
+	# open(SAVEOUT, ">&STDOUT") || die ("Cannot save STDOUT: $!\n");
+	# open(SAVEIN , "<&STDIN" ) || die ("Cannot save STDIN: $!\n");
+
+	my $pid = open3( '<&STDIN', '>&STDOUT', \*ERRFH, @$args);
+	
+	my %unique;
+	my @keys = grep { !$unique{$_}++ }
+		grep { /^[0-9A-Fa-f]{8}$/ }
+		map { s/\s//g; $_ } <ERRFH>;
+	wait;
+
+	# open(STDOUT, ">&SAVEOUT") || die "Cannot restore STDOUT: $!\n";
+	# open(STDIN , "<&SAVEIN")  || die "Cannot restore STDIN: $!\n";
+
+	return \@keys;
+};
+
+sub selectKeys {
+	my $keys = shift;
+	my $options = shift;
+
+	my $frontend = $options->{'frontend'};
+	$frontend = 'dialog' unless (defined $frontend);
+
+	if ($frontend eq 'dialog') {
+		unless (-x $Dialog) {
+			warn("Dialog ($Dialog) not executeable/installed. Falling back to Whiptail\n");
+			$frontend = 'whiptail';
+		}
+	};
+	if ($frontend eq 'whiptail') {
+		unless (-x $Whiptail ) {
+			warn("Whiptail ($Whiptail) not executeable/installed. Falling back to plain\n");
+			$frontend = 'plain';
+		}
+	};
+
+	if ( $frontend eq 'dialog' ) {
+		calcDialogSize;
+		my @ARGS = (
+			$Dialog,
+			'--backtitle',
+			$BACKTITLE,
+			'--separate-output',
+			'--title',
+			$TITLE,
+			'--checklist',
+			$INSTRUCTION,
+			@DIALOGSIZE);
+		push @ARGS, @{&prepareForDialog($keys)};
+		return &callDialog( \@ARGS );
+	} elsif ( $frontend eq 'whiptail' ) {
+		calcDialogSize;
+		my @ARGS = (
+			$Whiptail,
+			'--backtitle',
+			$BACKTITLE,
+			'--separate-output',
+			'--title',
+			$TITLE,
+			'--checklist',
+			$INSTRUCTION,
+			@WHIPTAILSIZE,
+			'--');
+		push @ARGS, @{&prepareForDialog($keys)};
+		return &callDialog( \@ARGS );
+	} else {
+		print for (@{ &prepareForTXT( $keys ) });
+		if ($keyserverWasSetOnCmdLine) {
+			printf ("Now run gpg --keyserver %s --recv-keys <key ids>\n", $options->{'keyserver'});
+		} else {
+			print ("Now run gpg --recv-keys <key ids>\n");
+		};
+
+		## If no frontend was selected, or selected frontend was plain,
+		## exit successfully, otherwise with an exitcode != 0
+		exit (defined $options->{'frontend'} &&
+		      $options->{'frontend'} ne "" &&
+		      $options->{'frontend'} ne "plain");
+	};
+};
+
+sub importKeys {
+	my $keyids = shift;
+	my $options = shift;
+
+	my @args = ( $options->{'gnupg'},
+		  '--keyserver',
+		  $options->{'keyserver'},
+		  '--recv-keys');
+	for my $keyid (@$keyids) {
+		# untaint keyids
+		my ($cleanid) = $keyid =~ /^([a-zA-Z0-9]{8})$/;
+		warn ("keyid '$keyid' has unexpected format - skipping\n"), next
+			unless defined $cleanid;
+		push @args, $cleanid;
+	}
+		  
+	print "Calling GnuPG...\n";
+	exec (@args) || die "can't exec gnupg: $!\n"; # won't return
+};
+
+
+sub usage {
+	my $errorcode = shift;
+	print << 'EOF'
+Syntax: keylookup [options] <searchstring>
+
+Options:
+	--keyserver=<keyserver>	Select keyserver
+	--port=<port>		Use a non standard port
+	--frontend=<frontend>	One of whiptail, dialog or plain
+	--importall		Import all matched keys
+	--gnupg=<gnupg>		use this gnupg binary
+	--honor-http-proxy	honor the http_proxy environment varibale
+	--help			print this message
+
+EOF
+;
+	exit($errorcode);
+};
+
+sub version {
+	print "keylookup $version\nWritten by Christian Kurz and Peter Palfrader.\n";
+	exit(0);
+};
+
+	my %options;
+	GetOptions( \%options,
+		'keyserver=s',
+		'port=i',
+		'frontend=s',
+		'importall',
+		'gnupg=s',
+		'honor-http-proxy',
+		'version',
+		'help') or
+		&usage(1);
+	&version(0) if ($options{'version'});
+	&usage(0) if ($options{'help'} || ( scalar(@ARGV) == 0));
+
+	## If the keyserver was not given on the command line, lurk into
+	## GnuPG's config file, it might be defined there.
+	$keyserverWasSetOnCmdLine = defined $options{'keyserver'};
+	unless (defined $options{'keyserver'} &&
+		defined $options{'honor-http-proxy'} ) {
+		if ( open(GNUPGOPTIONS, $GNUPGOPTIONS) ) {
+			my $keyserver = $options{'keyserver'};
+			while (<GNUPGOPTIONS>) {
+				$options{'keyserver'} = $1 if (/^\s*keyserver\s+(\S+?)[#\s]/i && ! defined $keyserver);
+				$options{'honor-http-proxy'} = 1 if /^\s*(keyserver-options\s+)honor-http-proxy\s/i;
+			};
+			close(GNUPGOPTIONS) || warn("Cannot close $GNUPGOPTIONS: $!\n");
+		} else {
+			warn ("Cannot open $GNUPGOPTIONS: $!\n");
+		};
+	};
+	$options{'port'}  = $PORT unless (defined $options{'port'});
+	$options{'gnupg'} = $GnuPG unless (defined $options{'gnupg'});
+
+	# Untaint it
+	$options{'keyserver'} =~ /(.*)/;
+	$options{'keyserver'} = $1;
+
+	## Take all additional arguments to the program as a search target,
+	## escape the string for use in URLs.
+	$options{'search'} = join ' ', @ARGV;
+	$options{'search'} =~ s/ ( [^A-Za-z0-9] )
+	                       / '%' . unpack("H2", $1)
+		               /xeg;
+	my $keys = getHits( \%options );
+	my $keyids;
+
+	if ($options{'importall'}) {
+		my @allkeys = keys %$keys;
+		$keyids = \@allkeys;
+	} else {
+		$keyids = selectKeys($keys, \%options); # won't return if no interactive frontend
+	};
+	&importKeys($keyids, \%options) if (scalar @$keyids);	# won't return
+
