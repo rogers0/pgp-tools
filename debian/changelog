@@ -22,8 +22,10 @@ signing-party (0.4.2-1) UNRELEASED; urgency=low
   [ Peter Palfrader ]
   * Add keylookup: ncurses wrapper around gpg --search
      + Recommend dialog | whiptail
+  * Do not ship useless README file in the binary package.  It's more or
+    less the same as the long description
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 16:46:27 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 17:29:08 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 
