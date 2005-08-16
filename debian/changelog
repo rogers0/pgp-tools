@@ -14,8 +14,9 @@ signing-party (0.4.2-1) unstable; urgency=low
 
   [ Peter Palfrader ]
   * Add keylookup: ncurses wrapper around gpg --search
+     + Recommend dialog | whiptail
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 16:29:54 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 16:46:27 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 
