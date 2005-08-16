@@ -30,8 +30,7 @@ Package: keylookup
 Architecture: all
 Depends: signing-party (>= 0.4.2)
 Description: transitional package to pull in signing-party
-  A nice console tool written in perl to fetch public keys from
-  keyservers.
+  A nice console tool to fetch public keys from keyservers.
   .
   keylookup has been merged with signing-party as of 0.4.2.
   .
