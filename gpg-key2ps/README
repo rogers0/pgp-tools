@@ -11,6 +11,7 @@ revoked-style is one of:
   strike - Strike through lines
 
 Output is PostScript which can be sent to e.g. the lpr command.
+Specifying the paper size only works when libpaper is installed.
 
 
 CREDITS
