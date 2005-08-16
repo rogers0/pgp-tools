@@ -31,7 +31,7 @@ use IO::Socket;
 use IPC::Open3;
 use Getopt::Long;
 
-my $version = '2.1 ($Id$)';
+my $version = '3.0 ($Id$)';
 
 # Where to find GnuPG's options file.
 # Full path to the dialog and whiptail executeable.

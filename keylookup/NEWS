@@ -1,6 +1,6 @@
 $Id$
 
-Release notes for keylookup 2005-08-16
+Release notes for keylookup 3.0 (2005-08-16)
  * Make keylookup use gpg --search instead of querying the
    keyserver directly.
 
