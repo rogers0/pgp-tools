@@ -18,6 +18,7 @@ signing-party (0.4.2-1) UNRELEASED; urgency=low
   [ Thijs Kinkhorst ]
   * gpg-key2ps:
      + Convert from shell script to perl.
+     + Fix too few slips on a page (Closes: #320785).
 
   [ Peter Palfrader ]
   * Add keylookup: ncurses wrapper around gpg --search
@@ -25,7 +26,7 @@ signing-party (0.4.2-1) UNRELEASED; urgency=low
   * Do not ship useless README file in the binary package.  It's more or
     less the same as the long description
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 16 Aug 2005 17:29:08 +0200
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 16 Aug 2005 20:25:01 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 
