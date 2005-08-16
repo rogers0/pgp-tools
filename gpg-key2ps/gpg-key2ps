@@ -85,6 +85,7 @@ if ( -x "/usr/bin/paperconf" ) {
 	chomp($h);
 } else {
 	# Default to A4.
+	print STDERR "Warning: libpaper-utils is not installed, defaulting to A4.\n";
 	$w=596;
 	$h=842;
 }
