@@ -30,8 +30,8 @@ Package: keylookup
 Architecture: all
 Depends: signing-party (>= 0.4.2)
 Description: transitional package to pull in signing-party
-  A nice console tool to fetch public keys from keyservers.
-  .
-  keylookup has been merged with signing-party as of 0.4.2.
-  .
-  This package is empty to facilitate upgrades and can safely be removed.
+ A nice console tool to fetch public keys from keyservers.
+ .
+ keylookup has been merged with signing-party as of 0.4.2.
+ .
+ This package is empty to facilitate upgrades and can safely be removed.
