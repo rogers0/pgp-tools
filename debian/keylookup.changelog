@@ -1,4 +1,4 @@
-signing-party (3.0-1) unstable; urgency=low
+signing-party (0.4.2-1) unstable; urgency=low
 
   * Merged with signing-party in 0.4.2-1.  This package is now empty
     and can safely be removed.
