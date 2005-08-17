@@ -1,6 +1,10 @@
-signing-party (0.4.2-1) UNRELEASED; urgency=low
+signing-party (0.4.2-1) unstable; urgency=low
 
-  [ Christoph Berg ]
+  * New upstream release.
+  * debian/control: move libpaper-utils to Recommends, remove redundant perl
+    dependency.
+  * Do not ship useless README file in the binary package.  It's more or
+    less the same as the long description
   * caff:
      + create configfile on first use (Closes: #316611).
      + note use of ~/.caff/gnupghome/gpg.conf in manpage (Closes: #321235).
@@ -10,23 +14,14 @@ signing-party (0.4.2-1) UNRELEASED; urgency=low
      + install README.*.
   * gpglist: added new script, thanks to Uli Martens.
   * gpg-key2ps:
-    + use Getopt::Long, general code cleanup.
-    + gpg-key2ps "my name" works now.
-  * debian/control: move libpaper-utils to Recommends, remove redundant perl
-    dependency.
-
-  [ Thijs Kinkhorst ]
-  * gpg-key2ps:
+     + use Getopt::Long, general code cleanup.
+     + gpg-key2ps "my name" works now.
      + Convert from shell script to perl.
      + Fix too few slips on a page (Closes: #320785).
-
-  [ Peter Palfrader ]
   * Add keylookup: ncurses wrapper around gpg --search
      + Recommend dialog | whiptail
-  * Do not ship useless README file in the binary package.  It's more or
-    less the same as the long description
 
- -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 16 Aug 2005 20:25:01 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 17 Aug 2005 23:06:15 +0200
 
 signing-party (0.4.1-1) unstable; urgency=low
 
