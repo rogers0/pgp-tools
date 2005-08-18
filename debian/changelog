@@ -1,3 +1,9 @@
+signing-party (0.4.2-2) UNRELEASED; urgency=low
+
+  * 
+
+ -- Christoph Berg <cb@df7cb.de>  Thu, 18 Aug 2005 16:22:58 +0200
+
 signing-party (0.4.2-1) unstable; urgency=low
 
   * New upstream release.
@@ -10,6 +16,7 @@ signing-party (0.4.2-1) unstable; urgency=low
      + note use of ~/.caff/gnupghome/gpg.conf in manpage (Closes: #321235).
      + allow adding a Reply-To: header (Closes: #321007, thanks to Joost van
        Baal for the patch).
+     + parse IMPORT_OK correctly (Closes: #321496).
      + be more verbose when user tries to sign obsolete v3 crap.
      + install README.*.
   * gpglist: added new script, thanks to Uli Martens.
