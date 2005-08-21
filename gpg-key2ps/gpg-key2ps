@@ -165,8 +165,6 @@ if ( $revokestyle eq "grey" ) {
 	print "	uid\n";
 	print "	0 setgray\n";
 	print "} def\n";
-} elsif ( $revokestyle eq "hide" ) {
-	print "/revuid {} def\n";
 } elsif ( $revokestyle eq "note" ) {
 	print "/revuid {\n";
 	print "	50 y moveto (uid) show\n";
@@ -223,7 +221,9 @@ while(<GPG>) {
 	# user ids
 	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
 	# revoked user id
-	s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/;
+	if (s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/) {
+		next if $revokestyle eq "hide";
+	}
 	# subkey
 	s/^sub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
 	$numlines++;
@@ -236,6 +236,8 @@ unless ($started) {
 	print STDERR "No public key found.\n";
 	exit 1;
 }
+
+print STDERR "numlines $numlines\n";
 
 # output the remaining postscript
 print <<EOF;
