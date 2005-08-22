@@ -3,6 +3,7 @@ signing-party (0.4.2-2) UNRELEASED; urgency=low
   [ Christoph Berg ]
   * gpg-key2ps:
      + handle revoked uids in perl to get linecount right (Closes: #320785).
+  * gpgsigs: install example files.
 
   [ Peter Palfrader ]
   * Install caff's pgp-fixkey.

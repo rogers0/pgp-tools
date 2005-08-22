@@ -28,14 +28,18 @@ install: build
 	dh_install
 	dh_installman */*.1
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
-	install caff/README \
+	install -m 644 caff/README \
 		caff/README.gpg-agent \
 		caff/README.many-keys \
 		caff/README.v3-keys \
 		caff/caffrc.sample \
 			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
+	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/examples
+	install -m 644 gpgsigs/gpgsigs-lt2k5*.txt \
+		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/examples
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
-	install keylookup/NEWS $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
+	install -m 644 keylookup/NEWS \
+		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
 
 binary-indep: build install
 	dh_testdir
