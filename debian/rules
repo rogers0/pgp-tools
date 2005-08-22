@@ -40,9 +40,13 @@ install: build
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
 	install -m 644 keylookup/NEWS \
 		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
+	install -d $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
+	install -m 644 debian/overrides/signing-party $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
 
 	install -d $(CURDIR)/debian/keylookup/usr/share/doc/keylookup
 	ln -s ../signing-party/changelog.Debian.gz $(CURDIR)/debian/keylookup/usr/share/doc/keylookup/
+	install -d $(CURDIR)/debian/keylookup/usr/share/lintian/overrides
+	install -m 644 debian/overrides/keylookup $(CURDIR)/debian/keylookup/usr/share/lintian/overrides
 
 binary-indep: build install
 	dh_testdir
