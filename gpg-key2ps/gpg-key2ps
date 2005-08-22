@@ -237,8 +237,6 @@ unless ($started) {
 	exit 1;
 }
 
-print STDERR "numlines $numlines\n";
-
 # output the remaining postscript
 print <<EOF;
 } def
