@@ -54,7 +54,7 @@ binary-indep: build install
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol -psigning-party
-	dh_gencontrol -pkeylookup -- -v3.0.$(VERSION)
+	dh_gencontrol -pkeylookup -- -v3.0-$(VERSION)
 	dh_md5sums
 	dh_builddeb
 
