@@ -41,6 +41,9 @@ install: build
 	install -m 644 keylookup/NEWS \
 		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
 
+	install -d $(CURDIR)/debian/keylookup/usr/share/doc/keylookup
+	ln -s ../signing-party/changelog.Debian.gz $(CURDIR)/debian/keylookup/usr/share/doc/keylookup/
+
 binary-indep: build install
 	dh_testdir
 	dh_testroot
@@ -48,7 +51,7 @@ binary-indep: build install
 	dh_installmenu
 	dh_installcron
 	dh_installinfo
-	dh_installchangelogs
+	dh_installchangelogs -psigning-party
 	dh_compress
 	dh_fixperms
 	dh_installdeb
