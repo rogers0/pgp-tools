@@ -7,8 +7,9 @@ signing-party (0.4.3-1) unstable; urgency=low
      + Install caff's pgp-fixkey.
      + Make the version of the empty keylookup package grow too.
      + Install keylookup's old Debian changelog as changelog.keylookup.gz.
+     + Make some lintian overrides.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 23 Aug 2005 01:33:25 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 23 Aug 2005 01:46:38 +0200
 
 signing-party (0.4.2-1) unstable; urgency=low
 
