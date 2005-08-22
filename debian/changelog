@@ -32,6 +32,8 @@ signing-party (0.4.2-1) unstable; urgency=low
      + Convert from shell script to perl.
      + Fix too few slips on a page (Closes: #320785).
   * Add keylookup: ncurses wrapper around gpg --search
+     + Uses keyserver from ~/.gnupg/gpg.conf unless overridden on command line
+       (Closes: #164750).
      + Recommend dialog | whiptail
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 17 Aug 2005 23:06:15 +0200
