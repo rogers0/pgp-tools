@@ -18,6 +18,7 @@ Description: tools for signing GnuPG keys
  .
   * caff: CA - Fire and Forget signs and mails a key
   * pgp-clean: removes all non-self signatures from key
+  * pgp-fixkey: removes broken packets from keys
   * gpg-mailkeys: simply mail out a signed key to its owner
   * gpg-key2ps: generate PostScript file with fingerprint paper strips
   * gpglist: show who signed which of your UIDs

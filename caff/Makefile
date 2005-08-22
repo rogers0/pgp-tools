@@ -1,4 +1,4 @@
-MAN = caff.1 pgp-clean.1
+MAN = caff.1 pgp-clean.1 pgp-fixkey.1
 
 all: $(MAN)
 
