@@ -34,9 +34,9 @@ install: build
 		caff/README.v3-keys \
 		caff/caffrc.sample \
 			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
-	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/examples
+	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/gpgsigs/examples
 	install -m 644 gpgsigs/gpgsigs-lt2k5*.txt \
-		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/examples
+		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/gpgsigs/examples
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
 	install -m 644 keylookup/NEWS \
 		$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
