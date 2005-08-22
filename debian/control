@@ -12,7 +12,7 @@ Depends: gnupg (>= 1.3.92), libgnupg-interface-perl, libtext-template-perl, libm
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils (>= 1.1.13)
 Provides: keylookup
 Conflicts: keylookup (<< 3.0)
-Description: tools for signing GnuPG keys
+Description: Various OpenPGP related tools
  signing-party is a collection for all kinds of PGP/GnuPG related things,
  including signing scripts, party preparation scripts, etc.
  .
@@ -35,4 +35,5 @@ Description: transitional package to pull in signing-party
  .
  keylookup has been merged with signing-party as of 0.4.2.
  .
- This package is empty to facilitate upgrades and can safely be removed.
+ This package is empty and exists to facilitate upgrades.
+ It can safely be removed.
