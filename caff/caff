@@ -314,6 +314,7 @@ sub generate_config() {
 	my @keys;
 	my $hostname = `hostname -f`;
 	chomp $hostname;
+	my ($Cgecos,$Cemail,$Ckeys) = ('','','');
 	if (defined $gecos) {
 		$gecos =~ s/,.*//;
 
@@ -334,25 +335,28 @@ sub generate_config() {
 		@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2,2}([^:]+):/mg);
 		unless (scalar @keys) {
 			info("Error: No keys were found using \"gpg --list-public-keys '$gecos'\".");
-			@keys = qw{0123456789abcdef 89abcdef76543210}
+			@keys = qw{0123456789abcdef 89abcdef76543210};
+			$Ckeys = '#';
 		}
 		($email) =  ($stdout =~ /^uid:.*<(.+?@.+?)>.*:/m);
 		unless (defined $email) {
 			info("Error: No email address was found using \"gpg --list-public-keys '$gecos'\".");
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
+			$Cemail = '#';
 		}
 	} else {
 		$gecos = 'Unknown Caff User';
 		$email = $ENV{'LOGNAME'}.'@'.$hostname;
-		@keys = qw{0123456789abcdef 89abcdef76543210}
+		@keys = qw{0123456789abcdef 89abcdef76543210};
+		($Cgecos,$Cemail,$Ckeys) = ('#','#','#');
 	};
 
 	return <<EOT;
 # .caffrc -- vim:syntax=perl:
 # This file is in perl(1) format - see caff(1) for details.
 
-\$CONFIG{'owner'}       = '$gecos';
-\$CONFIG{'email'}       = '$email';
+$Cgecos\$CONFIG{'owner'}       = '$gecos';
+$Cemail\$CONFIG{'email'}       = '$email';
 
 # you can get your long keyid from
 #   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>
@@ -365,7 +369,7 @@ sub generate_config() {
 #  or, if you have more than one key:
 #   \$CONFIG{'keyid'}       = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
 
-\$CONFIG{'keyid'}       = [ qw{@keys} ];
+$Ckeys\$CONFIG{'keyid'}       = [ qw{@keys} ];
 EOT
 };
 
@@ -385,12 +389,12 @@ sub load_config() {
 	};
 
 	$CONFIG{'caffhome'}=$ENV{'HOME'}.'/.caff' unless defined $CONFIG{'caffhome'};
-	die ("owner is not defined.\n") unless defined $CONFIG{'owner'};
-	die ("email is not defined.\n") unless defined $CONFIG{'email'};
-	die ("keyid is not defined.\n") unless defined $CONFIG{'keyid'};
-	die ("keyid is not an array ref\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
+	die ("$PROGRAM_NAME: owner is not defined in $config.\n") unless defined $CONFIG{'owner'};
+	die ("$PROGRAM_NAME: email is not defined in $config.\n") unless defined $CONFIG{'email'};
+	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
+	die ("$PROGRAM_NAME: keyid is not an array ref in $config.\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
 	for my $keyid (@{$CONFIG{'keyid'}}) {
-		$keyid =~ /^[A-F0-9]{16}$/i or die ("key $keyid is not a long (16 digit) keyid.\n");
+		$keyid =~ /^[A-F0-9]{16}$/i or die ("$PROGRAM_NAME: key $keyid is not a long (16 digit) keyid in $config.\n");
 	};
 	@{$CONFIG{'keyid'}} = map { uc } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
