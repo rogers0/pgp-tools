@@ -283,6 +283,30 @@ my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
+
+
+sub notice($) {
+	my ($line) = @_;
+	print "[NOTICE] $line\n";
+};
+sub info($) {
+	my ($line) = @_;
+	print "[INFO] $line\n";
+};
+sub debug($) {
+	my ($line) = @_;
+	#print "[DEBUG] $line\n";
+};
+sub trace($) {
+	my ($line) = @_;
+	#print "[trace] $line\n";
+};
+sub trace2($) {
+	my ($line) = @_;
+	#print "[trace2] $line\n";
+};
+
+
 sub generate_config() {
 	die "Error: \$LOGNAME is not set.\n" unless $ENV{LOGNAME};
 	my $gecos = (getpwnam($ENV{LOGNAME}))[6];
@@ -383,27 +407,6 @@ If you have any questions, don't hesitate to ask.
 Regards,
 {$owner}
 EOM
-};
-
-sub notice($) {
-	my ($line) = @_;
-	print "[NOTICE] $line\n";
-};
-sub info($) {
-	my ($line) = @_;
-	print "[INFO] $line\n";
-};
-sub debug($) {
-	my ($line) = @_;
-	#print "[DEBUG] $line\n";
-};
-sub trace($) {
-	my ($line) = @_;
-	#print "[trace] $line\n";
-};
-sub trace2($) {
-	my ($line) = @_;
-	#print "[trace2] $line\n";
 };
 
 sub make_gpg_fds() {
