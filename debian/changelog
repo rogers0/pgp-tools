@@ -1,8 +1,12 @@
 signing-party (0.4.3-2) UNRELEASED; urgency=low
 
-  * 
+  * caff:
+     + When building a ~/.caffrc when there is none we would fail if
+       we cannot find a key or an email address for the current user.
+       Change this to produce something sensible in that case as well
+       (closes: #325156).
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 23 Aug 2005 01:55:09 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 27 Aug 2005 00:43:27 +0200
 
 signing-party (0.4.3-1) unstable; urgency=low
 
