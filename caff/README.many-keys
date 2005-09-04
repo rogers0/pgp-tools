@@ -11,7 +11,8 @@ Some hints to get the signing done faster:
 
   caff and gpg allow you to specify the full fingerprint. This will save you
   from having to check the fingerprint yourself. If you have a text file with
-  all fingerprints, use that and then run
+  all fingerprints (with all the spaces stripped from them), use that and then
+  run
 
   $ caff <options> `cat ksp-fingerprints.txt`
 
