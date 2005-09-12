@@ -19,7 +19,13 @@ dist:
 	rm -rf $(TGZ_DIR)
 
 tag-release:
+	if svn ls svn+ssh://svn.debian.org/svn/pgp-tools/tags/release-$(VERSION) >/dev/null 2>&1; then \
+		echo "Already exists." >&2; exit 1; \
+	fi
 	svn cp -m 'tagging release $(VERSION)' svn+ssh://svn.debian.org/svn/pgp-tools/trunk svn+ssh://svn.debian.org/svn/pgp-tools/tags/release-$(VERSION)
 
 tag-debian-version:
+	if svn ls svn+ssh://svn.debian.org/svn/pgp-tools/tags/debian-version-$(DEBVERSION) >/dev/null 2>&1; then \
+		echo "Already exists." >&2; exit 1; \
+	fi
 	svn cp -m 'tagging debian version $(DEBVERSION)' svn+ssh://svn.debian.org/svn/pgp-tools/trunk svn+ssh://svn.debian.org/svn/pgp-tools/tags/debian-version-$(DEBVERSION)
