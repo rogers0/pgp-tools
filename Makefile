@@ -1,5 +1,6 @@
 DIRS=caff gpg-key2ps gpg-mailkeys gpgsigs gpglist keylookup
 VERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: ([^-]*)/')
+DEBVERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: (.*)/')
 TGZ=../signing-party_$(VERSION).orig.tar.gz
 TGZ_DIR=signing-party-$(VERSION)
 
@@ -16,3 +17,9 @@ dist:
 	cp -a README TODO Makefile $(TGZ_DIR)
 	tar cvz -f $(TGZ) --exclude .svn $(TGZ_DIR)
 	rm -rf $(TGZ_DIR)
+
+tag-release:
+	svn cp -m 'tagging release $(VERSION)' svn+ssh://svn.debian.org/svn/pgp-tools/trunk svn+ssh://svn.debian.org/svn/pgp-tools/tags/release-$(VERSION)
+
+tag-debian-version:
+	svn cp -m 'tagging debian version $(DEBVERSION)' svn+ssh://svn.debian.org/svn/pgp-tools/trunk svn+ssh://svn.debian.org/svn/pgp-tools/tags/debian-version-$(DEBVERSION)
