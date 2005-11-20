@@ -373,6 +373,22 @@ $Ckeys\$CONFIG{'keyid'}       = [ qw{@keys} ];
 EOT
 };
 
+sub check_executable($$) {
+	# (GnuPG::Interface gives lousy errors when the gpg binary isn't found,
+	# so we want to check manually.)
+	my ($purpose, $fn) = @_;
+	# Only check provided fnames with a slash in them.
+	return unless defined $fn;
+	if ($fn =~ m!/!) {
+		die ("$PROGRAM_NAME: $purpose executable '$fn' not found.\n") unless -x $fn;
+	} else {
+		for my $p (split(':', $ENV{PATH})) {
+			return if -x "$p/$fn";
+		};
+		die ("$PROGRAM_NAME: $purpose executable '$fn' not found on path.\n") unless -x $fn;
+	};
+};
+
 sub load_config() {
 	my $config = $ENV{'HOME'} . '/.caffrc';
 	unless (-f $config) {
@@ -402,6 +418,9 @@ sub load_config() {
 	$CONFIG{'gpg'} = 'gpg' unless defined $CONFIG{'gpg'};
 	$CONFIG{'gpg-sign'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-sign'};
 	$CONFIG{'gpg-delsig'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-delsig'};
+	check_executable("gpg", $CONFIG{'gpg'});
+	check_executable("gpg-sign", $CONFIG{'gpg-sign'});
+	check_executable("gpg-delsig", $CONFIG{'gpg-delsig'});
 	$CONFIG{'secret-keyring'} = $ENV{'HOME'}.'/.gnupg/secring.gpg' unless defined $CONFIG{'secret-keyring'};
 	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
 	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
