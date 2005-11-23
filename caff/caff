@@ -746,7 +746,8 @@ sub send_mail($$$@) {
 		$message = $stdout;
 
 		$message_entity = MIME::Entity->build(
-			Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"');
+			Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"',
+			Encoding    => '7bit');
 
 		$message_entity->attach(
 			Type        => "application/pgp-encrypted",
