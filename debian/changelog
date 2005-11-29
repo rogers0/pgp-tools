@@ -1,3 +1,9 @@
+signing-party (0.4.4-3) unstable; urgency=low
+
+  * Upgrade debhelper compatibility to the recommended level 5. 
+
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 29 Nov 2005 22:11:49 +0100
+
 signing-party (0.4.4-2) unstable; urgency=low
 
   * Fix path in caff(1) (Closes: #327556, thanks Axel Beckert).

@@ -3,7 +3,7 @@ Section: misc
 Priority: extra
 Maintainer: Thijs Kinkhorst <kink@squirrelmail.org>
 Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, Christoph Berg <myon@debian.org>
-Build-Depends: debhelper (>> 4.0.0)
+Build-Depends: debhelper (>= 5)
 Standards-Version: 3.6.2
 
 Package: signing-party
