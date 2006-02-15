@@ -50,7 +50,8 @@ CA Fire and Forget is a script that helps you in keysigning.  It takes a list
 of keyids on the command line, fetches them from a keyserver and calls GnuPG so
 that you can sign it.  It then mails each key to all its email addresses - only
 including the one UID that we send to in each mail, pruned from all but self
-sigs and sigs done by you.
+sigs and sigs done by you.  The mailed key is encrypted with itself as a means
+to verify that key belongs to the recipient.
 
 =head1 OPTIONS
 

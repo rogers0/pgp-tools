@@ -1,8 +1,12 @@
 signing-party (0.4.4-3) unstable; urgency=low
 
-  * Upgrade debhelper compatibility to the recommended level 5. 
+  [ Thijs Kinkhorst ]
+  * Upgrade debhelper compatibility to the recommended level 5.
 
- -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 29 Nov 2005 22:11:49 +0100
+  [ Christoph Berg ]
+  * caff: note that mailed keys are encrypted (suggested by Sune Vuorela).
+
+ -- Christoph Berg <myon@debian.org>  Wed, 15 Feb 2006 10:58:06 +0100
 
 signing-party (0.4.4-2) unstable; urgency=low
 
