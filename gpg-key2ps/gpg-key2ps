@@ -2,7 +2,7 @@
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
-# Copyright (C) 2005  Thijs Kinkhorst
+# Copyright (C) 2005-2006  Thijs Kinkhorst
 # Copyright (C) 2005  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
@@ -78,7 +78,7 @@ usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
 # determine the paper size through the paperconf tool
 my $w; my $h;
-if ( -x "/usr/bin/paperconf" ) {
+if ( `which paperconf` && $? == 0 ) {
 	$w=`paperconf -w`;
 	$h=`paperconf -h`;
 	chomp($w);

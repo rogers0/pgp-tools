@@ -24,7 +24,7 @@
 #           svn://svn.debian.org/pgp-tools/trunk/
 #           http://svn.debian.org/wsvn/pgp-tools/trunk/
 
-delete @ENV{'IFS', 'CDPATH', 'ENV', 'BASH_ENV', 'PATH'};
+delete @ENV{'IFS', 'CDPATH', 'ENV', 'BASH_ENV'};
 $|=1; # Always flush buffers
 
 
@@ -34,11 +34,6 @@ use IPC::Open3;
 use Getopt::Long;
 
 my $version = '3.0 ($Id$)';
-
-# Where to find GnuPG's options file.
-# Full path to the dialog and whiptail executeable.
-my $Dialog = '/usr/bin/dialog';
-my $Whiptail = '/usr/bin/whiptail';
 
 # Strings to use in the dialog|whiptail frontend
 my $TITLE = 'Import Keys';
@@ -232,14 +227,14 @@ sub selectKeys {
 	$frontend = 'dialog' unless (defined $frontend);
 
 	if ($frontend eq 'dialog') {
-		unless (-x $Dialog) {
-			warn("Dialog ($Dialog) not executeable/installed. Falling back to Whiptail\n");
+		unless (`which dialog` && $? == 0) {
+			warn("Dialog not executeable/installed. Falling back to Whiptail\n");
 			$frontend = 'whiptail';
 		}
 	};
 	if ($frontend eq 'whiptail') {
-		unless (-x $Whiptail ) {
-			warn("Whiptail ($Whiptail) not executeable/installed. Falling back to plain\n");
+		unless (`which whiptail` && $? == 0 ) {
+			warn("Whiptail not executeable/installed. Falling back to plain\n");
 			$frontend = 'plain';
 		}
 	};
@@ -247,7 +242,7 @@ sub selectKeys {
 	if ( $frontend eq 'dialog' ) {
 		calcDialogSize;
 		my @ARGS = (
-			$Dialog,
+			'dialog',
 			'--backtitle',
 			$BACKTITLE,
 			'--separate-output',
@@ -261,7 +256,7 @@ sub selectKeys {
 	} elsif ( $frontend eq 'whiptail' ) {
 		calcDialogSize;
 		my @ARGS = (
-			$Whiptail,
+			'whiptail',
 			'--backtitle',
 			$BACKTITLE,
 			'--separate-output',
