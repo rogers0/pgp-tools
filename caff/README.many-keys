@@ -2,7 +2,7 @@ Using caff to sign lots of keys
 -------------------------------
 
 If you have loads of keys to sign (sometimes, there are keysigning parties with
-more than 100 participants), keysigning can be arkward, even with caff. It gets
+more than 100 participants), keysigning can be awkward, even with caff. It gets
 worse if you have multiple local keys and want to sign with all.
 
 Some hints to get the signing done faster:

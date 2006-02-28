@@ -1,4 +1,5 @@
 caff  --  CA - fire and forget
+==============================
 
 caff is a script that helps you in keysigning.  It takes a list of
 keyids on the command line, fetches them from a keyserver and calls
@@ -8,7 +9,18 @@ mail, pruned from all but self sigs and sigs done by you.  The mailed
 key is encrypted with itself as a means to verify that key belongs to
 the recipient.
 
-Features:
+Since we do not upload the new signatures, or import them into our
+main keyring, the signature only gets public if:
+ - the email address is valid, and
+ - the person reading the email can decrypt the mail (if it was sent
+   encrypted).
+Therefore we achieve the same level of security as common Challenge
+Response systems like CABot, without all the extra hassle of those
+systems.
+
+FEATURES
+--------
+
  * Easy to setup.
  * Attaches only the very UID that we send to in the mail.
  * Prunes the key from all signatures that are not self sigs and
@@ -18,29 +30,30 @@ Features:
  * Creates proper PGP MIME messages.
  * Uses separate GNUPGHOME for all its operations.
 
-Special Requirements:
- * GnuPG 1.3.92 or later.
+DEPENDENCIES
+------------
 
-Discussion:
+ gnupg (>= 1.3.92), perl, libgnupg-interface-perl,
+ libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62),
+ mailx
 
-Since we do not upload the new signatures, or import them into our
-main keyring, the signature only gets public if:
- - the email address is valid
- - the person reading the email can decrypt the mail (if it was sent
-   encrypted).
-
-Therefore we achieve the same level of security as common Challenge
-Repsonse systems like CABot, without all the extra hassle of those
-systems.
-
-
-
-Dependencies: gnupg (>= 1.3.92), perl, libgnupg-interface-perl, libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
-
-
-INSTALLATION NOTES
+INSTALLATION
+------------
 
 After creating a ~/.caffrc from the template, caff almost works out of the box.
+
+
+MULTIPLE SIGNING KEYS
+---------------------
+
+Q: I possess multiple keys. How can I use caff to sign each keyid
+   with both my keys?
+A: Try this:
+  $ caff --no-export-old --no-mail -u <mykey1> <keyids to sign>
+  $ caff --no-download --no-export-old -u <mykey2> <keyids to sign>
+
+
+
 
 -- 
 Peter

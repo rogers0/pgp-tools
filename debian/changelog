@@ -2,11 +2,13 @@ signing-party (0.4.4-3) unstable; urgency=low
 
   [ Thijs Kinkhorst ]
   * Upgrade debhelper compatibility to the recommended level 5.
+  * Update FSF addresses.
+  * caff: tweak documentation.
 
   [ Christoph Berg ]
   * caff: note that mailed keys are encrypted (suggested by Sune Vuorela).
 
- -- Christoph Berg <myon@debian.org>  Wed, 15 Feb 2006 10:58:06 +0100
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 28 Feb 2006 18:15:32 +0100
 
 signing-party (0.4.4-2) unstable; urgency=low
 
