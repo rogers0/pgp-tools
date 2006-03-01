@@ -245,6 +245,23 @@ Add a Reply-To: header to messages sent. Default: none.
 Address to send blind carbon copies to when sending mail.
 Default: none.
 
+=item B<mailer-send> [array]
+
+Parameters to pass to Mail::Mailer.
+This could for example be
+
+	$CONFIG{mailer-send} =  [ 'smtp', Server => 'mail.server', Auth => ['user', 'pass'] ]
+
+to use the perl SMTP client or
+
+	$CONFIG{mailer-send} =  [ 'sendmail', '-o8' ]
+
+to pass arguments to the sendmail program.
+For more information run C<< perldoc Mail::Mailer >>.
+Setting this option is strongly discouraged.  Fix your local MTA
+instead.
+Default: none.
+
 =back
 
 =head1 AUTHORS
@@ -286,6 +303,10 @@ my $VERSION = "0.0.0.$REVISION_NUMER";
 
 
 
+sub mywarn($) {
+	my ($line) = @_;
+	print "[WARN] $line\n";
+};
 sub notice($) {
 	my ($line) = @_;
 	print "[NOTICE] $line\n";
@@ -426,6 +447,8 @@ sub load_config() {
 	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
 	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
 	$CONFIG{'key-files'} = () unless defined $CONFIG{'key-files'};
+	$CONFIG{'mailer-send'} = [] unless defined $CONFIG{'mailer-send'};
+	die ("$PROGRAM_NAME: mailer-send is not an array ref in $config.\n") unless (ref $CONFIG{'mailer-send'} eq 'ARRAY');
 	$CONFIG{'mail-template'} = <<'EOM' unless defined $CONFIG{'mail-template'};
 Hi,
 
@@ -770,7 +793,8 @@ sub send_mail($$$@) {
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
 	$message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
 	$message_entity->head->add("User-Agent", $USER_AGENT);
-	$message_entity->send();
+	mywarn("You have set arguments to pass to Mail::Mailer.  Better fix your MTA.  (Also, Mail::Mailer's error reporting is non existant, so it won't tell you when it doesn't work.)") if (scalar @{$CONFIG{'mailer-send'}} > 0);
+	$message_entity->send(@{$CONFIG{'mailer-send'}});
 	$message_entity->stringify();
 };
 
