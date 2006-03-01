@@ -7,11 +7,13 @@ signing-party (0.4.5-1) UNRELEASED; urgency=low
   * gpg-key2ps, keylookup: make them less dependent on specific
     installation paths and thus better portable outside of Debian
     (Closes: #354142).
+  * caff: support using a SMTP-server to send out the mails instead
+    of a local MTA. Thanks Mathias Brossard for the patch.
 
   [ Christoph Berg ]
   * caff: note that mailed keys are encrypted (suggested by Sune Vuorela).
 
- -- Thijs Kinkhorst <kink@squirrelmail.org>  Tue, 28 Feb 2006 18:41:13 +0100
+ -- Thijs Kinkhorst <kink@squirrelmail.org>  Wed,  1 Mar 2006 15:47:33 +0100
 
 signing-party (0.4.4-2) unstable; urgency=low
 
