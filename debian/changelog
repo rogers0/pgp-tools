@@ -1,17 +1,17 @@
-signing-party (0.4.5-1) UNRELEASED; urgency=low
+signing-party (0.4.5-1) unstable; urgency=low
 
   * Upgrade debhelper compatibility to the recommended level 5.
   * Update FSF addresses.
   * caff: tweak documentation.
-  * gpg-key2ps, keylookup: make them less dependent on specific
-    installation paths and thus better portable outside of Debian
-    (Closes: #354142).
   * caff: note that mailed keys are encrypted (suggested by Sune Vuorela).
   * caff: You can now specify additional arguments to pass to the
     send method of Mail::Mailer.  This allows you to send mails via
     SMTP and use authentication for instance.  Thanks to Martin von Gagern.
+  * gpg-key2ps, keylookup: make them less dependent on specific
+    installation paths and thus better portable outside of Debian
+    (Closes: #354142).
 
- -- Peter Palfrader <weasel@debian.org>  Wed,  1 Mar 2006 16:04:43 +0100
+ -- Christoph Berg <myon@debian.org>  Sun, 12 Mar 2006 13:34:20 +0100
 
 signing-party (0.4.4-2) unstable; urgency=low
 
