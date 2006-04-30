@@ -4,7 +4,7 @@
 # $Id$
 #
 # Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
-# Copyright (c) 2005 Christoph Berg <cb@df7cb.de>
+# Copyright (c) 2005, 2006 Christoph Berg <cb@df7cb.de>
 #
 # All rights reserved.
 #
@@ -635,7 +635,7 @@ my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET
 my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
 
 load_config;
-my $USER_AGENT = "caff $VERSION - (c) 2004, 2005 Peter Palfrader et al.";
+my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
 
 my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
 my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
@@ -650,7 +650,7 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 sub version($) {
 	my ($fd) = @_;
-	print $fd "caff $VERSION - (c) 2004, 2005 Peter Palfrader et al.\n";
+	print $fd "caff $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
 };
 
 sub usage($$) {
