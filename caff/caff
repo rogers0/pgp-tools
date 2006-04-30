@@ -203,6 +203,10 @@ This is useful for offline signing. Default: B<0>.
 Don't export UIDs by default, on which your latest signature is older
 than this age.  Default: B<24*60*60> (i.e. one day).
 
+=item B<local-user> [string]
+
+Select the key that is used for signing, in case you have more than one key.
+
 =head2 Mail settings
 
 =item B<mail> [boolean]
@@ -891,13 +895,18 @@ if ($params->{'version'}) {
 };
 usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
+$CONFIG{'local-user'}  = $params->{'local-user'}  if defined $params->{'local-user'};
+$CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
+$CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
+$CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
+$CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
+push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
-
-if ($params->{'local-user'}) {
-	$USER = $params->{'local-user'};
+if ($CONFIG{'local-user'}) {
+	$USER = $CONFIG{'local-user'};
 	$USER =~ s/^0x//i;
 	unless ($USER =~ /^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
-		print STDERR "-u $USER is not a keyid.\n";
+		print STDERR "Local-user $USER is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
 	$USER = uc($USER);
@@ -915,13 +924,6 @@ for my $keyid (@ARGV) {
 	};
 	push @KEYIDS, uc($keyid);
 };
-
-$CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
-$CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
-$CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
-$CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
-push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
-
 
 #################
 # import own keys

@@ -3,12 +3,14 @@ signing-party (0.4.6-1) unreleased; urgency=low
   * caff:
     + Try hostname without -f first to be compatible with BSD
       (Closes: #356830).
+    + Make local-user a config option, thanks to Michael C. Toren for the
+      patch (Closes: #361316).
     + Bump copyright, use URL in User-Agent header.
   * pgp-clean:
     + Import caff's getopt handling.
     + Add option to allow exporting subkeys (Closes: #359698).
 
- -- Christoph Berg <myon@debian.org>  Sun, 30 Apr 2006 11:33:23 +0200
+ -- Christoph Berg <myon@debian.org>  Sun, 30 Apr 2006 12:25:27 +0200
 
 signing-party (0.4.5-1) unstable; urgency=low
 
