@@ -1,3 +1,11 @@
+signing-party (0.4.6-1) unreleased; urgency=low
+
+  * caff:
+    + Try hostname without -f first to be compatible with BSD
+      (Closes: #356830).
+
+ -- Christoph Berg <myon@debian.org>  Sun, 30 Apr 2006 10:52:10 +0200
+
 signing-party (0.4.5-1) unstable; urgency=low
 
   * Upgrade debhelper compatibility to the recommended level 5.

@@ -334,9 +334,12 @@ sub generate_config() {
 	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
 	my $email;
 	my @keys;
-	my $hostname = `hostname -f`;
+	# BSD does not have hostname -f, so we try without -f first
+	my $hostname = `hostname`;
+	$hostname = `hostname -f` unless $hostname =~ /\./;
 	chomp $hostname;
 	my ($Cgecos,$Cemail,$Ckeys) = ('','','');
+
 	if (defined $gecos) {
 		$gecos =~ s/,.*//;
 
