@@ -4,6 +4,7 @@
 # $Id$
 #
 # Copyright (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
+# Copyright (c) 2006 Christoph Berg <cb@df7cb.de>
 #
 # All rights reserved.
 #
@@ -39,7 +40,7 @@ pgp-clean -- remove all non-self signatures from key
 
 =over
 
-=item B<pgp-clean> I<keyid> [I<keyid> ...]
+=item B<pgp-clean> [B<-s>] I<keyid> [I<keyid> ...]
 
 =back
 
@@ -53,6 +54,10 @@ signing (e.g. with B<caff>).
 =head1 OPTIONS
 
 =over
+
+=item B<-s> B<--export-subkeys>
+
+Do not remove subkeys. (Pruned by default.)
 
 =item I<keyid>
 
@@ -87,11 +92,16 @@ use File::Path;
 use File::Temp qw{tempdir};
 use Fcntl;
 use IO::Select;
+use Getopt::Long;
 use GnuPG::Interface;
 
 my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
+
+###########
+# functions
+###########
 
 sub notice($) {
 	my ($line) = @_;
@@ -239,26 +249,60 @@ sub export_key($$) {
 	return $stdout;
 };
 
+##################
+# global variables
+##################
+
 my $KEYEDIT_PROMPT = '^\[GNUPG:\] GET_LINE keyedit.prompt';
 my $KEYEDIT_DELUID_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.uid.okay';
 my $KEYEDIT_DELSIG_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.delsig';
 my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET_LINE keyedit.prompt)';
 my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
+my $params;
 
+###################
+# argument handling
+###################
 
-sub usage() {
-	print STDERR "pgp-clean $VERSION - (c) 2004, 2005 Peter Palfrader\n";
-	print STDERR "Usage: $PROGRAM_NAME <keyid> [<keyid> ...]\n";
-	exit 1;
+sub version($) {
+	my ($fd) = @_;
+	print $fd "pgp-clean $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
 };
 
-usage() unless scalar @ARGV >= 1;
+sub usage($$) {
+	my ($fd, $exitcode) = @_;
+	version($fd);
+	print $fd "Usage: $PROGRAM_NAME [-s] <keyid> [<keyid> ...]\n";
+	print $fd "-s --export-subkeys  do not remove subkeys\n";
+	exit $exitcode;
+};
+
+Getopt::Long::config('bundling');
+if (!GetOptions (
+	'-h'               =>  \$params->{'help'},
+	'--help'           =>  \$params->{'help'},
+	'-V'               =>  \$params->{'version'},
+	'--version'        =>  \$params->{'version'},
+	'-s'               =>  \$params->{'export-subkeys'},
+	'--export-subkeys' =>  \$params->{'export-subkeys'},
+	)) {
+	usage(\*STDERR, 1);
+};
+if ($params->{'help'}) {
+	usage(\*STDOUT, 0);
+};
+if ($params->{'version'}) {
+	version(\*STDOUT);
+	exit(0);
+};
+usage(\*STDERR, 1) unless scalar @ARGV >= 1;
+
 my @KEYIDS;
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
 	unless ($keyid =~ /^[A-Za-z0-9]{8}([A-Za-z0-9]{8})?$/) {
 		print STDERR "$keyid is not a keyid.\n";
-		usage();
+		usage(\*STDERR, 1);
 	};
 	push @KEYIDS, uc($keyid);
 };
@@ -361,7 +405,7 @@ for my $keyid (@KEYIDS) {
 
 	# delete subkeys
 	################
-	if ($number_of_subkeys > 0) {
+	if (!$params->{'export-subkeys'} and $number_of_subkeys > 0) {
 		for (my $i=1; $i<=$number_of_subkeys; $i++) {
 			readwrite_gpg("key $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 		};
