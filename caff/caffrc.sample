@@ -1,5 +1,5 @@
 # $Id$
-# vim: syntax=perl
+# vim:ft=perl:
 
 $CONFIG{'owner'}       = 'John Doe';
 $CONFIG{'email'}       = 'user@example.com';
@@ -11,7 +11,7 @@ $CONFIG{'email'}       = 'user@example.com';
 # your fingerprint.
 
 $CONFIG{'keyid'}       = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
-$CONFIG{'also-encrypt-to'} = 'DE7AAF6E94C09C7F';
+$CONFIG{'also-encrypt-to'} = [ qw{DE7AAF6E94C09C7F} ];
 $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 
 # The options below need not be changed for normal operation.
@@ -42,10 +42,10 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 # $CONFIG{'mail-template'} = <<'EOM'
 # Hi,
 # 
-# please find attached the user id{(scalar @uids >= 2 ? 's' : '')}.
+# please find attached the user id{(scalar @uids >= 2 ? 's' : '')}
 # {foreach $uid (@uids) {
 #     $OUT .= "\t".$uid."\n";
-# };} of your key {$key} signed by me.
+# };}of your key {$key} signed by me.
 # 
 # Note that I did not upload your key to any keyservers.
 # If you have multiple user ids, I sent the signature for each user id

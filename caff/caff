@@ -164,9 +164,9 @@ is set to.
 
 Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
 
-=item B<also-encrypt-to> [keyid]
+=item B<also-encrypt-to> [list of keyids]
 
-An additional keyid to encrypt messages to. Default: none.
+Additional keyids to encrypt messages to. Default: none.
 
 =item B<gpg-sign-args> [string]
 
@@ -380,26 +380,36 @@ sub generate_config() {
 		($Cgecos,$Cemail,$Ckeys) = ('#','#','#');
 	};
 
-	return <<EOT;
-# .caffrc -- vim:syntax=perl:
+	my $template = <<EOT;
+# .caffrc -- vim:ft=perl:
 # This file is in perl(1) format - see caff(1) for details.
 
-$Cgecos\$CONFIG{'owner'}       = '$gecos';
-$Cemail\$CONFIG{'email'}       = '$email';
+$Cgecos\$CONFIG{'owner'} = '$gecos';
+$Cemail\$CONFIG{'email'} = '$email';
+#\$CONFIG{'reply-to'} = 'foo\@bla.org';
 
-# you can get your long keyid from
+# You can get your long keyid from
 #   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>
 #
-# if you have a v4 key, it will simply be the last 16 digits of
+# If you have a v4 key, it will simply be the last 16 digits of
 # your fingerprint.
 #
 # Example:
-#   \$CONFIG{'keyid'}       = [ qw{FEDCBA9876543210} ];
+#   \$CONFIG{'keyid'} = [ qw{FEDCBA9876543210} ];
 #  or, if you have more than one key:
-#   \$CONFIG{'keyid'}       = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
+#   \$CONFIG{'keyid'} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
+$Ckeys\$CONFIG{'keyid'} = [ qw{@keys} ];
 
-$Ckeys\$CONFIG{'keyid'}       = [ qw{@keys} ];
+# Additionally encrypt messages sent to these keyids
+#\$CONFIG{'also-encrypt-to'} = [ qw{@keys} ];
+
+# Mail template to use for the encrypted part
+#\$CONFIG{'mail-template'} = << 'EOM';
 EOT
+
+	$template .= "#$_" foreach <DATA>;
+	$template .= "#EOM\n";
+	return $template;
 };
 
 sub check_executable($$) {
@@ -456,28 +466,9 @@ sub load_config() {
 	$CONFIG{'key-files'} = () unless defined $CONFIG{'key-files'};
 	$CONFIG{'mailer-send'} = [] unless defined $CONFIG{'mailer-send'};
 	die ("$PROGRAM_NAME: mailer-send is not an array ref in $config.\n") unless (ref $CONFIG{'mailer-send'} eq 'ARRAY');
-	$CONFIG{'mail-template'} = <<'EOM' unless defined $CONFIG{'mail-template'};
-Hi,
-
-please find attached the user id{(scalar @uids >= 2 ? 's' : '')}.
-{foreach $uid (@uids) {
-    $OUT .= "\t".$uid."\n";
-};} of your key {$key} signed by me.
-
-Note that I did not upload your key to any keyservers.
-If you have multiple user ids, I sent the signature for each user id
-separately to that user id's associated email address. You can import
-the signatures by running each through `gpg --import`.
-
-If you want this new signature to be available to others, please upload
-it yourself. With GnuPG this can be done using
-	gpg --keyserver subkeys.pgp.net --send-key {$key}
-
-If you have any questions, don't hesitate to ask.
-
-Regards,
-{$owner}
-EOM
+	unless (defined $CONFIG{'mail-template'}) {
+		$CONFIG{'mail-template'} .= $_ foreach <DATA>;
+	}
 };
 
 sub make_gpg_fds() {
@@ -766,7 +757,14 @@ sub send_mail($$$@) {
 		$gpg->options->meta_interactive( 0 );
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		$gpg->options->push_recipients( $key_id );
-		$gpg->options->push_recipients( $CONFIG{'also-encrypt-to'} ) if defined $CONFIG{'also-encrypt-to'};
+		if (defined $CONFIG{'also-encrypt-to'}) {
+			if (ref($CONFIG{'also-encrypt-to'})) {
+				$gpg->options->push_recipients($_)
+					foreach @{$CONFIG{'also-encrypt-to'}};
+			} else { # old syntax
+				$gpg->options->push_recipients($CONFIG{'also-encrypt-to'});
+			}
+		}
 		my $pid = $gpg->encrypt(handles => $handles);
 		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
@@ -1301,3 +1299,29 @@ for my $keyid (@keyids_ok) {
 	};
 
 };
+
+###########################
+# the default mail template
+###########################
+
+__DATA__
+Hi,
+
+please find attached the user id{(scalar @uids >= 2 ? 's' : '')}
+{foreach $uid (@uids) {
+    $OUT .= "\t".$uid."\n";
+};}of your key {$key} signed by me.
+
+If you have multiple user ids, I sent the signature for each user id
+separately to that user id's associated email address. You can import
+the signatures by running each through `gpg --import`.
+
+Note that I did not upload your key to any keyservers. If you want this
+new signature to be available to others, please upload it yourself.
+With GnuPG this can be done using
+	gpg --keyserver subkeys.pgp.net --send-key {$key}
+
+If you have any questions, don't hesitate to ask.
+
+Regards,
+{$owner}
