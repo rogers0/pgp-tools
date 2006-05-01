@@ -85,6 +85,7 @@ Do not sign the keys.
 =item B<-u> I<yourkeyid>, B<--local-user> I<yourkeyid>
 
 Select the key that is used for signing, in case you have more than one key.
+To sign with multiple keys at once, separate multiple keyids by comma.
 
 =item B<--key-file> I<file>
 
@@ -164,7 +165,7 @@ is set to.
 
 Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
 
-=item B<also-encrypt-to> [list of keyids]
+=item B<also-encrypt-to> [keyid, or list of keyids]
 
 Additional keyids to encrypt messages to. Default: none.
 
@@ -203,9 +204,10 @@ This is useful for offline signing. Default: B<0>.
 Don't export UIDs by default, on which your latest signature is older
 than this age.  Default: B<24*60*60> (i.e. one day).
 
-=item B<local-user> [string]
+=item B<local-user> [keyid, or list of keyids]
 
 Select the key that is used for signing, in case you have more than one key.
+With multiple keyids, sign with each key in turn.
 
 =head2 Mail settings
 
@@ -400,7 +402,10 @@ $Cemail\$CONFIG{'email'} = '$email';
 #   \$CONFIG{'keyid'} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
 $Ckeys\$CONFIG{'keyid'} = [ qw{@keys} ];
 
-# Additionally encrypt messages sent to these keyids
+# Select this/these keys to sign with
+#\$CONFIG{'local-user'} = [ qw{@keys} ];
+
+# Additionally encrypt messages for these keyids
 #\$CONFIG{'also-encrypt-to'} = [ qw{@keys} ];
 
 # Mail template to use for the encrypted part
@@ -761,7 +766,7 @@ sub send_mail($$$@) {
 			if (ref($CONFIG{'also-encrypt-to'})) {
 				$gpg->options->push_recipients($_)
 					foreach @{$CONFIG{'also-encrypt-to'}};
-			} else { # old syntax
+			} else {
 				$gpg->options->push_recipients($CONFIG{'also-encrypt-to'});
 			}
 		}
@@ -855,8 +860,9 @@ sub delete_signatures($$$$$$) {
 };
 
 
-
-my $USER;
+###################
+# argument handling
+###################
 my @KEYIDS;
 my $params;
 
@@ -899,16 +905,6 @@ $CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'
 $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
 $CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
-
-if ($CONFIG{'local-user'}) {
-	$USER = $CONFIG{'local-user'};
-	$USER =~ s/^0x//i;
-	unless ($USER =~ /^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
-		print STDERR "Local-user $USER is not a keyid.\n";
-		usage(\*STDERR, 1);
-	};
-	$USER = uc($USER);
-};
 
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
@@ -1051,20 +1047,41 @@ if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 }
 	
 unless ($CONFIG{'no-sign'}) {
+	my @local_user;
+	if ($CONFIG{'local-user'}) {
+		if (ref($CONFIG{'local-user'})) {
+			@local_user = @{$CONFIG{'local-user'}};
+		} else {
+			@local_user = split /\s*,\s*/, $CONFIG{'local-user'};
+		};
+		foreach (@local_user) {
+			s/^0x//i;
+			unless (/^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
+				print STDERR "Local-user $_ is not a keyid.\n";
+				usage(\*STDERR, 1);
+			};
+			$_ = uc($_);
+		};
+	} else {
+		@local_user = (undef);
+	};
+
 	info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 	for my $keyid (@keyids_ok) {
-		my @command;
-		push @command, $CONFIG{'gpg-sign'};
-		push @command, '--local-user', $USER if (defined $USER);
-		push @command, "--homedir=$GNUPGHOME";
-		push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-		push @command, '--no-auto-check-trustdb';
-		push @command, '--trust-model=always';
-		push @command, '--edit', $keyid;
-		push @command, 'sign';
-		push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
-		print join(' ', @command),"\n";
-		system (@command);
+		foreach my $local_user (@local_user) {
+			my @command;
+			push @command, $CONFIG{'gpg-sign'};
+			push @command, '--local-user', $local_user if (defined $local_user);
+			push @command, "--homedir=$GNUPGHOME";
+			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+			push @command, '--no-auto-check-trustdb';
+			push @command, '--trust-model=always';
+			push @command, '--edit', $keyid;
+			push @command, 'sign';
+			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+			print join(' ', @command),"\n";
+			system (@command);
+		};
 	};
 };
 

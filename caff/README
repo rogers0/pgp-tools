@@ -42,19 +42,6 @@ INSTALLATION
 
 After creating a ~/.caffrc from the template, caff almost works out of the box.
 
-
-MULTIPLE SIGNING KEYS
----------------------
-
-Q: I possess multiple keys. How can I use caff to sign each keyid
-   with both my keys?
-A: Try this:
-  $ caff --no-export-old --no-mail -u <mykey1> <keyids to sign>
-  $ caff --no-download --no-export-old -u <mykey2> <keyids to sign>
-
-
-
-
 -- 
 Peter
 $Id$

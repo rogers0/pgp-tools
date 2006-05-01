@@ -5,6 +5,7 @@ signing-party (0.4.6-1) unreleased; urgency=low
       (Closes: #356830).
     + Make local-user a config option, thanks to Michael C. Toren for the
       patch (Closes: #361316).
+    + Make local-user accept a list of keyids (Closes: #333832).
     + Make also-encrypt-to a list, add a commented stanza to the default
       config file (Closes: #325163).
     + Include mail-template in default config file, some minor syntax fixes.
@@ -12,8 +13,9 @@ signing-party (0.4.6-1) unreleased; urgency=low
   * pgp-clean:
     + Import caff's getopt handling.
     + Add option to allow exporting subkeys (Closes: #359698).
+  * Bump Standards-Version, no change.
 
- -- Christoph Berg <myon@debian.org>  Mon,  1 May 2006 13:06:14 +0200
+ -- Christoph Berg <myon@debian.org>  Tue,  2 May 2006 00:50:00 +0200
 
 signing-party (0.4.5-1) unstable; urgency=low
 
