@@ -1,4 +1,4 @@
-signing-party (0.4.6-1) unreleased; urgency=low
+signing-party (0.4.6-1) unstable; urgency=low
 
   * caff:
     + Try hostname without -f first to be compatible with BSD
@@ -15,7 +15,7 @@ signing-party (0.4.6-1) unreleased; urgency=low
     + Add option to allow exporting subkeys (Closes: #359698).
   * Bump Standards-Version, no change.
 
- -- Christoph Berg <myon@debian.org>  Tue,  2 May 2006 00:50:00 +0200
+ -- Christoph Berg <myon@debian.org>  Wed,  3 May 2006 23:43:44 +0200
 
 signing-party (0.4.5-1) unstable; urgency=low
 
