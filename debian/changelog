@@ -1,8 +1,9 @@
 signing-party (0.4.6-2) unstable; urgency=low
 
+  * gpgsigs: recognize rvk (revoker), found in ksp-dc6.txt.
   * Bump Standards-Version to 3.7.2, no changes.
 
- -- Thijs Kinkhorst <kink@squirrelmail.org>  Thu,  4 May 2006 09:03:24 +0200
+ -- Christoph Berg <myon@debian.org>  Fri, 12 May 2006 13:40:37 -0500
 
 signing-party (0.4.6-1) unstable; urgency=low
 

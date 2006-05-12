@@ -17,6 +17,7 @@
 #   * support for multiple user keys
 #   * better charset conversion
 #   * pod documentation
+# see the Debian changelog for further changes.
 
 my $VERSION = qq$Rev$;
 
@@ -194,9 +195,9 @@ while (<SIGS>) {
 		$uid = "Photo ID";
 		next;
 	}
-	next if ( m/^(rev|sub|tru):/ );
+	next if ( m/^(rev|rvk|sub|tru):/ ); # revoke/revoker/subkey/trust
 	warn "unknown value: '$_', key: ".(defined $key ? $key :'none')."\n";
-}	
+}
 close SIGS;
 print STDERR "\n";
 
@@ -369,7 +370,7 @@ http://pgp-tools.alioth.debian.org/
 
 (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 
-(c) 2004, 2005 Christoph Berg <cb@df7cb.de>
+(c) 2004, 2005, 2006 Christoph Berg <cb@df7cb.de>
 
 =head1 LICENSE
 
