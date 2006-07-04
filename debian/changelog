@@ -1,3 +1,9 @@
+signing-party (0.4.6-3) unstable; urgency=low
+
+  * Update my maintainer address.
+
+ -- Thijs Kinkhorst <thijs@debian.org>  Tue,  4 Jul 2006 15:33:53 +0200
+
 signing-party (0.4.6-2) unstable; urgency=low
 
   * gpgsigs: recognize rvk (revoker), found in ksp-dc6.txt.
