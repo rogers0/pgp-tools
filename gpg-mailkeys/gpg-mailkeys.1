@@ -9,6 +9,11 @@ gpg\-mailkeys \- sends emails containing keys to their owners
 sends the owners of the keys listed on the command line a mail each,
 containing their public key. After signing, you can use this tool to send
 everyone the new signatures they just got.
+
+If you're interested in encrypting the signature before it's sent, in order
+to verify that the associated address actually belongs to the key owner,
+you should check out
+.B caff
 .SH OPTIONS
 None
 .SH ENVIRONMENT

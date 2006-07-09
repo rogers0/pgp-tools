@@ -1,6 +1,8 @@
 signing-party (0.4.6-3) unstable; urgency=low
 
   * Update my maintainer address.
+  * gpg-mailkeys: use right content-type for attached key,
+    thanks Wesley Landaker (Closes: #370566).
 
  -- Thijs Kinkhorst <thijs@debian.org>  Tue,  4 Jul 2006 15:33:53 +0200
 

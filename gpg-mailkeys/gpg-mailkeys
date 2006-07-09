@@ -59,7 +59,7 @@ Subject: $SUBJECT
 User-Agent: gpg-mailkeys/$VERSION
 MIME-Version: 1.0
 Content-Type: multipart/mixed; micalg=pgp-sha1;
-    protocol="application/pgp-signature"; boundary="$BOUNDARY"
+    boundary="$BOUNDARY"
 Content-Disposition: inline
 
 
@@ -82,8 +82,8 @@ fi
 cat << EOM >> $TEMPFILE
 
 --$BOUNDARY
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: attachment; filename="$1.sig"
+Content-Type: application/pgp-keys
+Content-Disposition: attachment; filename="$1.asc"
 
 `gpg --armor --export $1`
 
