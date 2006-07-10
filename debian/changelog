@@ -1,4 +1,4 @@
-signing-party (0.4.6-3) unstable; urgency=low
+signing-party (0.4.7-1) unstable; urgency=low
 
   * Update my maintainer address.
   * gpg-mailkeys: use right content-type for attached key,
