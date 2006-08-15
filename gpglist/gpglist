@@ -120,7 +120,7 @@ while (<SIGS>) {
 		next;
 	}
 	last if ( m/^(sub):/ );
-	next if ( m/^(tru):/ );
+	next if ( m/^(fpr|tru):/ );
 	print STDERR "hi, i'm a bug. please report me to my owner\n";
 	die "input: $_, key: $key";
 }

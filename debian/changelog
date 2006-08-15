@@ -1,3 +1,9 @@
+signing-party (0.4.7-2) unreleased; urgency=low
+
+  * gpglist: do not die with with-fingerprint (Closes: #382019).
+
+ -- Christoph Berg <myon@debian.org>  Tue, 15 Aug 2006 17:48:03 +0200
+
 signing-party (0.4.7-1) unstable; urgency=low
 
   * Update my maintainer address.
