@@ -3,7 +3,7 @@
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
 # Copyright (C) 2005-2006  Thijs Kinkhorst
-# Copyright (C) 2005  Christoph Berg <cb@df7cb.de>
+# Copyright (C) 2005-2006  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
 #
@@ -19,7 +19,7 @@ my $creationdate = scalar(localtime);
 
 sub version($) {
 	my $fd = shift;
-	print $fd "gpg-key2ps $version - (c) 2001-2005 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
+	print $fd "gpg-key2ps $version - (c) 2001-2006 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
 }
 
 sub usage($$) {
@@ -92,7 +92,8 @@ if ( `which paperconf` && $? == 0 ) {
 
 # open a gpg process we'll be reading from below
 map { s/'/'\\''/g; } @ARGV; # quote single quotes
-open(GPG, "gpg --fingerprint --with-colons '". (join "' '", @ARGV) ."' |");
+# --list-key due to #382794
+open(GPG, "gpg --list-key --with-fingerprint --with-colons '". (join "' '", @ARGV) ."' |");
 
 sub start_postscript {
 # start the PostScript output
