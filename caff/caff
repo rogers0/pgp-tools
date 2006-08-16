@@ -908,11 +908,11 @@ push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'ke
 
 for my $keyid (@ARGV) {
 	$keyid =~ s/^0x//i;
-	unless ($keyid =~ /^([A-F0-9]{8}|[A-F0-9]{16}||[A-F0-9]{40})$/i) {
-		if ($keyid =~ /^[A-F0-9]{32}$/) {
-			info("Ignoring v3 fingerprint $keyid.  v3 keys are obsolete.");
-			next;
-		};
+	if ($keyid =~ /^[A-F0-9]{32}$/i) {
+		info("Ignoring v3 fingerprint $keyid.  v3 keys are obsolete.");
+		next;
+	};
+	if ($keyid !~ /^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
