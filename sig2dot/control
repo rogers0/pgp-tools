@@ -1,0 +1,14 @@
+Source: sig2dot
+Section: graphics
+Priority: extra
+Maintainer: Christoph Berg <myon@debian.org>
+Build-Depends: debhelper (>> 4.0.0)
+Standards-Version: 3.7.2
+
+Package: sig2dot
+Architecture: all
+Depends: ${shlibs:Depends}, ${perl:Depends}
+Recommends: gnupg, springgraph
+Description: converts a list of GPG signatures to a .dot file
+ Parses output of "gpg --list-sigs" into a format suitable
+ for rendering into a graph by springgraph or graphviz.

@@ -1,0 +1,9 @@
+sig2dot for Debian
+------------------
+
+The syntax definition of the .dot files which sig2dot produces
+can be found in the graphviz man pages. A copy is here:
+ * http://www.graphviz.org/Documentation.php
+ * http://www.graphviz.org/cvs/doc/info/lang.html
+
+ -- Christoph Berg <cb@df7cb.de>  Sun,  6 Mar 2005 18:11:08 +0100
