@@ -465,7 +465,8 @@ sub load_config() {
 	check_executable("gpg", $CONFIG{'gpg'});
 	check_executable("gpg-sign", $CONFIG{'gpg-sign'});
 	check_executable("gpg-delsig", $CONFIG{'gpg-delsig'});
-	$CONFIG{'secret-keyring'} = $ENV{'HOME'}.'/.gnupg/secring.gpg' unless defined $CONFIG{'secret-keyring'};
+	$CONFIG{'secret-keyring'} = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg'
+		unless defined $CONFIG{'secret-keyring'};
 	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
 	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
 	$CONFIG{'key-files'} = () unless defined $CONFIG{'key-files'};
