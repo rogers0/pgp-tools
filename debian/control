@@ -5,7 +5,7 @@ Maintainer: Thijs Kinkhorst <thijs@debian.org>
 Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, Christoph Berg <myon@debian.org>
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
-XS-X-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
+XS-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
 
 Package: signing-party
 Architecture: all
