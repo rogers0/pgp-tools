@@ -1,12 +1,11 @@
-signing-party (0.4.8-1) unreleased; urgency=low
+signing-party (0.4.8-1) unstable; urgency=low
 
   * gpglist: do not die with with-fingerprint (Closes: #382019).
   * gpg-key2ps: add --list-key to gpg call (works around #382794).
-  * sig2dot: integrate source in this package.
   * caff: when set, use $ENV{'GNUPGHOME'} to find secring.gpg. Suggested by
     Gerfried Fuchs.
 
- -- Christoph Berg <myon@debian.org>  Mon, 21 Aug 2006 11:57:40 +0200
+ -- Christoph Berg <myon@debian.org>  Sun,  8 Oct 2006 01:29:59 +0200
 
 signing-party (0.4.7-1) unstable; urgency=low
 
