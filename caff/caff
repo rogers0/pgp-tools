@@ -1026,7 +1026,7 @@ if ($CONFIG{'no-download'}) {
 	if (scalar %local_keyids) {
 		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
 		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
-		if (scalar %local_keyids == 1) {
+		if (scalar keys %local_keyids == 1) {
 			mywarn("Assuming ". (join ' ', keys %local_keyids)." is a fine keyid.");
 		} else {
 			mywarn("Assuming ". (join ' ', keys %local_keyids)." are fine keyids.");

@@ -1,3 +1,10 @@
+signing-party (0.4.XXXX) UNRELEASED; urgency=low
+
+  * caff: Fix a bug with checking if we have exactly one or more keys
+    that failed downloading.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 11 Oct 2006 10:35:15 +0200
+
 signing-party (0.4.8-1) unstable; urgency=low
 
   * gpglist: do not die with with-fingerprint (Closes: #382019).
