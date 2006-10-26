@@ -1,9 +1,14 @@
-signing-party (0.4.XXXX) UNRELEASED; urgency=low
+signing-party (0.4.9-1) UNRELEASED; urgency=low
 
+  [ Peter Palfrader ]
   * caff: Fix a bug with checking if we have exactly one or more keys
     that failed downloading.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 11 Oct 2006 10:35:15 +0200
+  [ Christoph Berg ]
+  * caff: Mention in manpage that keyserver-options is a useful setting in
+    .caff/gnupghome/gpg.conf (Closes: #392811).
+
+ -- Christoph Berg <myon@debian.org>  Thu, 26 Oct 2006 12:52:04 +0200
 
 signing-party (0.4.8-1) unstable; urgency=low
 

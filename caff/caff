@@ -105,7 +105,7 @@ Import keys from file. Can be supplied more than once.
 
 =item $HOME/.caff/gnupghome/gpg.conf  -  gpg configuration
 
-useful options include use-agent, default-cert-level, etc.
+useful options include use-agent, keyserver-options, default-cert-level, etc.
 
 =back
 
