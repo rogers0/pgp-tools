@@ -2,7 +2,7 @@
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
-# Copyright (C) 2005-2006  Thijs Kinkhorst
+# Copyright (C) 2005-2007  Thijs Kinkhorst
 # Copyright (C) 2005-2006  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
@@ -15,18 +15,19 @@ use Getopt::Long;
 my $version = '$Rev$';
 $version =~ s/\$Rev:\s*(\d+)\s*\$/$1/;
 my $revokestyle = "hide";
+my $columns = 2;
 my $creationdate = scalar(localtime);
 
 sub version($) {
 	my $fd = shift;
-	print $fd "gpg-key2ps $version - (c) 2001-2006 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
+	print $fd "gpg-key2ps $version - (c) 2001-2007 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
 }
 
 sub usage($$) {
 	my ($fd, $exitcode) = @_;
 	version ($fd);
 	print $fd <<EOF;
-Usage: $0 [-p papersize] [-r revoked-style] keyid-or-name ...
+Usage: $0 [-p papersize] [-r revoked-style] [-1] keyid-or-name ...
 Options:
  -p --paper-size
  -r --revoked-style
@@ -35,6 +36,7 @@ Options:
         note   - Add "[revoked]"
         show   - List revoked uids normally
         strike - Strike through lines
+ -1 Only print one column, for extra wide keys
  -h --help
  -v --version
 EOF
@@ -52,7 +54,7 @@ if (!GetOptions (
 	'-p=s'              => \$opts->{papersize},
 	'--paper-size=s'    => \$opts->{papersize},
 	'-r=s'              => \$opts->{revokestyle},
-	'--revoked-style=s' => \$opts->{revokestyle},
+	'-1'                => \$opts->{1},
 )) {
 	usage(\*STDERR, 1);
 }
@@ -73,6 +75,8 @@ if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
 	print STDERR "Unknown revoked-style \"$revokestyle\".\n";
 	usage (\*STDERR, 1);
 }
+
+if ( $opts->{1} ) { $columns = 1; }
 
 usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
@@ -119,7 +123,7 @@ print <<EOF;
 
 /hline {
 	30 y 3 add moveto
-	w 2 div 30 sub y 3 add lineto stroke
+	w $columns div 30 sub y 3 add lineto stroke
 	newline
 } def
 
@@ -249,12 +253,12 @@ print <<EOF;
 	/y w 20 sub def
 	1 1 num {
 		gsave
-		0 0 h 2 div w rectclip
+		0 0 h $columns div w rectclip
 		/upper y 11 add def
 		key
 		newline
 		/lower y 11 add def
-		0 upper h 2 div upper h 2 div lower 0 lower 0 upper moveto lineto lineto lineto lineto stroke
+		0 upper h $columns div upper h $columns div lower 0 lower 0 upper moveto lineto lineto lineto lineto stroke
 		grestore
 	} for
 } def
@@ -262,9 +266,17 @@ print <<EOF;
 w 0 translate
 90 rotate
 column
-h 2 div 0 translate
+EOF
+
+if ( $columns == 2 ) {
+	print <<EOF;
+h $columns div 0 translate
 column
 
+EOF
+}
+
+print <<EOF;
 showpage
 
 %%Trailer

@@ -2,8 +2,11 @@ signing-party (0.4.9-2) unstable; urgency=low
 
   * caff:
     + Fix syntax error in example config variables (Closes: #413020).
+  * gpg-key2ps:
+    + Add '-1' option to only display one column of slips, for extra
+      wide keys (Closes: #399474).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Fri,  2 Mar 2007 13:04:36 +0100
+ -- Thijs Kinkhorst <thijs@debian.org>  Fri,  2 Mar 2007 14:12:03 +0100
 
 signing-party (0.4.9-1) unstable; urgency=low
 
