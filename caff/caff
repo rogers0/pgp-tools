@@ -116,9 +116,9 @@ The file is generated when it does not exist.
 
 Example:
 
-	$CONFIG{owner} = q{Peter Palfrader};
-	$CONFIG{email} = q{peter@palfrader.org};
-	$CONFIG{keyid} = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
+	$CONFIG{'owner'} = q{Peter Palfrader};
+	$CONFIG{'email'} = q{peter@palfrader.org};
+	$CONFIG{'keyid'} = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 
 =head2 Required basic settings
 
@@ -218,7 +218,7 @@ Do not prompt for sending mail, just do it. Default: B<0>.
 =item B<no-mail> [boolean]
 
 Do not prompt for sending mail. The messages are still written to
-$CONFIG{caffhome}/keys/. Default: B<0>.
+$CONFIG{'caffhome'}/keys/. Default: B<0>.
 
 =item B<mail-template> [string]
 
@@ -256,11 +256,11 @@ Default: none.
 Parameters to pass to Mail::Mailer.
 This could for example be
 
-	$CONFIG{mailer-send} =  [ 'smtp', Server => 'mail.server', Auth => ['user', 'pass'] ]
+	$CONFIG{'mailer-send'} =  [ 'smtp', Server => 'mail.server', Auth => ['user', 'pass'] ];
 
 to use the perl SMTP client or
 
-	$CONFIG{mailer-send} =  [ 'sendmail', '-o8' ]
+	$CONFIG{'mailer-send'} =  [ 'sendmail', '-o8' ];
 
 to pass arguments to the sendmail program.
 For more information run C<< perldoc Mail::Mailer >>.
