@@ -291,6 +291,10 @@ for my $keyid (@KEYIDS) {
 	};
 	my $keyinfo = $stdout;
 	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	if ($#publine < 0) {
+		warn ("No public key found for $keyid.\n");
+		next;
+	}
 	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
 	my $can_encrypt = $flags =~ /E/;
 	unless (defined $longkeyid) {
