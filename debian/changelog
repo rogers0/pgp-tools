@@ -7,10 +7,12 @@ signing-party (0.4.10-1) unstable; urgency=low
   * gpg-key2ps:
     + Add '-1' option to only display one column of slips, for extra
       wide keys (Closes: #399474).
+  * keylookup:
+    + Fix perl warnings caused by empty lines from gpg output.
   * Drop transitional and now obsolete keylookup package.
   * Remove no longer needed dependency on mailx.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Tue, 22 May 2007 11:36:28 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Tue, 22 May 2007 11:41:32 +0200
 
 signing-party (0.4.9-1) unstable; urgency=low
 

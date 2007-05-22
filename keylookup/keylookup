@@ -99,6 +99,7 @@ sub getHits($) {
 
 	while (<KID>) {
 		chomp;
+		if ( $_ eq "" ) { next; }
 		my ($type, undef) = split /:/;
 		if ($type eq 'pub') {
 			my ($type, $keyid, $algo, $bits, $created, undef, $revoked) = split /:/;
