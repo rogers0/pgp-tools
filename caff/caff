@@ -171,7 +171,8 @@ Additional keyids to encrypt messages to. Default: none.
 
 =item B<gpg-sign-args> [string]
 
-Additional arguments to pass to gpg.  Default: none.
+Additional commands to pass to gpg after the "sign" command.
+Default: none.
 
 =head2 Keyserver settings
 
