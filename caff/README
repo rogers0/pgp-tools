@@ -34,8 +34,7 @@ DEPENDENCIES
 ------------
 
  gnupg (>= 1.3.92), perl, libgnupg-interface-perl,
- libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62),
- mailx
+ libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62)
 
 INSTALLATION
 ------------

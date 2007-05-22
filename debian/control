@@ -10,7 +10,7 @@ XS-Vcs-Browse: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Architecture: all
-Depends: gnupg (>= 1.3.92), libgnupg-interface-perl, libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62), mailx
+Depends: gnupg (>= 1.3.92), libgnupg-interface-perl, libtext-template-perl, libmime-perl, libmailtools-perl (>= 1.62)
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils (>= 1.1.13)
 Provides: keylookup
 Conflicts: keylookup (<< 3.0)
