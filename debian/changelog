@@ -2,12 +2,13 @@ signing-party (0.4.9-2) unstable; urgency=low
 
   * caff:
     + Fix syntax error in example config variables (Closes: #413020).
-    + Fix perl warnings when calling pgp-fixkey with unknown keyid.
+    + Fix perl warnings when calling pgp-fixkey with unknown keyid or
+      with empty signature create date.
   * gpg-key2ps:
     + Add '-1' option to only display one column of slips, for extra
       wide keys (Closes: #399474).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Tue, 24 Apr 2007 11:17:43 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Tue, 22 May 2007 10:48:40 +0200
 
 signing-party (0.4.9-1) unstable; urgency=low
 
