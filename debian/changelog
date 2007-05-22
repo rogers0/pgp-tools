@@ -1,4 +1,4 @@
-signing-party (0.4.9-2) unstable; urgency=low
+signing-party (0.4.10-1) unstable; urgency=low
 
   * caff:
     + Fix syntax error in example config variables (Closes: #413020).
@@ -7,8 +7,9 @@ signing-party (0.4.9-2) unstable; urgency=low
   * gpg-key2ps:
     + Add '-1' option to only display one column of slips, for extra
       wide keys (Closes: #399474).
+  * Drop transitional and now obsolete keylookup package.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Tue, 22 May 2007 10:48:40 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Tue, 22 May 2007 11:31:22 +0200
 
 signing-party (0.4.9-1) unstable; urgency=low
 

@@ -41,10 +41,6 @@ install: build
 	install -d $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
 	install -m 644 debian/overrides/signing-party $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
 
-	install -d $(CURDIR)/debian/keylookup/usr/share/doc/keylookup
-	ln -s ../signing-party/changelog.Debian.gz $(CURDIR)/debian/keylookup/usr/share/doc/keylookup/
-	install -d $(CURDIR)/debian/keylookup/usr/share/lintian/overrides
-	install -m 644 debian/overrides/keylookup $(CURDIR)/debian/keylookup/usr/share/lintian/overrides
 
 binary-indep: build install
 	dh_testdir
@@ -53,13 +49,12 @@ binary-indep: build install
 	dh_installmenu
 	dh_installcron
 	dh_installinfo
-	dh_installchangelogs -psigning-party
+	dh_installchangelogs
 	dh_compress
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
-	dh_gencontrol -psigning-party
-	dh_gencontrol -pkeylookup -- -v3.0-$(VERSION)
+	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
 
