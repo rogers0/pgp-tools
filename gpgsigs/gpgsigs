@@ -36,7 +36,7 @@ sub version($)
 gpgsigs $VERSION- http://pgp-tools.alioth.debian.org/
   (c) 2004 Uli Martens <uli\@youam.net>
   (c) 2004, 2005 Peter Palfrader <peter\@palfrader.org>
-  (c) 2004, 2005 Christoph Berg <cb\@df7cb.de>
+  (c) 2004, 2005, 2006, 2007 Christoph Berg <cb\@df7cb.de>
 EOF
 }
 
@@ -115,6 +115,7 @@ my $outfile = (shift @ARGV) || '-';
 
 my @mykeys = split /,/, $mykey;
 map { s/^0x//i; } @mykeys;
+my %myuids = map { $_ => [] } @mykeys;
 
 if (!@mykeys || scalar @ARGV) {
 	usage(*STDERR, 1);
@@ -145,20 +146,28 @@ if ($recv_keys) {
 }
 
 print STDERR "Running --list-sigs, this will take a while ";
-open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @keys 2>/dev/null |"
+open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @mykeys @keys 2>/dev/null |"
 	or die "can't get gpg listing";
 
-my ($key, $uid, $sigs);
+my ($key, $uid, $sigs, $uidstatus);
 while (<SIGS>) {
 	if ( m/^pub:(?:.*?:){3,3}([0-9A-F]{16,16}):/ ) {
 		$key = $1;
 		print STDERR ".";
 		next;
 	}
-	if ( m/^uid:(?:.*?:){8,8}(.*):/s ) {
-		$uid = $1;
+	if ( m/^uid:(.):(?:.*?:){7,7}(.*):/s ) {
+		$uidstatus = $1;
+		$uid = $2;
 		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
 		$uid = myrecode($uid, "UTF-8", $charset);
+
+		my ($shortkey) = substr $key, -8;
+		# Remember own, non-revoked uids
+		if (exists $myuids{$shortkey} and $uidstatus ne "r") {
+			push @{$myuids{$shortkey}}, $uid
+		}
+
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
@@ -215,22 +224,31 @@ close MD;
 open MD, "gpg --with-colons --print-md sha1 $keytxt|" or warn "can't get gpg sha1\n";
 my $SHA1 = <MD>;
 close MD;
+open MD, "gpg --with-colons --print-md sha256 $keytxt|" or warn "can't get gpg sha256\n";
+my $SHA256 = <MD>;
+close MD;
 
 my @MD5 = split /:/, $MD5;
 my @SHA1 = split /:/, $SHA1;
+my @SHA256 = split /:/, $SHA256;
 $MD5 = $MD5[2];
 $SHA1 = $SHA1[2];
+$SHA256 = $SHA256[2];
 
 $MD5 =~ s/(.{16})/$1 /;
 $SHA1 =~ s/(.{20})/$1 /;
+$SHA256 =~ s/(.{32})/$1 /;
 $MD5 =~ s/([0-9A-Z]{2})/$1 /ig;
 $SHA1 =~ s/([0-9A-Z]{4})/$1 /ig;
+$SHA256 =~ s/([0-9A-Z]{4})/$1 /ig;
 
 chomp $MD5;
 chomp $SHA1;
+chomp $SHA256;
 my $metatxt = quotemeta($keytxt);
 $MD5 =~ s/^$metatxt:\s*//;
 $SHA1 =~ s/^$metatxt:\s*//;
+$SHA256 =~ s/^$metatxt:\s*//;
 
 
 # write out result
@@ -267,6 +285,9 @@ while (<TXT>) {
 	if (/^SHA1 Checksum:/ && defined $SHA1) {
 		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA1/;
 	}
+	if (/^SHA256 Checksum:/ && defined $SHA256) {
+		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA256/;
+	}
 	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
 		$uid = $2;
@@ -274,6 +295,16 @@ while (<TXT>) {
 		#	print WRITE print_tag($key, $uid) . " $_";
 		#	next;
 		#}
+		print WRITE;
+		my $inc = "";
+		foreach my $mykey (@mykeys) {
+			foreach my $myuid (@{$myuids{$mykey}}) {
+				$inc .= defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
+			}
+		}
+		print WRITE "[$inc] incoming signatures\n" if $inc =~ /\S/;
+		next;
+
 	}
 	if ( m/^uid +(.*)$/ ) {
 		$uid = $1;
@@ -290,8 +321,18 @@ while (<TXT>) {
 }
 
 print WRITE "Legend:\n";
+my $num_myuids = 0;
 foreach my $i (0 .. @mykeys - 1) {
-	print WRITE '('. ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i]\n";
+	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $myuids{$mykeys[$i]}->[0]\n";
+	$num_myuids += @{$myuids{$mykeys[$i]}};
+}
+my $i = 0;
+foreach my $mykey (@mykeys) {
+	foreach my $myuid (@{$myuids{$mykey}}) {
+		my $inc = defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
+		print WRITE "[" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $myuid\n";
+		$i++;
+	}
 }
 close TXT;
 
@@ -370,7 +411,7 @@ http://pgp-tools.alioth.debian.org/
 
 (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 
-(c) 2004, 2005, 2006 Christoph Berg <cb@df7cb.de>
+(c) 2004, 2005, 2006, 2007 Christoph Berg <cb@df7cb.de>
 
 =head1 LICENSE
 

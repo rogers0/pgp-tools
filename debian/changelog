@@ -1,3 +1,11 @@
+signing-party (0.4.11-1) unstable; urgency=low
+
+  The "Debconf 7" release.
+  * gpgsigs: Apply patch by Joachim Breitner to also show incoming signatures
+    and support sha256 checksum (Closes: #428538).
+
+ -- Christoph Berg <myon@debian.org>  Sun, 17 Jun 2007 12:32:21 +0200
+
 signing-party (0.4.10-1) unstable; urgency=low
 
   * caff:
