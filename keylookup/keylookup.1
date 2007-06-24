@@ -4,14 +4,14 @@
 
 .SH NAME
 .LP
-keylookup \- Fetch and Import GnuPG keys from keyservers.
+keylookup - Fetch and Import GnuPG keys from keyservers.
 
 .SH SYNOPSIS
 \fBkeylookup\fP [\fIoptions\fP] \fIsearch-string\fP
 
 .SH DESCRIPTION
 .LP
-\fBkeylookup\fR is a wrapper around gpg --search, allowing you to search
+\fBkeylookup\fR is a wrapper around gpg \-\-search, allowing you to search
 for keys on a keyserver.  It presents the list of matching keys to the user
 and allows her to select the keys for importing into the GnuPG keyring.
 
@@ -19,15 +19,15 @@ For the search and actual import of keys GnuPG itself is called.
 
 
 .SH OPTIONS
-.IP "\fB--keyserver\fP=\fIkeyserver\fP" 8
+.IP "\fB\-\-keyserver\fP=\fIkeyserver\fP" 8
 Specify the keyserver to use. If no keyserver is specified, it 
 will parse the GnuPG options file for a default keyserver to use.
 If no keyserver can be found, \fBkeylookup\fP will abort.
 
-.IP "\fB--port\fP=\fIport\fP" 8
+.IP "\fB\-\-port\fP=\fIport\fP" 8
 Use a port other than 11371.
 
-.IP "\fB--frontend\fP=\fIfrontend\fP" 8
+.IP "\fB\-\-frontend\fP=\fIfrontend\fP" 8
 \fBkeylookup\fP supports displaying the search results with 3
 different frondends. Both \fBwhiptail\fP and \fBdialog\fP are
 interactive and allow the user to select the keys to import.
@@ -38,18 +38,18 @@ If available, \fB/usr/bin/dialog\fP is the default. If it is not
 available but \fB/usr/bin/whiptail\fP is installed, then this is 
 used instead. If nothing else works, we'll fall back to \fBplain\fP.
 
-.IP "\fB--importall\fP" 8
+.IP "\fB\-\-importall\fP" 8
 Don't ask the user which keys to import, but instead import all 
 keys matching the \fIsearch-string\fP. If this is given no 
 frontend is needed.
 
-.IP "\fB--honor-http-proxy\fP" 8
+.IP "\fB\-\-honor\-http\-proxy\fP" 8
 Similar to GnuP \fBkeylookup\fP will only honor the \fBhttp_proxy\fP
 environment variable if this option is given. If it is not given
 but your GnuPG options file includes it, then \fBkeylookup\fP will 
 use it.
 
-.IP "\fB--help\fP" 8
+.IP "\fB\-\-help\fP" 8
 Print a brief help message and exit succesfully.
 
 
@@ -63,8 +63,8 @@ Used to locate the default home directory.
 If set directory used instead of "~/.gnupg". 
 
 .IP "http_proxy" 10 
-Only honored when the option --honor-http-proxy is set or honor-http-proxy is
-set in GnuPG's config file.
+Only honored when the option \-\-honor\-http\-proxy is set or
+honor\-http\-proxy is set in GnuPG's config file.
 
 
 
@@ -74,12 +74,12 @@ set in GnuPG's config file.
 will query your default keyserver for Christian's keys and offer you to
 import them into your keyring with the dialog frontend (if available).
 
-.IP "keylookup --honor-http-proxy --frontend plain wk@gnupg"
+.IP "keylookup \-\-honor\-http\-proxy \-\-frontend plain wk@gnupg"
 will query the default keyserver again, now using the http_proxy if
 the environment variable is defined and list wk@gnupg's (Werner Koch)'s key
 on STDOUT.
 
-.IP "keylookup --keyserver pgp.mit.edu Peter Palfrader"
+.IP "keylookup \-\-keyserver pgp.mit.edu Peter Palfrader"
 will now ask the keyserver pgp.mit.edu for my (Peter's) keys and
 display them for import in dialog.
 
@@ -88,7 +88,7 @@ display them for import in dialog.
 
 .IP "~/.gnupg/options"  10
 GnuPG's options file where \fBkeylookup\fP will take the keyserver
-and honor-http-proxy values from if it exists.
+and honor\-http\-proxy values from if it exists.
 
 
 .SH "SEE ALSO"
