@@ -6,7 +6,7 @@ Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, 
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
 XS-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
-XS-Vcs-Browse: http://svn.debian.org/wsvn/pgp-tools
+XS-Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Architecture: all
