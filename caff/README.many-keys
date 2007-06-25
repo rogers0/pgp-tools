@@ -11,10 +11,12 @@ Some hints to get the signing done faster:
 
   caff and gpg allow you to specify the full fingerprint. This will save you
   from having to check the fingerprint yourself. If you have a text file with
-  all fingerprints (with all the spaces stripped from them), use that and then
-  run
+  all fingerprints, use that and then run
 
-  $ caff <options> `cat ksp-fingerprints.txt`
+  $ caff <options> "`cat ksp-fingerprints.txt`"
+
+  For convenience, caff also allows spaces in fingerprints/keyids as output by
+  gpg --fingerprint. (Remember to properly quote arguments as shown above.)
 
 * v3 keys are evil.
 
@@ -35,17 +37,13 @@ Some hints to get the signing done faster:
 
   Going through retrieving, signing, and mailing keys can help, e.g.:
 
-  $ caff --no-sign --no-export-old --no-mail `cat ksp-fingerprints.txt`
-  $ caff --no-download --no-export-old --no-mail `cat ksp-fingerprints.txt`
-  $ caff --no-download --no-sign --no-export-old `cat ksp-fingerprints.txt`
+  $ caff --no-sign --no-export-old --no-mail "`cat ksp-fingerprints.txt`"
+  $ caff --no-download --no-export-old --no-mail "`cat ksp-fingerprints.txt`"
+  $ caff --no-download --no-sign --no-export-old "`cat ksp-fingerprints.txt`"
 
-* If you have multiple local keys, only send mail once after signing with all.
+* If you have multiple local keys, use -u <mykey1>,<mykey2>.
 
-  caff will send out all previously done signatures in the message. (Of course
-  you have to configure $CONFIG{'keyid'} to contain all your key ids.)
-
-  $ caff --no-export-old --no-mail -u <mykey1> <keyids to sign>
-  $ caff --no-download --no-export-old -u <mykey2> <keyids to sign>
+  $ caff -u <mykey1>,<mykey2> <keyids to sign>
 
 * Use gpg-agent.
 
@@ -61,4 +59,4 @@ Some hints to get the signing done faster:
   prompt any more; you will have *not* to send out some mails. (And you have
   unwanted signatures lingering around in ~/.caff/gnupghome/pubring.gpg.)
 
- -- Christoph Berg <cb@df7cb.de>  Wed,  6 Jul 2005 13:46:16 +0200
+ -- Christoph Berg <cb@df7cb.de>  Mon, 25 Jun 2007 10:55:40 +0200

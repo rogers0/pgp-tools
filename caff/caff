@@ -909,8 +909,9 @@ $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
 $CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
-for my $keyid (@ARGV) {
+for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
 	$keyid =~ s/^0x//i;
+	$keyid =~ s/ //g; # gpg --fingerprint includes spaces
 	if ($keyid =~ /^[A-F0-9]{32}$/i) {
 		info("Ignoring v3 fingerprint $keyid.  v3 keys are obsolete.");
 		next;

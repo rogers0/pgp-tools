@@ -1,10 +1,10 @@
 v3 keys are evil
 ----------------
 
-The good thing about v4 keys is that the fingerprint ends contains the 8 byte
-(16 char) key id at the and and that the 8 byte key id likewise ends in the 4
-byte key id. For v3 keys it does not. This, and some issues with HKP key
-servers make the handling of v3 a PITA.
+The good thing about v4 keys is that the last 16 chars of the fingerprint are
+the same as the 8 byte keyid, and likewise the last 8 chars are the 4 byte
+keyid. For v3 keys that is not true. This, and some issues with HKP key servers
+make the handling of v3 a PITA.
 
 To sign v3 keys with caff, do the following:
 
