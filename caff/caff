@@ -777,7 +777,7 @@ sub send_mail($$$@) {
 		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 		if ($stdout eq '') {
-			warn ("No data from gpg for list-key $key_id\n");
+			warn ("No data from gpg for encrypting mail\n");
 			next;
 		};
 		$message = $stdout;
