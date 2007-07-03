@@ -783,7 +783,7 @@ sub send_mail($$$@) {
 					warn("Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.\n".
 					     "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>\n".
 					     "or try the following if you are slightly more daring:\n".
-					     " gpg --export $keyid | gpg --homedir=$GNUPGHOME --import");
+					     " gpg --export $keyid | gpg --homedir=$GNUPGHOME --import\n");
 					return;
 				};
 			};
