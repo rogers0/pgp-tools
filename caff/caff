@@ -780,7 +780,10 @@ sub send_mail($$$@) {
 				my $reason = $1;
 				my $keyid = $2;
 				if (grep { $_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
-					warn("Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.  Try to update the key using gpg --homedir=\$HOME/caff/gnupghome --import <exported key>.");
+					warn("Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.\n".
+					     "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>\n".
+					     "or try the following if you are slightly more daring:\n".
+					     " gpg --export $keyid | gpg --homedir=$GNUPGHOME --import");
 					return;
 				};
 			};
