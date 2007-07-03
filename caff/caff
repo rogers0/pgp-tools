@@ -477,6 +477,9 @@ sub load_config() {
 	unless (defined $CONFIG{'mail-template'}) {
 		$CONFIG{'mail-template'} .= $_ foreach <DATA>;
 	}
+	if ((defined $CONFIG{'also-encrypt-to'}) && ! (ref($CONFIG{'also-encrypt-to'}) eq 'ARRAY')) {
+		$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ];
+	};
 };
 
 sub make_gpg_fds() {
@@ -766,19 +769,23 @@ sub send_mail($$$@) {
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		$gpg->options->push_recipients( $key_id );
 		if (defined $CONFIG{'also-encrypt-to'}) {
-			if (ref($CONFIG{'also-encrypt-to'})) {
-				$gpg->options->push_recipients($_)
-					foreach @{$CONFIG{'also-encrypt-to'}};
-			} else {
-				$gpg->options->push_recipients($CONFIG{'also-encrypt-to'});
-			}
+			$gpg->options->push_recipients($_) foreach @{$CONFIG{'also-encrypt-to'}};
 		}
 		my $pid = $gpg->encrypt(handles => $handles);
 		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 		if ($stdout eq '') {
-			warn ("No data from gpg for encrypting mail\n");
-			next;
+			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)/m) and
+			    (defined $CONFIG{'also-encrypt-to'})) {
+				my $reason = $1;
+				my $keyid = $2;
+				if (grep { %_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
+					warn("Could not encrypt to $keyid, spezified in CONFIG{'also-encrypt-to'}.  Try to update the key using gpg --homedir=\$HOME/caff/gnupghome --import <keyd>.");
+					return;
+				};
+			};
+			warn ("No data from gpg for encrypting mail.  STDERR was:\n$stderr\nstatus output was:\n$status\n");
+			return;
 		};
 		$message = $stdout;
 
