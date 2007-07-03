@@ -780,7 +780,7 @@ sub send_mail($$$@) {
 				my $reason = $1;
 				my $keyid = $2;
 				if (grep { %_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
-					warn("Could not encrypt to $keyid, spezified in CONFIG{'also-encrypt-to'}.  Try to update the key using gpg --homedir=\$HOME/caff/gnupghome --import <keyd>.");
+					warn("Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.  Try to update the key using gpg --homedir=\$HOME/caff/gnupghome --import <exported key>.");
 					return;
 				};
 			};
@@ -1315,12 +1315,15 @@ for my $keyid (@keyids_ok) {
 				$address =~ s/.*<(.*)>.*/$1/;
 				if (ask("Mail signature for $uid->{'text'} to '$address'?", 1, $CONFIG{'mail'})) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
-
-					my $keydir = "$KEYSBASE/$DATE_STRING";
-					my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
-					open (KEY, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
-					print KEY $mail;
-					close KEY;
+					if (defined $mail) {
+						my $keydir = "$KEYSBASE/$DATE_STRING";
+						my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
+						open (KEY, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
+						print KEY $mail;
+						close KEY;
+					} else {
+						warn "Generating mail failed.\n";
+					};
 				};
 			};
 		};
