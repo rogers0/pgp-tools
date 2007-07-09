@@ -798,6 +798,7 @@ sub send_mail($$$@) {
 
 		$message_entity->attach(
 			Type        => "application/pgp-encrypted",
+			Filename    => "signedkey.msg",
 			Disposition => 'attachment',
 			Encoding    => "7bit",
 			Data        => "Version: 1\n");

@@ -6,10 +6,16 @@ signing-party (0.4.11-2) UNRELEASED; urgency=low
   * Replaces: keylookup.
 
   [ Peter Palfrader ]
-  * Fix a warning message in caff when encrypting fails.
-  * Try to handle expired keys specified in also-encrypt-to better
+  * caff:
+    + Fix a warning message when encrypting fails.
+    + Try to handle expired keys specified in also-encrypt-to better.
 
- -- Peter Palfrader <weasel@debian.org>  Tue,  3 Jul 2007 15:53:27 +0200
+  [ Thijs Kinkhorst ]
+  * caff:
+    + Add filename to one of the MIME parts as its absence breaks certain virus
+      scanners.
+
+ -- Thijs Kinkhorst <thijs@debian.org>  Mon,  9 Jul 2007 14:53:13 +0200
 
 signing-party (0.4.11-1) unstable; urgency=low
 
