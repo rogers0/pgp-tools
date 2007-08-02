@@ -9,8 +9,8 @@ set -e
 VERSION='$Rev$'
 
 if [ -z "$*" ]; then
-	echo "Send people their newly signed GPG key by mail."
-	echo "Usage: $0 keyid ..."
+	printf "Send people their newly signed GPG key by mail.\n"
+	printf "Usage: $0 keyid ...\n"
 	exit 1
 fi
 
@@ -38,20 +38,21 @@ fi
 FAILKEYS=
 
 while [ -n "$1" ]; do
-	echo -n "[$1] "
+	printf "[$1] "
 	TEMPFILE=`mktemp -t gpg2mail.XXXXXX`
 	ADDR=`gpg --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^re][^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
 	if [ -z "$ADDR" ]; then
-		echo "(no usable user ids)"
+		printf "(no usable user ids)\n"
 		FAILKEYS="$FAILKEYS:$1"
 		shift 1
 		continue
 	fi
-	BOUNDARY="ksp-$$-boundary-$RANDOM"
+	NANOTIME=`date +%s-%N`
+	BOUNDARY="ksp-$$-boundary-$NANOTIME"
 	
-	echo -n "$ADDR:"
+	printf "$ADDR:"
 	if [ $FROM ]; then
-		echo >$TEMPFILE "From: $NAME <$FROM>"
+		printf >$TEMPFILE "From: $NAME <$FROM>\n"
 	fi
 cat << EOM >> $TEMPFILE
 To: $ADDR
@@ -75,7 +76,7 @@ $TEXT
 EOM
 
 if [ -f ~/.signature ]; 
-	then echo "--=20" >> $TEMPFILE 
+	then printf "--=20\n" >> $TEMPFILE 
 	cat ~/.signature >> $TEMPFILE
 fi
 
@@ -89,15 +90,14 @@ Content-Disposition: attachment; filename="$1.asc"
 
 --$BOUNDARY--
 EOM
-	echo -n " sending"
+	printf " sending"
 	/usr/sbin/sendmail -ti <$TEMPFILE
 	rm $TEMPFILE
-	echo " done."
+	printf " done.\n"
 	shift 1
 done
 
 if [ -n "$FAILKEYS" ]; then
-	echo
-	echo "Note: The following keys could not be sent:"
-	echo "$FAILKEYS" | tr ':' '\n' | sed -e '/^ *$/d' -e 's/^/  /'
+	printf "\nNote: The following keys could not be sent:\n"
+	printf "$FAILKEYS\n" | tr ':' '\n' | sed -e '/^ *$/d' -e 's/^/  /'
 fi
