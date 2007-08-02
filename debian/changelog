@@ -14,8 +14,9 @@ signing-party (0.4.11-2) UNRELEASED; urgency=low
   * caff:
     + Add filename to one of the MIME parts as its absence breaks certain virus
       scanners.
+  * Cleanup package dependencies.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Mon,  9 Jul 2007 14:53:13 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Thu,  2 Aug 2007 12:12:02 +0200
 
 signing-party (0.4.11-1) unstable; urgency=low
 
