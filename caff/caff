@@ -40,7 +40,7 @@ caff -- CA - Fire and Forget
 
 =over
 
-=item B<caff> [-eEmMRS] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
+=item B<caff> [-eERS] [-m I<yes|ask-yes|ask-no|no>] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
 
 =back
 
@@ -66,13 +66,10 @@ Export old signatures. Default is to ask the user for each old signature.
 Do not export old signatures. Default is to ask the user for each old
 signature.
 
-=item B<-m>, B<--mail>
+=item B<-m>, B<--mail> I<yes|ask-yes|ask-no|no>
 
-Send mail after signing. Default is to ask the user for each uid.
-
-=item B<-M>, B<--no-mail>
-
-Do not send mail after signing. Default is to ask the user for each uid.
+Whether to send mail after signing. Default is to ask, for each uid,
+with a default value of yes.
 
 =item B<-R>, B<--no-download>
 
@@ -214,12 +211,11 @@ With multiple keyids, sign with each key in turn.
 
 =item B<mail> [boolean]
 
-Do not prompt for sending mail, just do it. Default: B<0>.
+Whether to send mails. This is a quad-option, with which you can set the
+behaviour: yes always sends, no never sends; ask-yes and ask-no asks, for
+each uid, with according defaults for the question. Default: B<ask-yes>.
 
-=item B<no-mail> [boolean]
-
-Do not prompt for sending mail. The messages are still written to
-$CONFIG{'caffhome'}/keys/. Default: B<0>.
+In any case, the messages are also written to $CONFIG{'caffhome'}/keys/
 
 =item B<mail-template> [string]
 
@@ -662,7 +658,7 @@ sub version($) {
 sub usage($$) {
 	my ($fd, $exitcode) = @_;
 	version($fd);
-	print $fd "Usage: $PROGRAM_NAME [-eEmMRS] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+	print $fd "Usage: $PROGRAM_NAME [-eERS] [-m <yes|ask-yes|ask-no|no>] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
 	print $fd "Consult the manual page for more information.\n";
 	exit $exitcode;
 };
@@ -892,8 +888,8 @@ if (!GetOptions (
 	'--export-old'    =>  \$params->{'export-old'},
 	'-E'              =>  \$params->{'no-export-old'},
 	'--no-export-old' =>  \$params->{'no-export-old'},
-	'-m'              =>  \$params->{'mail'},
-	'--mail'          =>  \$params->{'mail'},
+	'-m:s'              =>  \$params->{'mail'},
+	'--mail:s'          =>  \$params->{'mail'},
 	'-M'              =>  \$params->{'no-mail'},
 	'--no-mail'       =>  \$params->{'no-mail'},
 	'-R'              =>  \$params->{'no-download'},
@@ -915,9 +911,21 @@ usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
 $CONFIG{'local-user'}  = $params->{'local-user'}  if defined $params->{'local-user'};
 $CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
+$CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
+
+# If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
+if ( $CONFIG{'no-mail'} || defined $params->{'no-mail'} ||
+	( defined $params->{'mail'} && $params->{'mail'}  eq 'no' ) ) {
+	$CONFIG{'mail'} = 'no';
+} elsif ( defined $params->{'mail'} ) {
+	$CONFIG{'mail'} = $params->{'mail'};
+} else {
+	$CONFIG{'mail'} = 'ask-yes';
+}
+
 $CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
 $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
-$CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
+
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
@@ -1298,7 +1306,7 @@ for my $keyid (@keyids_ok) {
 	if (scalar @UIDS == 0) {
 		info("found no signed uids for $keyid");
 	} else {
-		next if $CONFIG{'no-mail'}; # do not send mail
+		next if ($CONFIG{'mail'} eq 'no'); # do not send mail
 
 		my @attached;
 		for my $uid (@UIDS) {
@@ -1317,7 +1325,7 @@ for my $keyid (@keyids_ok) {
 			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				if (ask("Mail signature for $uid->{'text'} to '$address'?", 1, $CONFIG{'mail'})) {
+				if (ask("Mail signature for $uid->{'text'} to '$address'?", $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes')) {
 					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 					if (defined $mail) {
 						my $keydir = "$KEYSBASE/$DATE_STRING";
