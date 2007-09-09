@@ -1,3 +1,11 @@
+signing-party (0.4.12-2) unreleased; urgency=low
+
+  [ Christoph Berg ]
+  * gpgsigs: Implement support for latex output and photo ids.
+    (Closes: #430607)
+
+ -- Christoph Berg <myon@debian.org>  Mon, 10 Sep 2007 00:43:13 +0200
+
 signing-party (0.4.12-1) unstable; urgency=low
 
   [ Christoph Berg ]

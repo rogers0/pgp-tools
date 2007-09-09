@@ -59,12 +59,14 @@ EOF
 }
 
 
-my ($fromcharset, $charset, $recv_keys);
+my ($fromcharset, $charset, $recv_keys, $refresh, $latex);
 Getopt::Long::config('bundling');
 GetOptions(
 	'-f=s' => \$fromcharset,
 	'-t=s' => \$charset,
 	r => \$recv_keys,
+	refresh => \$refresh,
+	latex => \$latex,
 	help => sub { usage(*STDOUT, 0); },
 	version => sub { version(*STDOUT); exit 0;},
 ) or usage(*STDERR, 1);
@@ -109,13 +111,12 @@ sub myrecode($$$) {
 
 
 # parse options
-my $mykey = uc(shift @ARGV);
+my @mykeys = split /,/, uc(shift @ARGV);
 my $keytxt = (shift @ARGV) || usage(*STDERR, 1);
 my $outfile = (shift @ARGV) || '-';
 
-my @mykeys = split /,/, $mykey;
 map { s/^0x//i; } @mykeys;
-my %myuids = map { $_ => [] } @mykeys;
+my %uids = map { $_ => [] } @mykeys;
 
 if (!@mykeys || scalar @ARGV) {
 	usage(*STDERR, 1);
@@ -163,11 +164,20 @@ while (<SIGS>) {
 		$uid = myrecode($uid, "UTF-8", $charset);
 
 		my ($shortkey) = substr $key, -8;
-		# Remember own, non-revoked uids
-		if (exists $myuids{$shortkey} and $uidstatus ne "r") {
-			push @{$myuids{$shortkey}}, $uid
+		# Remember non-revoked uids
+		if ($uidstatus ne "r") {
+			push @{$uids{$shortkey}}, $uid;
 		}
 
+		next;
+	}
+	if ( m/^uat:(.):/ ) { # uat:-::::2006-08-03::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
+		$uidstatus = $1;
+		next if $uidstatus ne "-";
+		system "gpg --photo-viewer 'convert - %k.eps' --list-options show-photos --list-key $key";
+		$uid = "Photo ID";
+		my ($shortkey) = substr $key, -8;
+		push @{$uids{$shortkey}}, $uid;
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
@@ -190,7 +200,7 @@ while (<SIGS>) {
 			if ($before eq 'S' || $before eq 's') {
 				$sigs->{$key}->{$uid}->{$1.$2} = $class;
 			} elsif ($class eq 'S' || $class eq 's') {
-				# intentionall left blank
+				# intentionally left blank
 			} elsif ($before < $class) {
 				$sigs->{$key}->{$uid}->{$1.$2} = $class;
 			};
@@ -198,10 +208,6 @@ while (<SIGS>) {
 			$sigs->{$key}->{$uid}->{$1.$2} .= $class;
 		};
 		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2};
-		next;
-	}
-	if ( m/^uat:/ ) {
-		$uid = "Photo ID";
 		next;
 	}
 	next if ( m/^(rev|rvk|sub|tru):/ ); # revoke/revoker/subkey/trust
@@ -276,6 +282,18 @@ my $line = 0;
 print STDERR "Annotating $keytxt, writing into $outfile\n";
 open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
+
+if ($latex) {
+	print WRITE <<'EOF';
+\documentclass{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{alltt}
+\usepackage{graphicx}
+\begin{document}
+\begin{alltt}
+EOF
+}
+
 while (<TXT>) {
 	$line++;
 	$_ = myrecode($_, $fromcharset, $charset);
@@ -296,23 +314,38 @@ while (<TXT>) {
 		#	next;
 		#}
 		print WRITE;
+		next;
+	}
+
+	if ( m/^ *Key fingerprint/ ) {
+		print WRITE;
 		my $inc = "";
 		foreach my $mykey (@mykeys) {
-			foreach my $myuid (@{$myuids{$mykey}}) {
+			foreach my $myuid (@{$uids{$mykey}}) {
 				$inc .= defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
 			}
 		}
 		print WRITE "[$inc] incoming signatures\n" if $inc =~ /\S/;
+		if ($refresh or $latex) {
+			foreach $uid (@{$uids{$key}}) {
+				print WRITE print_tag($key, $uid) . " $uid\n";
+				if ($latex and ($uid eq "Photo ID")) {
+					print WRITE "\\begin{flushright}\n";
+					print WRITE "\\includegraphics[height=3cm]{$key.eps}\n";
+					print WRITE "\\end{flushright}\n";
+				}
+			}
+		}
 		next;
 
 	}
 	if ( m/^uid +(.*)$/ ) {
 		$uid = $1;
+		next if $refresh or $latex;
 		unless (defined $key) {
 			warn "key is undefined - input text is possibly malformed near line $line\n";
 			next;
 		};
-		die "uid is undefined, key $key" unless defined $uid;
 		die "bad tag from $key | $uid" unless defined (print_tag($key, $uid));
 		print WRITE print_tag($key, $uid) . " $_";
 		next;
@@ -323,18 +356,27 @@ while (<TXT>) {
 print WRITE "Legend:\n";
 my $num_myuids = 0;
 foreach my $i (0 .. @mykeys - 1) {
-	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $myuids{$mykeys[$i]}->[0]\n";
-	$num_myuids += @{$myuids{$mykeys[$i]}};
+	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $uids{$mykeys[$i]}->[0]\n";
+	$num_myuids += @{$uids{$mykeys[$i]}};
 }
 my $i = 0;
 foreach my $mykey (@mykeys) {
-	foreach my $myuid (@{$myuids{$mykey}}) {
+	foreach my $myuid (@{$uids{$mykey}}) {
 		my $inc = defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
 		print WRITE "[" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $myuid\n";
 		$i++;
 	}
 }
 close TXT;
+
+if ($latex) {
+	print WRITE <<'EOF';
+\end{alltt}
+\end{document}
+EOF
+}
+
+close WRITE;
 
 __END__
 
