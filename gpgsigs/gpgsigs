@@ -150,7 +150,7 @@ print STDERR "Running --list-sigs, this will take a while ";
 open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @mykeys @keys 2>/dev/null |"
 	or die "can't get gpg listing";
 
-my ($key, $uid, $sigs, $uidstatus);
+my ($key, $uid, $sigs);
 while (<SIGS>) {
 	if ( m/^pub:(?:.*?:){3,3}([0-9A-F]{16,16}):/ ) {
 		$key = $1;
@@ -158,24 +158,26 @@ while (<SIGS>) {
 		next;
 	}
 	if ( m/^uid:(.):(?:.*?:){7,7}(.*):/s ) {
-		$uidstatus = $1;
+		my $uidstatus = $1;
 		$uid = $2;
 		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
 		$uid = myrecode($uid, "UTF-8", $charset);
 
 		my ($shortkey) = substr $key, -8;
 		# Remember non-revoked uids
-		if ($uidstatus ne "r") {
-			push @{$uids{$shortkey}}, $uid;
-		}
-
+		next if $uidstatus eq "r";
+		push @{$uids{$shortkey}}, $uid;
 		next;
 	}
-	if ( m/^uat:(.):/ ) { # uat:-::::2006-08-03::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
-		$uidstatus = $1;
-		next if $uidstatus ne "-";
-		system "gpg --photo-viewer 'convert - %k.eps' --list-options show-photos --list-key $key";
-		$uid = "Photo ID";
+	if ( m/^uat:(.)::::[^:]+::([0-9A-F]+)::\d+ (\d+)/ ) { # uat:-::::2006-08-03::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
+		my $uidstatus = $1;
+		# $2 is hash of attribute data
+		my $size = $3 - 19; # FIXME: find a nicer way to find out picture size
+		$uid = "[jpeg image of size $size]";
+		next if $uidstatus eq "r";
+		if ($latex) {
+			system "gpg --photo-viewer 'convert - %k.eps' --list-options show-photos --list-key $key > /dev/null";
+		}
 		my ($shortkey) = substr $key, -8;
 		push @{$uids{$shortkey}}, $uid;
 		next;
@@ -329,7 +331,7 @@ while (<TXT>) {
 		if ($refresh or $latex) {
 			foreach $uid (@{$uids{$key}}) {
 				print WRITE print_tag($key, $uid) . " $uid\n";
-				if ($latex and ($uid eq "Photo ID")) {
+				if ($latex and ($uid =~ /^\[jpeg image/)) {
 					print WRITE "\\begin{flushright}\n";
 					print WRITE "\\includegraphics[height=3cm]{$key.eps}\n";
 					print WRITE "\\end{flushright}\n";
