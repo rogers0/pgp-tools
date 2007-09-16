@@ -3,7 +3,7 @@
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
 # Copyright (C) 2005-2007  Thijs Kinkhorst
-# Copyright (C) 2005-2006  Christoph Berg <cb@df7cb.de>
+# Copyright (C) 2005-2007  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
 #
@@ -336,18 +336,34 @@ Print version and exit.
 
 =back
 
-
 =head1 SEE ALSO
 
-gpg(1)
+=over
 
-http://pgp-tools.alioth.debian.org/
+=item gpg(1)
+
+GNU Privacy Guard.
+
+=item http://pgp-tools.alioth.debian.org/
+
+The homepage of B<gpg-key2ps> and the other tools bundled in B<signing-party>.
+
+=item http://www.debian.org/events/materials/business-cards/
+
+B<gpg-key2ps> prints plain fingerprint slips. If you are looking for something
+more stylish, look at these latex templates for business cards that also
+include fingerprints.
+
+=back
 
 =head1 AUTHORS AND COPYRIGHT
 
-(c) 2001 - 2005 Simon Richter <sjr@debian.org>
+=over
 
-(c) 2005 Thijs Kinkhorst <thijs@kinkhorst.com>
+=item (c) 2001-2005 Simon Richter <sjr@debian.org>
 
-(c) 2005 Christoph Berg <cb@df7cb.de>
+=item (c) 2005-2007 Thijs Kinkhorst <thijs@kinkhorst.com>
 
+=item (c) 2005-2007 Christoph Berg <cb@df7cb.de>
+
+=back
