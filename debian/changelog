@@ -1,12 +1,15 @@
 signing-party (0.4.12-2) unreleased; urgency=low
 
   [ Christoph Berg ]
-  * gpgsigs: Implement support for latex output and photo ids.
+  * gpgsigs: Implement support for LaTeX output and photo ids.
     (Closes: #412433, #430607)
   * gpg-key2ps: Mention http://www.debian.org/events/materials/business-cards/
     as an alternative. (Closes: #439510)
 
- -- Christoph Berg <myon@debian.org>  Mon, 17 Sep 2007 00:10:45 +0200
+  [ Thijs Kinkhorst ]
+  * Move Homepage to control field.
+
+ -- Thijs Kinkhorst <thijs@debian.org>  Fri, 21 Sep 2007 16:55:24 +0200
 
 signing-party (0.4.12-1) unstable; urgency=low
 

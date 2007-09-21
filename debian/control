@@ -5,6 +5,7 @@ Maintainer: Thijs Kinkhorst <thijs@debian.org>
 Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, Christoph Berg <myon@debian.org>
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
+Homepage: http://pgp-tools.alioth.debian.org/
 XS-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
 XS-Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
@@ -26,6 +27,4 @@ Description: Various OpenPGP related tools
   * gpglist: show who signed which of your UIDs
   * gpgsigs: annotates list of GnuPG keys with already done signatures
   * keylookup: ncurses wrapper around gpg --search
- .
- Homepage: http://pgp-tools.alioth.debian.org/
 
