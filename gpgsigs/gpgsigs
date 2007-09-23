@@ -54,6 +54,8 @@ separate multiple keyids with ','
 -r            call gpg --recv-keys before proceeding
 -f <charset>  convert <keytxt> from charset
 -t <charset>  convert UIDs to charset in output
+--refresh     regenerate UID lists on keys
+--latex       generate LaTeX output including photo IDs
 EOF
 	exit $error;
 }
@@ -388,7 +390,7 @@ B<gpgsigs> - annotate list of GnuPG keys with already done signatures
 
 =head1 SYNOPSIS
 
-B<gpgsigs> [-r] [-f I<charset>] [-t I<charset>] I<keyid>I<[>B<,>I<keyidI<[>B<,>I<...>I<]>>I<]> F<keytxt> [F<outfile>]
+B<gpgsigs> [I<options>] I<keyid>I<[>B<,>I<keyidI<[>B<,>I<...>I<]>>I<]> F<keytxt> [F<outfile>]
 
 =head1 DESCRIPTION
 
@@ -402,18 +404,27 @@ and placeholders (C<__ __>), the checksum is inserted.
 
 =over
 
-=item -r
+=item B<-r>
 
 Call I<gpg --recv-keys> before creating the output.
 
-=item -f I<charset>
+=item B<-f> I<charset>
 
 Convert F<keytxt> from I<charset>. The default is ISO-8859-1.
 
-=item -t I<charset>
+=item B<-t> I<charset>
 
 Convert UIDs to I<charset>. The default is derived from LC_ALL, LC_CTYPE, and
 LANG, and if all these are unset, the default is ISO-8859-1.
+
+=item B<--refresh>
+
+Refresh the UID lists per key from gpg. Useful when UIDs were added or revoked
+since the input text was generated.
+
+=item B<--latex>
+
+Generate LaTeX output, including photo IDs. Implies B<--refresh>.
 
 =item I<keyid>
 
