@@ -1,4 +1,4 @@
-signing-party (0.4.12-2) unreleased; urgency=low
+signing-party (0.4.13-1) unstable; urgency=low
 
   [ Christoph Berg ]
   * gpgsigs: Implement support for LaTeX output and photo ids.
@@ -9,7 +9,7 @@ signing-party (0.4.12-2) unreleased; urgency=low
   [ Thijs Kinkhorst ]
   * Move Homepage to control field.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Fri, 21 Sep 2007 16:55:24 +0200
+ -- Christoph Berg <myon@debian.org>  Sun, 18 Nov 2007 21:02:49 +0100
 
 signing-party (0.4.12-1) unstable; urgency=low
 
