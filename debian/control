@@ -6,13 +6,14 @@ Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, 
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
 Homepage: http://pgp-tools.alioth.debian.org/
-XS-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
-XS-Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
+Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
+Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Architecture: all
 Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-perl, libmailtools-perl
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils
+Suggests: imagemagick | graphicsmagick-imagemagick-compat
 Replaces: keylookup (<< 3.0)
 Conflicts: keylookup (<< 3.0)
 Description: Various OpenPGP related tools
