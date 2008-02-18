@@ -1,3 +1,10 @@
+signing-party (0.4.13-2) unreleased/unstable; urgency=low
+
+  * gpglist: Do not barf on revokers (rvk). Thanks to Faidon Liambotis for
+    spotting.
+
+ -- Christoph Berg <myon@debian.org>  Mon, 18 Feb 2008 21:07:42 +0100
+
 signing-party (0.4.13-1) unstable; urgency=low
 
   [ Christoph Berg ]
