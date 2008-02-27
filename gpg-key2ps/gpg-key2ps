@@ -54,6 +54,7 @@ if (!GetOptions (
 	'-p=s'              => \$opts->{papersize},
 	'--paper-size=s'    => \$opts->{papersize},
 	'-r=s'              => \$opts->{revokestyle},
+	'--revoked-style=s' => \$opts->{revokestyle},
 	'-1'                => \$opts->{1},
 )) {
 	usage(\*STDERR, 1);

@@ -7,8 +7,10 @@ signing-party (0.4.13-2) unreleased; urgency=low
   [ Thijs Kinkhorst ]
   * keylookup: cope with 16 or 40 nibble keyids, thanks Philippe Teuwen
     (Closes: #466716).
+  * gpg-key2ps: also accept revoked-style long option, thanks Luca Capello
+    (Closes: #466993).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 27 Feb 2008 11:23:33 +0100
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 27 Feb 2008 11:29:11 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 
