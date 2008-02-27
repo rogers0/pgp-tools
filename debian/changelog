@@ -1,9 +1,14 @@
-signing-party (0.4.13-2) unreleased/unstable; urgency=low
+signing-party (0.4.13-2) unreleased; urgency=low
 
+  [ Christoph Berg ]
   * gpglist: Do not barf on revokers (rvk). Thanks to Faidon Liambotis for
     spotting.
 
- -- Christoph Berg <myon@debian.org>  Mon, 18 Feb 2008 21:07:42 +0100
+  [ Thijs Kinkhorst ]
+  * keylookup: cope with 16 or 40 nibble keyids, thanks Philippe Teuwen
+    (Closes: #466716).
+
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 27 Feb 2008 11:23:33 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 

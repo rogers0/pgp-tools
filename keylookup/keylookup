@@ -210,7 +210,8 @@ sub callDialog {
 	
 	my %unique;
 	my @keys = grep { !$unique{$_}++ }
-		grep { /^[0-9A-Fa-f]{8}$/ }
+		# get the keyID; can be 8, 16 or 40 nibbles
+		grep { /^((([a-zA-Z0-9]{24})?[a-zA-Z0-9]{8})?[a-zA-Z0-9]{8})$/ }
 		map { s/\s//g; $_ } <ERRFH>;
 	wait;
 
@@ -296,7 +297,7 @@ sub importKeys {
 	push @args,  '--recv-keys';
 	for my $keyid (@$keyids) {
 		# untaint keyids
-		my ($cleanid) = $keyid =~ /^([a-zA-Z0-9]{8})$/;
+		my ($cleanid) = $keyid =~ /^((([a-zA-Z0-9]{24})?[a-zA-Z0-9]{8})?[a-zA-Z0-9]{8})$/;
 		warn ("keyid '$keyid' has unexpected format - skipping\n"), next
 			unless defined $cleanid;
 		push @args, $cleanid;
