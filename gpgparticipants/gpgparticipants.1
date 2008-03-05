@@ -1,0 +1,24 @@
+.TH GPGPARTICIPANTS 1 "March 05, 2008"
+.SH NAME
+gpgparticipants \- generate paper list for keysigning party
+.SH SYNOPSIS
+.B gpgparticipants
+.RI input
+output
+datestring
+organizer
+title
+.SH DESCRIPTION
+.B gpgparticipants
+is targeted at organisers of a keysigning party that uses the
+Zimmermann-Sassaman key-signing protocol.
+
+It creates a file with all the keys from a list of participators in your
+keysigning party. You give it a list with key ID's and some general variables,
+and it will generate a file you can publish. You publish this list;
+participants will download and print this file to take with them to the party.
+
+.SH SEE ALSO
+.BR gpg (1), gpgsigs (1)
+.SH AUTHOR
+This manual page was written by Thijs Kinkhorst <thijs@debian.org>.

@@ -7,6 +7,8 @@ This is a collection of several projects relating to OpenPGP.
 * gpg-key2ps: generate PostScript file with fingerprint paper strips
 * gpglist: show who signed which of your UIDs
 * gpgsigs: annotates list of GnuPG keys with already done signatures
+* gpgparticipants: create a list of key signing party participants,
+  for use by the party organiser
 * keylookup: ncurses wrapper around gpg --search
 
 For more information on each of these tools, please see their respective

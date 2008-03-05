@@ -27,5 +27,6 @@ Description: Various OpenPGP related tools
   * gpg-key2ps: generate PostScript file with fingerprint paper strips
   * gpglist: show who signed which of your UIDs
   * gpgsigs: annotates list of GnuPG keys with already done signatures
+  * gpgparticipants: create list of party participants for the organiser
   * keylookup: ncurses wrapper around gpg --search
 

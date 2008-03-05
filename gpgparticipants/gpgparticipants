@@ -1,0 +1,70 @@
+#!/bin/sh
+# Prepare a printable list of keysigning participants.
+# Useful for the party organiser.
+#
+# $Id$
+#
+# License: GPLv2 or later
+# Copyright Philippe Teuwen <phil a teuwen o org> 2008
+
+if [ $# -ne 5 ]; then
+    cat <<EOF
+Usage: $0 input output datestring organizer title
+Or:    $0 -     output datestring organizer title
+       to read from STDIN
+Example:
+       echo 9AD7E3DB 54C12701 |\\
+       $0 - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
+EOF
+    exit 0
+fi
+
+input="$1"
+[ "$input" = "-" ] && input="";
+output="$2"
+date="$3"
+org="$4"
+title=$(echo "$5"|tr a-z A-Z|sed 's/\(.\)/\1 /g')
+
+exec > "$output"
+
+# Date of event
+LANG=C date --date="$date" +"%A, %B %e, %Y;  %H:%M"
+# Organiser contact
+printf "%80s\n\n\n" "$org"
+# Title
+printf "%*s\n\n" $(((72+$(echo "$title"|wc -c))/2)) "$title"
+# Header
+cat <<EOF
+                     List of Participants  (v 1.0)
+
+
+Here's what you have to do with this file:
+(1) Print this file to paper.
+(2) Compute this file's MD5 checksum and optionally also its SHA1 checksum.
+   gpg --print-md md5  $output  (or use md5sum)
+   gpg --print-md sha1 $output  (or use sha1sum)
+(3) Fill in the hash values on the printout.
+(4) Bring the printout, a pen, and proof of identity to the key signing party
+    (and be on time!).
+
+MD5 Checksum:  __ __ __ __ __ __ __ __    __ __ __ __ __ __ __ __      [ ]
+
+
+
+SHA1 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____    [ ]
+
+
+
+
+EOF
+
+k=0;
+for i in $(cat $input); do
+    k=$(($k+1));
+    printf "\n%03d  [ ] Fingerprint OK        [ ] ID OK\n" $k;
+    gpg --fingerprint $i | grep -v "^sub" | \
+    	grep -v '^uid.*jpeg image of size';
+done
+
+

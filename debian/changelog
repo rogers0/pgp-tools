@@ -1,4 +1,4 @@
-signing-party (0.4.13-2) unreleased; urgency=low
+signing-party (0.4.14-1) unreleased; urgency=low
 
   [ Christoph Berg ]
   * gpglist: Do not barf on revokers (rvk). Thanks to Faidon Liambotis for
@@ -9,8 +9,11 @@ signing-party (0.4.13-2) unreleased; urgency=low
     (Closes: #466716).
   * gpg-key2ps: also accept revoked-style long option, thanks Luca Capello
     (Closes: #466993).
+  * gpgparticipants: new script to create a participant list useful for
+    party organisers using the Zimmermann-Sassaman key-signing protocol.
+    Thanks Philippe Teuwen (Closes: #467338).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 27 Feb 2008 11:29:11 +0100
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 05 Mar 2008 17:08:59 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 
