@@ -12,8 +12,10 @@ signing-party (0.4.14-1) unreleased; urgency=low
   * gpgparticipants: new script to create a participant list useful for
     party organisers using the Zimmermann-Sassaman key-signing protocol.
     Thanks Philippe Teuwen (Closes: #467338).
+  * caff: always update the user's key from their GnuPG home, to adequately
+    cope with changed keys (Closes: #462897).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 05 Mar 2008 17:08:59 +0100
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 05 Mar 2008 17:27:01 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 

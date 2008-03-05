@@ -946,22 +946,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 # import own keys
 #################
 for my $keyid (@{$CONFIG{'keyid'}}) {
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --fast-list-mode } ] );
-	$gpg->options->meta_interactive( 0 );
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->list_public_keys(handles => $handles, command_args => $keyid);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
-
-	if ($stdout eq '') {
-		warn ("No data from gpg for list-key\n"); # There should be at least 'tru:' everywhere.
-	};
-	unless ($stdout =~ /^pub:(?:[^:]*:){3,3}$keyid:/m) {
-		info("Key $keyid not found in caff's home.  Getting it from your normal GnuPGHome.");
+		info("Importing key $keyid from your normal GnuPGHome.");
 		my $key = export_key(undef, $keyid);
 		if (!defined $key || $key eq '') {
 			warn ("Did not get key $keyid from your normal GnuPGHome\n");
@@ -972,7 +957,6 @@ for my $keyid (@{$CONFIG{'keyid'}}) {
 			warn ("Could not import $keyid into caff's gnupghome.\n");
 			next;
 		};
-	}
 }
 
 ########################
