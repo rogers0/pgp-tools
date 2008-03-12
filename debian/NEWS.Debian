@@ -1,3 +1,12 @@
+signing-party (1.0-1) unstable; urgency=low
+
+  There are several new tools:
+  * gpgparticipants creates a list of party participants for the organiser.
+  * sig2dot and springgraph were imported from their formerly separate
+    packages.
+
+ -- Christoph Berg <myon@debian.org>  Wed, 12 Mar 2008 22:58:00 +0100
+
 signing-party (0.4.2-1) unstable; urgency=low
 
   * New: gpglist -- show who signed which of your UIDs
@@ -9,7 +18,7 @@ signing-party (0.4.0-1) unstable; urgency=low
   * Signing-party has now been merged with the (never released) pgp-tools
     package. It now includes two new tools. The package will be extended
     further in the near future.
-    
+
   * New: caff -- CA - fire and forget:
     caff takes a list of keyids on the command line, fetches them from a
     keyserver and calls GnuPG so that you can sign it. It then mails each

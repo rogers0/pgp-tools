@@ -37,14 +37,14 @@ Description: Various OpenPGP related tools
 
 Package: sig2dot
 Architecture: all
-Depends: signing-party (= ${binary:Version})
+Depends: signing-party (>= 1.0)
 Description: transitional package to pull in signing-party
  This is an empty package to pull in signing-party in which sig2dot is
  now included. It can safely be removed.
 
 Package: springgraph
 Architecture: all
-Depends: signing-party (= ${binary:Version})
+Depends: signing-party (>= 1.0)
 Description: transitional package to pull in signing-party
  This is an empty package to pull in signing-party in which springgraph is
  now included. It can safely be removed.

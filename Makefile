@@ -1,4 +1,5 @@
-DIRS=caff gpg-key2ps gpg-mailkeys gpgsigs gpglist gpgparticipants keylookup
+DIRS=caff gpg-key2ps gpg-mailkeys gpgsigs gpglist gpgparticipants keylookup \
+     sig2dot springgraph
 VERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: ([^-]*)/')
 DEBVERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: (.*)/')
 TGZ=../signing-party_$(VERSION).orig.tar.gz
@@ -6,6 +7,9 @@ TGZ_DIR=signing-party-$(VERSION)
 
 all:
 	for dir in $(DIRS) ; do if [ -f $$dir/Makefile ] ; then $(MAKE) -C $$dir || exit 1 ; fi ; done
+
+install:
+	for dir in $(DIRS) ; do if [ -f $$dir/Makefile ] ; then $(MAKE) -C $$dir install || exit 1 ; fi ; done
 
 clean:
 	for dir in $(DIRS) ; do if [ -f $$dir/Makefile ] ; then $(MAKE) -C $$dir clean || exit 1 ; fi ; done
