@@ -1,0 +1,84 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH SPRINGGRAPH 1 "September 5, 2005"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+springgraph \- renders a graph from a .dot file
+.SH SYNOPSIS
+.B springgraph [OPTIONS] < input-file > output-file.png
+.br
+.SH DESCRIPTION
+This manual page documents briefly the
+.B springgraph
+command.
+This manual page was written for the Debian distribution
+because the original program does not have a manual page.
+.PP
+Springgraph will read in a .dot file description of a graph, which,
+for each node, specifies its name and which other nodes it is
+connected to, and then renders a graph. The output is a PNG
+file. Each node is drawn as an
+ellipse, and each connection is drawn as an arrow. The node placement
+is a result of all of the nodes moving away from each other, while all
+nodes which are connected move toward each other. This movement is
+repeated until it stabilizes.
+
+Springgraph was written as an alternative to neato, which is part of
+graphviz. It attempts to read the same .dot files used by graphviz,
+but currently only supports a limited number of node attributes (label
+and fillcolor) and can only handle two nodes per edge definition ("node1 ->
+node2", not "node1 -> node2 -> node3").
+.SH OPTIONS
+\fIspringgraph\fP
+accepts the following options:
+.TP 16
+.B \-p
+Create a file that can be rendered with POV-Ray
+.TP 16
+.B \-v
+create a VRML file
+.TP 16
+.B \-s
+this option specifies the scale. All of the node locations
+are multiplied by this. Increase the scale to eliminate node
+overlaps. Decrease the scale to make the graph smaller. 
+.TP 16
+.B \-t
+make the background of the resulting image transparent.
+.TP 16
+.B \-b
+set background color of image, specify it in the form RRGGBB,
+in hex digits, e.g. FFFFFF is white, 000000 is black, FF0000
+is red, ...
+.TP 16
+.B \-l
+set the line color, same format as the background color
+.TP 16
+.B \-h
+display usage synopsis
+.SH EXAMPLE
+ digraph {
+  "rene" -> "myon";
+  "mvo" -> "rene";
+ }
+.SH SEE ALSO
+neato(1)
+sig2dot(1)
+http://www.graphviz.org/Documentation.php
+http://www.graphviz.org/cvs/doc/info/lang.html
+.SH AUTHOR
+This manual page was written by Kevin M. Rosenberg <kmr@debian.org>,
+for the Debian GNU/Linux system (but may be used by others).

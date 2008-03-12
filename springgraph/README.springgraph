@@ -1,0 +1,26 @@
+springgraph
+-----------
+
+Springgraph will read in a .dot file description of a graph, which,
+for each node, specifies its name and which other nodes it is
+connected to, and then renders a graph. Each node is drawn as an
+ellipse, and each connection is drawn as an arrow. The node placement
+is a result of all of the nodes moving away from each other, while
+all nodes which are connected move toward each other. This movement
+is repeated until it stabilizes.
+
+Springgraph was written as an alternative to neato, which is part of
+graphviz. It attempts to read the same .dot files used by graphviz,
+but currently only supports a limited number of node attributes
+(label and fillcolor).
+
+Definition of the .dot files which springgraph renders can be found
+in the graphviz man pages. A copy is here:
+ * http://www.graphviz.org/Documentation.php
+ * http://www.graphviz.org/cvs/doc/info/lang.html
+
+Springgraph only supports the fillcolor and label node attributes, and can only
+handle two nodes per edge definition ("node1 -> node2", not "node1 -> node2 ->
+node3").
+
+ -- Christoph Berg <cb@df7cb.de>  Sun,  6 Mar 2005 17:44:47 +0100

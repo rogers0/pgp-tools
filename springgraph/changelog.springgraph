@@ -1,0 +1,94 @@
+springgraph (0.82-7) UNRELEASED; urgency=low
+
+  * NOT RELEASED YET
+
+ -- Christoph Berg <myon@debian.org>  Sat, 28 Oct 2006 13:46:46 +0200
+
+springgraph (0.82-6) unstable; urgency=low
+
+  * Add missing targets in debian/rules (Closes: #395791).
+  * Build package in binary-indep.
+  * Use dh_perl.
+
+ -- Christoph Berg <myon@debian.org>  Sat, 28 Oct 2006 13:32:54 +0200
+
+springgraph (0.82-5) unstable; urgency=low
+
+  * Fix typo in manpage (Closes: #310340, thanks to A Costa for the patch).
+  * Add syntax example to manpage.
+  * Use ${perl:Depends}.
+  * Bump Standards-Version.
+
+ -- Christoph Berg <myon@debian.org>  Mon,  5 Sep 2005 14:01:12 +0200
+
+springgraph (0.82-4) unstable; urgency=low
+
+  * New maintainer (Closes: #297447).
+  * Removed redundant parts of debian/rules.
+  * Updated pointer to dot language documentation (Closes: #295700).
+
+ -- Christoph Berg <cb@df7cb.de>  Sun,  6 Mar 2005 16:37:47 +0100
+
+springgraph (0.82-3) unstable; urgency=low
+
+  * Orphan as in bug #297447
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Sat,  5 Mar 2005 02:44:42 -0700
+
+springgraph (0.82-2) unstable; urgency=low
+
+  * Add more documentation (closes:267495)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Mon, 23 Aug 2004 14:45:18 -0600
+
+springgraph (0.82-1) unstable; urgency=low
+
+  * Accept patch from Tobias Gruetzma for more layout options
+    (closes:234117)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Tue, 24 Feb 2004 08:53:45 -0700
+
+springgraph (0.81-1) unstable; urgency=low
+
+  * Caption stderr progress notes (closes:206147)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Wed, 20 Aug 2003 10:37:21 -0600
+
+springgraph (0.80.1-1) unstable; urgency=low
+
+  * Allow use of libgd-gd2-noxpm-perl (closes:188856)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Mon, 14 Apr 2003 08:15:30 -0600
+
+springgraph (0.80-1) unstable; urgency=low
+
+  * Apply speed-up patch from Marco Bodrato  (closes: 185532)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Wed, 19 Mar 2003 21:06:15 -0700
+
+springgraph (0.79-4) unstable; urgency=low
+
+  * Use libgd-gd2-perl rather than libgd-gd1-perl (closes:183919)
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Sat,  8 Mar 2003 05:20:43 -0700
+
+springgraph (0.79-3) unstable; urgency=low
+
+  * Change architecture to all
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Fri, 21 Feb 2003 12:19:36 -0700
+
+springgraph (0.79-2) unstable; urgency=low
+
+  * Added perl dependency
+  * Move to extra priority.
+  * Use dh_perl and ${perl:depend}
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Tue, 18 Feb 2003 19:21:04 -0700
+
+springgraph (0.79-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Tue, 18 Feb 2003 14:11:08 -0700
+
