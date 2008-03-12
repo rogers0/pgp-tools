@@ -18,7 +18,7 @@ dist:
 	[ ! -f $(TGZ) ]
 	mkdir $(TGZ_DIR)
 	for dir in $(DIRS) ; do cp -a $$dir $(TGZ_DIR); done
-	cp -a README TODO Makefile $(TGZ_DIR)
+	cp -a README Makefile $(TGZ_DIR)
 	GZIP=--best tar cvz -f $(TGZ) --exclude .svn $(TGZ_DIR)
 	rm -rf $(TGZ_DIR)
 
