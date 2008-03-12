@@ -37,8 +37,6 @@ install: build
 			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/gpgsigs/examples
 	install -m 644 gpgsigs/gpgsigs-lt2k5*.txt $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/gpgsigs/examples
-	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
-	install -m 644 keylookup/NEWS $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/keylookup
 	install -d $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
 	install -m 644 debian/overrides/signing-party $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
 

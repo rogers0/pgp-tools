@@ -6,4 +6,3 @@ gpgsigs/gpgsigs usr/bin
 gpg-key2ps/gpg-key2ps usr/bin
 gpg-mailkeys/gpg-mailkeys usr/bin
 gpgparticipants/gpgparticipants usr/bin
-keylookup/keylookup usr/bin

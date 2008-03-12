@@ -8,6 +8,7 @@ signing-party (1.0-1) unreleased; urgency=low
   * sig2dot, springgraph: new scripts joining the family, no longer provided
     as separate packages. We shamelessly bump our version number to something
     greater, and build transitional packages.
+  * Start moving the installation machinery from debian/* to Makefiles.
 
   [ Thijs Kinkhorst ]
   * keylookup: cope with 16 or 40 nibble keyids, thanks Philippe Teuwen

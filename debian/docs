@@ -1,2 +1,4 @@
 debian/NEWS.Debian
 debian/changelog.keylookup
+debian/changelog.sig2dot
+debian/changelog.springgraph
