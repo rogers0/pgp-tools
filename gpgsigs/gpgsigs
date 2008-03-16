@@ -20,6 +20,7 @@
 # see the Debian changelog for further changes.
 
 my $VERSION = qq$Rev$;
+$ENV{PATH} .= ":/usr/share/signing-party";
 
 use strict;
 use warnings;
@@ -152,11 +153,12 @@ print STDERR "Running --list-sigs, this will take a while ";
 open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @mykeys @keys 2>/dev/null |"
 	or die "can't get gpg listing";
 
-my ($key, $uid, $sigs);
+my ($key, $uid, $sigs, $photocount);
 while (<SIGS>) {
 	if ( m/^pub:(?:.*?:){3,3}([0-9A-F]{16,16}):/ ) {
 		$key = $1;
 		print STDERR ".";
+		undef $photocount;
 		next;
 	}
 	if ( m/^uid:(.):(?:.*?:){7,7}(.*):/s ) {
@@ -177,8 +179,11 @@ while (<SIGS>) {
 		my $size = $3 - 19; # FIXME: find a nicer way to find out picture size
 		$uid = "[jpeg image of size $size]";
 		next if $uidstatus eq "r";
-		if ($latex) {
-			system "gpg --photo-viewer 'convert - %k.eps' --list-options show-photos --list-key $key > /dev/null";
+		if ($latex and not $photocount) { # call once per key
+			my ($shortkey) = substr $key, -8;
+			system "rm $shortkey.[1-9]*.eps";
+			system "gpg --photo-viewer 'gpgsigs-eps-helper $shortkey' --list-options show-photos --list-key $key > /dev/null";
+			$photocount = 1;
 		}
 		my ($shortkey) = substr $key, -8;
 		push @{$uids{$shortkey}}, $uid;
@@ -318,6 +323,7 @@ while (<TXT>) {
 		#	next;
 		#}
 		print WRITE;
+		undef $photocount;
 		next;
 	}
 
@@ -334,8 +340,9 @@ while (<TXT>) {
 			foreach $uid (@{$uids{$key}}) {
 				print WRITE print_tag($key, $uid) . " $uid\n";
 				if ($latex and ($uid =~ /^\[jpeg image/)) {
+					$photocount++;
 					print WRITE "\\begin{flushright}\n";
-					print WRITE "\\includegraphics[height=3cm]{$key.eps}\n";
+					print WRITE "\\includegraphics[height=3cm]{$key.$photocount.eps}\n";
 					print WRITE "\\end{flushright}\n";
 				}
 			}
@@ -425,6 +432,7 @@ since the input text was generated.
 =item B<--latex>
 
 Generate LaTeX output, including photo IDs. Implies B<--refresh>.
+B<Note:> This writes eps files to the current directory.
 
 =item I<keyid>
 

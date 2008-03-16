@@ -9,6 +9,8 @@ signing-party (1.0-1) unreleased; urgency=low
     as separate packages. We shamelessly bump our version number to something
     greater, and build transitional packages.
   * gpg-key2ps: also handle revoked subkeys (Closes: #467001).
+  * gpgsigs: correctly handle keys with several photo ids via a helper script
+    in /usr/share/signing-party/ (Closes: #453840).
   * Start moving the installation machinery from debian/* to Makefiles.
 
   [ Thijs Kinkhorst ]
@@ -22,7 +24,7 @@ signing-party (1.0-1) unreleased; urgency=low
   * caff: always update the user's key from their GnuPG home, to adequately
     cope with changed keys (Closes: #462897).
 
- -- Christoph Berg <myon@debian.org>  Sun, 16 Mar 2008 19:39:54 +0100
+ -- Christoph Berg <myon@debian.org>  Sun, 16 Mar 2008 20:38:23 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 

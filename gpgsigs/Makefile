@@ -4,6 +4,12 @@ gpgsigs.1: gpgsigs
 	pod2man $< > $@
 
 install:
+	install -D gpgsigs $(DESTDIR)/usr/bin/gpgsigs
+	install -D gpgsigs-eps-helper \
+		$(DESTDIR)/usr/share/signing-party/gpgsigs-eps-helper
+	install -d $(DESTDIR)/usr/share/doc/signing-party/gpgsigs/examples
+	install -m644 gpgsigs-lt2k5*.txt \
+		$(DESTDIR)/usr/share/doc/signing-party/gpgsigs/examples
 
 clean:
 	rm -f gpgsigs.1

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+ID="$1"
+NUM=1
+
+while test -e $ID.$NUM.eps ; do
+	NUM=`expr $NUM + 1`
+done
+
+convert - $ID.$NUM.eps
