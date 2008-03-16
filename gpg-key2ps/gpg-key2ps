@@ -3,7 +3,7 @@
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
 # Copyright (C) 2005-2007  Thijs Kinkhorst
-# Copyright (C) 2005-2007  Christoph Berg <cb@df7cb.de>
+# Copyright (C) 2005-2008  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
 #
@@ -20,7 +20,7 @@ my $creationdate = scalar(localtime);
 
 sub version($) {
 	my $fd = shift;
-	print $fd "gpg-key2ps $version - (c) 2001-2007 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
+	print $fd "gpg-key2ps $version - (c) 2001-2008 Simon Richter, Thijs Kinkhorst, Christoph Berg\n";
 }
 
 sub usage($$) {
@@ -31,7 +31,7 @@ Usage: $0 [-p papersize] [-r revoked-style] [-1] keyid-or-name ...
 Options:
  -p --paper-size
  -r --revoked-style
-        hide   - Don't show revoked uids (default)
+        hide   - Don't show revoked uids and subkeys (default)
         grey   - Print text in grey
         note   - Add "[revoked]"
         show   - List revoked uids normally
@@ -162,38 +162,60 @@ print <<EOF;
 	newline
 } def
 
-EOF
-
-# output the desired display for revoked uids
-if ( $revokestyle eq "grey" ) {
-	print "/revuid {\n";
-	print "	.5 setgray\n";
-	print "	uid\n";
-	print "	0 setgray\n";
-	print "} def\n";
-} elsif ( $revokestyle eq "note" ) {
-	print "/revuid {\n";
-	print "	50 y moveto (uid) show\n";
-	print "	200 y moveto show ( [revoked]) show\n";
-	print "	newline\n";
-	print "} def\n";
-} elsif ( $revokestyle eq "show" ) {
-	print "/revuid { uid } def\n";
-} elsif ( $revokestyle eq "strike" ) {
-	print "/revuid {\n";
-	print "	uid\n";
-	print "	45 y 9 add moveto h 2 div 45 sub y 18 add lineto stroke\n";
-	print "} def\n";
-}
-
-print <<EOF;
-
 /sbk {
 	50 y moveto (sub) show
 	70 y moveto show showAlgorithm (/) show show
 	150 y moveto show
 	newline
 } def
+
+EOF
+
+# output the desired display for revoked uids
+if ( $revokestyle eq "grey" ) {
+	print <<EOF;
+/revuid {
+	.5 setgray
+	uid
+	0 setgray
+} def
+/revsbk {
+	.5 setgray
+	sbk
+	0 setgray
+} def
+EOF
+} elsif ( $revokestyle eq "note" ) {
+	print <<EOF;
+/revuid {
+	50 y moveto (uid) show
+	200 y moveto show ( [revoked]) show
+	newline
+} def
+/revsbk {
+	sbk
+	( [revoked]) show
+} def
+EOF
+} elsif ( $revokestyle eq "show" ) {
+	print <<EOF;
+/revuid { uid } def
+/revsbk { sbk } def
+EOF
+} elsif ( $revokestyle eq "strike" ) {
+	print <<EOF;
+/revuid {
+	uid
+	45 y 9 add moveto h 2 div 45 sub y 18 add lineto stroke
+} def
+/revsbk {
+	sbk
+	45 y 9 add moveto h 2 div 45 sub y 18 add lineto stroke
+} def
+EOF
+}
+
+print <<EOF;
 
 /key {
 	noneedhline
@@ -231,7 +253,10 @@ while(<GPG>) {
 		next if $revokestyle eq "hide";
 	}
 	# subkey
-	s/^sub:[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
+	s/^sub:[^r:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
+	if (s/^sub:r[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) revsbk/) {
+		next if $revokestyle eq "hide";
+	}
 	$numlines++;
 	# print this line
 	print;
@@ -316,7 +341,7 @@ libpaper isn't installed.
 
 =item B<-r> B<--revoked-style> I<revoked-style>
 
-Select how to mark revoked UIDs. Five styles are available:
+Select how to mark revoked UIDs and subkeys. Five styles are available:
  B<hide> don't show at all (default),
  B<show> show normally,
  B<grey> display in 50% grey,
@@ -365,6 +390,6 @@ include fingerprints.
 
 =item (c) 2005-2007 Thijs Kinkhorst <thijs@kinkhorst.com>
 
-=item (c) 2005-2007 Christoph Berg <cb@df7cb.de>
+=item (c) 2005-2008 Christoph Berg <cb@df7cb.de>
 
 =back
