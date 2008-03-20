@@ -15,6 +15,7 @@ clean:
 	for dir in $(DIRS) ; do if [ -f $$dir/Makefile ] ; then $(MAKE) -C $$dir clean || exit 1 ; fi ; done
 
 dist:
+	[ -d debian ] && fakeroot debian/rules clean
 	[ ! -f $(TGZ) ]
 	mkdir $(TGZ_DIR)
 	for dir in $(DIRS) ; do cp -a $$dir $(TGZ_DIR); done

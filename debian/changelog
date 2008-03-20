@@ -1,4 +1,4 @@
-signing-party (1.0-1) unreleased; urgency=low
+signing-party (1.0-1) unstable; urgency=low
 
   * The 1.0 release.
 
@@ -24,7 +24,7 @@ signing-party (1.0-1) unreleased; urgency=low
   * caff: always update the user's key from their GnuPG home, to adequately
     cope with changed keys (Closes: #462897).
 
- -- Christoph Berg <myon@debian.org>  Sun, 16 Mar 2008 20:38:23 +0100
+ -- Christoph Berg <myon@debian.org>  Sun, 16 Mar 2008 20:58:50 +0100
 
 signing-party (0.4.13-1) unstable; urgency=low
 
