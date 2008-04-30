@@ -76,7 +76,7 @@ $TEXT
 EOM
 
 if [ -f ~/.signature ]; 
-	then printf "--=20\n" >> $TEMPFILE 
+	then printf -- "--=20\n" >> $TEMPFILE 
 	cat ~/.signature >> $TEMPFILE
 fi
 
