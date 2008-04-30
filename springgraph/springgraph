@@ -74,7 +74,6 @@
 # v0.80 Mar 19 2003 optimization patch from Marco Bodrato
 # v0.81 Aug 20 2003 Caption stderr progress notes
 
-use GD;
 use Getopt::Std;
 use strict;
 use vars qw(
@@ -180,6 +179,13 @@ $twopi = $pi * 2;
 
 getopts('s:pvhtb:l:');
 
+# -h: Show some help
+if ($opt_h) {
+  usage();
+  exit 1;
+}
+use GD;
+
 # -s: set scale
 if ($opt_s)
 {
@@ -204,11 +210,6 @@ if ($opt_v)
   $vrml = 0;
 }
 
-# -h: Show some help
-if ($opt_h) {
-  usage();
-  exit 1;
-}
 
 # -t: Make background transparent
 if ($opt_t)
@@ -880,9 +881,12 @@ sub cylinder {
 
 sub usage {
 print <<END
-springgraph - Render a .dot file into a graphic
+springgraph - Render a .dot file into a graphic, taking that dot file
+              on standard in and delivering a PNG on standard out.
 
-Usage: springgraph [-p] [-v] [-s scale] [-t] [-b color] [-l color] [-h]
+Usage:
+  springgraph [-p] [-v] [-s scale] [-t] [-b color] [-l color] [-h] \\
+  < example.dot > example.png
 
    -p   Create a file that can be rendered with POV-Ray
    -v   Create a VRML file

@@ -2,8 +2,9 @@ signing-party (1.0-2) UNRELEASED; urgency=low
 
   * gpg-mailkeys: Fix parameter escaping of printf, thanks
     Olivier Tetard (Closes: #478151).
+  * springgraph: clarify help text (Closes: 474351).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 30 Apr 2008 21:19:19 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 30 Apr 2008 21:37:41 +0200
 
 signing-party (1.0-1) unstable; urgency=low
 
