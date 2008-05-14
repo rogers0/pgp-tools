@@ -3,8 +3,9 @@ signing-party (1.0-2) UNRELEASED; urgency=low
   * gpg-mailkeys: Fix parameter escaping of printf, thanks
     Olivier Tetard (Closes: #478151).
   * springgraph: clarify help text (Closes: 474351).
+  * Switch dependency libmime-perl to libmime-tools-perl (renamed).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 30 Apr 2008 21:37:41 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 14 May 2008 19:53:10 +0200
 
 signing-party (1.0-1) unstable; urgency=low
 
