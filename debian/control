@@ -10,6 +10,7 @@ Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
+Section: misc
 Architecture: all
 Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl, libmailtools-perl
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
@@ -36,6 +37,7 @@ Description: Various OpenPGP related tools
   * springgraph: creates a graph from a .dot file
 
 Package: sig2dot
+Section: graphics
 Architecture: all
 Depends: signing-party (>= 1.0)
 Description: transitional package to pull in signing-party
@@ -43,6 +45,7 @@ Description: transitional package to pull in signing-party
  now included. It can safely be removed.
 
 Package: springgraph
+Section: graphics
 Architecture: all
 Depends: signing-party (>= 1.0)
 Description: transitional package to pull in signing-party

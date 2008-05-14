@@ -4,8 +4,9 @@ signing-party (1.0-2) UNRELEASED; urgency=low
     Olivier Tetard (Closes: #478151).
   * springgraph: clarify help text (Closes: 474351).
   * Switch dependency libmime-perl to libmime-tools-perl (renamed).
+  * Put springgraph and sig2dot in section graphics.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Wed, 14 May 2008 19:53:10 +0200
+ -- Thijs Kinkhorst <thijs@debian.org>  Wed, 14 May 2008 20:04:57 +0200
 
 signing-party (1.0-1) unstable; urgency=low
 
