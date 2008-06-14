@@ -135,13 +135,21 @@ A list of your keys.  This is used to determine which signatures to keep
 in the pruning step.  If you select a key using B<-u> it has to be in
 this list.  B<REQUIRED>.
 
+=back
+
 =head2 General settings
+
+=over
 
 =item B<caffhome> [string]
 
 Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
+=back
+
 =head2 GnuPG settings
+
+=over
 
 =item B<gpg> [string]
 
@@ -171,7 +179,11 @@ Additional keyids to encrypt messages to. Default: none.
 Additional commands to pass to gpg after the "sign" command.
 Default: none.
 
+=back
+
 =head2 Keyserver settings
+
+=over
 
 =item B<keyserver> [string]
 
@@ -186,7 +198,11 @@ Default: B<0>.
 
 A list of files containing keys to be imported.
 
+=back
+
 =head2 Signing settings
+
+=over
 
 =item B<no-sign> [boolean]
 
@@ -207,7 +223,11 @@ than this age.  Default: B<24*60*60> (i.e. one day).
 Select the key that is used for signing, in case you have more than one key.
 With multiple keyids, sign with each key in turn.
 
+=back
+
 =head2 Mail settings
+
+=over
 
 =item B<mail> [boolean]
 
