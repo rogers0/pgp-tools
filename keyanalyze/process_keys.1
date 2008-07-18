@@ -1,0 +1,31 @@
+.\" process_keys, preprocesses keys into input for keyanalyze
+.\" manpage Copyright (C) 2004 Matthew Wilcox
+.\"
+.\" This program is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License
+.\" as published by the Free Software Foundation; either version 2
+.\" of the License, or (at your option) any later version.
+.\" 
+.TH process_keys 1
+
+.SH NAME
+process_keys \- Web of Trust analysis
+
+.SH SYNTAX
+\fBprocess_keys\fP [ \fB\-S\fP ]
+
+.SH DESCRIPTION
+\fIprocess_keys\fP takes the output from
+.BR pgpring (1)
+and turns it into suitable input for
+.BR keyanalyze (1).
+
+It acts as a filter, reading from stdin and writing to stdout.
+
+.SH OPTIONS
+.TP
+.B \-S
+Accept keys that are not selfsigned.  Not recommended.
+
+.SH AUTHOR
+Thomas Roessler <roessler@does-not-exist.org>

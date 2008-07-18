@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ $# -eq 0 ]; then
+	echo "Must provide at least a key ID"
+	exit 1
+fi
+while [ $# -gt 1 ]; do
+	gpgopts="$gpgopts $1"
+	shift
+done
+gpg $gpgopts --fast-list-mode --list-sigs $1 | grep ^sig | cut -c13-20 |sort -u

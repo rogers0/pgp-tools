@@ -27,7 +27,7 @@ install: build
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/signing-party
 	dh_install
-	dh_installman */*.1
+	dh_installman */*.1 */*/*.1
 	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
 	install -m 644 caff/README \
 		caff/README.gpg-agent \
@@ -35,9 +35,8 @@ install: build
 		caff/README.v3-keys \
 		caff/caffrc.sample \
 			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
-	install -d $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
-	install -m 644 debian/overrides/signing-party $(CURDIR)/debian/signing-party/usr/share/lintian/overrides
-
+	# ignore errors with older debhelper versions
+	-dh_lintian
 
 binary-indep: build install
 	dh_testdir

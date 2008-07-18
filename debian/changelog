@@ -1,9 +1,18 @@
-signing-party (1.0-3) UNRELEASED; urgency=low
+signing-party (1.1-1) UNRELEASED; urgency=low
 
+  [ Thijs Kinkhorst ]
   * Checked for policy 3.8.0, no changes.
   * Fix pod syntax problems in caff (Closes: #485653).
 
- -- Thijs Kinkhorst <thijs@debian.org>  Sat, 14 Jun 2008 17:47:59 +0200
+  [ Christoph Berg ]
+  * Import keyanalyze into signing-party. Thanks to Matthew Wilcox for the
+    permission. Provide a transitional package.
+    + Add patch to flatten output structure for small keyrings.
+      (Closes: #309101)
+    + Update config.{sub,guess}. (Closes: #365148)
+  * Use dh_lintian.
+
+ -- Christoph Berg <myon@debian.org>  Fri, 18 Jul 2008 14:49:02 +0200
 
 signing-party (1.0-2) unstable; urgency=low
 
@@ -289,6 +298,27 @@ signing-party (0.3.0-1) unstable; urgency=low
   * Clarify copyright / maintainer documentation.
 
  -- Thijs Kinkhorst <kink@squirrelmail.org>  Sat,  5 Mar 2005 14:39:24 +0100
+
+keyanalyze (0.0.200204-1) unstable; urgency=low
+
+  * Initial release (Closes: #238140)
+  * pgpring:
+    - Fixed key ID generation for ElGamal primary keys
+    - Enabled -W -Wall -g -O2 CFLAGS
+    - Fixed type-punning problems
+    - Fixed implicit declaration of exit()
+    - Wrote manpage
+  * process_keys:
+    - Deleted two unused variables
+    - Wrote manpage
+  * keyanalyze:
+    - Rewrote list handling to solve off-by-one problems
+    - Used an array of structs instead of a lot of arrays
+    - Made it accept -i and -o arguments to override the input and output
+      names.
+    - Wrote manpage
+
+ -- Matthew Wilcox <willy@debian.org>  Sat, 19 Jun 2004 13:07:48 -0400
 
 signing-party (0.2.3-2) unstable; urgency=low
 

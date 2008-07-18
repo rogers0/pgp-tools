@@ -1,0 +1,100 @@
+#!/usr/bin/perl
+
+# unsign takes the output from keyanalyze and adds useful information such as
+# the keys that haven't signed you and you haven't signed within this set.
+# This functionality should probably be added as an option to keyanalyze.
+
+$group=$ARGV[0];
+
+sub print_keys {
+	my ($title, @array) = @_;
+	my $size = $#array + 1;
+	print "\n$title:\n";
+	foreach (@array) {
+		print "  $_ $names{$_}\n";
+	}
+	print "Total: $size keys in this set\n";
+}
+
+sub set_diff {
+	my ($firstref, $secondref) = @_;
+	my @result;
+
+	ELEMENT: foreach $element (@$firstref) {
+		foreach $test (@$secondref) {
+			next ELEMENT if $element eq $test;
+		}
+
+		push @result, $element;
+	}
+
+	return @result;
+}
+
+sub read_keyfile {
+	my ($name, $toref, $fromref) = @_;
+	open(KEY, $name) or return 1;
+	my $state = 0;
+	while (my $line = <KEY>) {
+		if ($line =~ "^Signatures to") {
+			$state = 1;
+		} elsif ($line =~ "^Total:") {
+			$state = 0;
+		} elsif ($line =~ "^Signatures from") {
+			$state = 2;
+		} elsif ($state == 1) {
+			my @key = split(' ', $line);
+			push @$toref, @key[1];
+		} elsif ($state == 2) {
+			my @key = split(' ', $line);
+			push @$fromref, @key[1];
+		}
+	}
+	close(KEY);
+	return 0;
+}
+
+open(IDS, "$group/pubring.ids") or die "Could not open $group\n";
+while ($id = <IDS>) {
+	next if ($id =~ /^#/);
+	next if ($id =~ /^$/);
+#	chomp $id;
+	$id =~ s/\s+$//;
+	$id = substr($id, -8) if length($id) > 8;
+	push @ids, $id;
+
+	$name = `gpg --options $group/options --list-keys $id`;
+	$name =~ s/\n.*//s;
+	$name =~ s/^.*[0-9][0-9] //;
+	$name =~ s/@/-at-/g;
+	$names{$id} = $name;
+}
+close(IDS);
+
+foreach $key (@ids) {
+	my $name = $group . "/output/" . substr($key, 0, 2) . "/" . $key;
+	my @to;
+	my @from;
+
+	next if read_keyfile($name, \@to, \@from);
+
+	push @to, $key;
+	push @from, $key;
+
+	my @nonsigned = set_diff(\@ids, \@from);
+	my @nonsigners = set_diff(\@ids, \@to);
+
+	my @first = set_diff(\@nonsigned, \@nonsigners);
+	my @third = set_diff(\@nonsigned, \@first);
+	my @second = set_diff(\@nonsigners, \@nonsigned);
+
+	open(KEY, ">>$name") or die "Cannot open $name\n";
+	my $oldfh = select(KEY);
+
+	print_keys("This key has been signed by, but has not signed", @first);
+	print_keys("This key has signed, but has not been signed by", @second);
+	print_keys("This key is not directly connected to", @third);
+
+	select($oldfd);
+	close(KEY);
+}

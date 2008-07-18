@@ -1,0 +1,43 @@
+09590CFD GA Tech College of computing
+8B4608A1 GA Tech College of computing
+6916C873 GA Tech College of computing
+4F570BA3 PGP security maverick
+DC4ED62D PGP security maverick
+466B4289 ext2fstools, Kerberos, LSB, IETF, other
+80B07A4F ext2fstools, Kerberos, LSB, IETF, other
+103D4013 ext2fstools, Kerberos, LSB, IETF, other
+93674C40 ext2fstools, Kerberos, LSB, IETF, other
+F95C2F6D Debian maintainer & uni-mainz keyserver admin
+09AC0A6A cypherpunks
+66FBC18C keyanalyze report, free software law, freedb, other
+0A2F87E5 OpenBSD, OpenSSH, IPSEC
+C2009841 OpenBSD, OpenSSH, IPSEC
+0679ED91 manages SURFnet servers, scanned PGP source code
+66A74B31 manages SURFnet servers, scanned PGP source code
+C7A966DD inventor of PGP
+FAEBD5FC inventor of PGP
+0DBF906D MIT security/network manager
+5B0358A2 author of GNU Privacy Guard (GPG)
+1CF27FD5 author of pks PGP keyserver software
+DD934139 hosts Swiss PGP keyserver, www.ch.pgp.net
+52D1CAB1 security researcher at ETH Zurich
+00292B81 security researcher at ETH Zurich
+46F3212D Debian developer, postfix junkie
+2B48F6F5 ISAAC, crypto guru
+2DE30EC1 CERT, you know
+09D3E64D USENIX, PGPMoose
+7362BE39 chief cryptographer, Intel
+C3FC4C69 security expert, AT&T Labs
+ED9547ED Debian Project Leader emeritus, dpkg
+2FA3BC2D Debian Project Leader emeritus, dpkg
+39F37F5D privacy advocate & security expert
+961F4A35 inventor of SSH
+DB41B387 Free Software Foundation VP
+7DFF8533 USENIX, Linux NFSv4, uucp
+13D9873D co-author, Linux Kernel Internals
+1FE961A1 xfree86 driver coder
+94C09C7F debian trust analysis
+603F2D01 PKI page, pki-page.org
+A9FA17FF Debian maintainer
+BDBFE838 KMail developer
+BB1D9F6D German computer magazine c't; crypto campaign

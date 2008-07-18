@@ -1,0 +1,18 @@
+OpenPGP key analysis
+
+keyanalyze takes a PGP/GnuPG public key ring and analyses the relationships
+between the keys in it.  It produces output suitable for placing on a web
+site showing which keys have signed which other keys.  Its aim is to
+stimulate awareness of keysigning and help people notice gaps in the Web of
+Trust that could easily be filled.
+
+More documentation later on I hope. For now:
+
+make
+./analyze.sh path/to/pubring.pgp
+
+Output is stored in ./output/ - Be prepared. There is a lot of it.
+I'd suggest having at least 1GB free if you're processing from the
+the 'full' keyring. (1 million keys or more)
+
+Modify the analyze.sh file to meet your needs if necessary.

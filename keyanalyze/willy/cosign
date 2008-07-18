@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+for (@ARGV) {
+	open(KEY, $_);
+	($name = $_) =~ s#.*/##;
+
+	$state = 0;
+	$#to = -1;
+	$#from = -1;
+	$#onlyto = -1;
+	while ($line = <KEY>) {
+		if ($line =~ "^Signatures to") {
+			$state = 1;
+		} elsif ($line =~ "^Total:") {
+			$state = 0;
+		} elsif ($line =~ "^Signatures from") {
+			$state = 2;
+		} elsif ($state == 1) {
+			$to[++$#to] = $line;
+		} elsif ($state == 2) {
+			$from[++$#from] = $line;
+		}
+	}
+	close(KEY);
+
+	@to = sort @to;
+	@from = sort @from;
+
+	TO: foreach $sigto (@to) {
+		foreach $index (0 .. @from) {
+			if ($sigto eq $from[$index]) {
+				splice(@from, $index, 1);
+				next TO;
+			}
+		}
+		$onlyto[++$#onlyto] = $sigto;
+	}
+
+	$signed = $#onlyto + 1;
+	$signedby = $#from + 1;
+
+	print "The following $signedby keys have not signed key $name:\n";
+	print @from;
+	print " \nKey $name has not signed $signed keys:\n";
+	print @onlyto;
+	print "\n";
+}

@@ -67,3 +67,18 @@ and springgraph:
   the Debian GNU/Linux distribution in file /usr/share/common-licenses/GPL;
   if not, write to the Free Software Foundation, Inc., 51 Franklin Street,
   Fifth Floor, Boston, MA  02110-1301, USA
+
+License for keyanalyze:
+  This package was debianised by Matthew Wilcox <willy@debian.org> between
+  March and June of 2003.
+
+  It was downloaded from http://dtype.org/keyanalyze/code.php
+
+  The primary upstream author is M. Drew Streib <dtype@dtype.org>
+
+  Copyright:
+
+  This software is supplied under the terms of the GNU General Public
+  License version 2.
+
+  On Debian/GNU systems, this can be found as /usr/share/common-licenses/GPL-2.

@@ -1,0 +1,48 @@
+.\" keyanalyze, a program for analysing webs of trust
+.\" manpage Copyright (C) 2004 Matthew Wilcox
+.\"
+.\" This program is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License
+.\" as published by the Free Software Foundation; either version 2
+.\" of the License, or (at your option) any later version.
+.\" 
+.TH keyanalyze 1
+
+.SH NAME
+keyanalyze \- Web of Trust analysis
+
+.SH SYNTAX
+\fBkeyanalyze\fP [ \fB\-i\fP \fIinfile\fP ] [ \fB\-o\fP \fIoutdir\fP ] [ \fB\-1\fP ]
+
+.SH DESCRIPTION
+\fIkeyanalyze\fP analyses the web of trust within a group of keys.  It
+takes preprocessed keys as input (see
+.BR process_keys (1))
+and produces an output directory full of statistics about the keys.
+
+.SH OPTIONS
+.TP
+.BI \-i " infile"
+Read from \fIinfile\fP instead of \fBpreprocess.keys\fP.
+.TP
+.BI \-o " outdir"
+Put the results in \fIoutdir\fP instead of \fBoutput/\fP.  The directory
+will be created if it does not already exist.
+.TP
+.BI \-1
+Per default, \fBkeyanalyze\fP writes the output into subdirectories named after
+the first two characters of the key ID. This options disables this; useful for
+small keyrings.
+
+.SH AUTHORS
+M. Drew Streib <dtype@dtype.org>,
+.br
+Thomas Roessler <roessler@does\-not\-exist.org>,
+.br
+Hal J. Burch <hburch@halport.lumeta.com>,
+.br
+Matt Kraai <kraai@alumni.carnegiemellon.edu>,
+.br
+Steve Langasek <vorlon@netexpress.net>,
+.br
+Matthew Wilcox <matthew@wil.cx>

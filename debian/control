@@ -11,15 +11,17 @@ Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Section: misc
-Architecture: all
+Architecture: any
 Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl, libmailtools-perl
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
 # springraph
  libgd-gd2-noxpm-perl | libgd-gd2-perl
-Suggests: imagemagick | graphicsmagick-imagemagick-compat
-Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1)
-Conflicts: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1)
-Provides: sig2dot, springgraph
+Suggests: imagemagick | graphicsmagick-imagemagick-compat,
+# keyanalyze
+ mutt
+Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
+Conflicts: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
+Provides: sig2dot, springgraph, keyanalyze
 Description: Various OpenPGP related tools
  signing-party is a collection for all kinds of PGP/GnuPG related things,
  including tools for signing keys, keyring analysis, and party preparation.
@@ -32,9 +34,17 @@ Description: Various OpenPGP related tools
   * gpglist: show who signed which of your UIDs
   * gpgsigs: annotates list of GnuPG keys with already done signatures
   * gpgparticipants: create list of party participants for the organiser
+  * keyanalyze: minimum signing distance (MSD) analysis on keyrings
   * keylookup: ncurses wrapper around gpg --search
   * sig2dot: converts a list of GnuPG signatures to a .dot file
   * springgraph: creates a graph from a .dot file
+
+Package: keyanalyze
+Architecture: all
+Depends: signing-party (>= 1.1)
+Description: transitional package to pull in signing-party
+ This is an empty package to pull in signing-party in which keyanalyze is
+ now included. It can safely be removed.
 
 Package: sig2dot
 Section: graphics

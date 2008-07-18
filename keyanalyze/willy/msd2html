@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+# this short script is for making the HTML for the top50 report monthly
+# Copyright (c)2001 M. Drew Streib
+# This code is released under the GPL version 2 or later.
+
+# Modifications (c) Copyright 2003-2004 Matthew Wilcox for subset analyses.
+
+$options = $ARGV[0];
+$server='http://keyserver.kjsl.com:11371/';
+$oldmsd = 0;
+$oldrank = 0;
+
+while ($line = <STDIN>) {
+	$line =~ /\s+(\d+)\s+((\w|\d)+)\s+((\w|\d)+)\s+((\d|\.)+)/;
+	$rank = $1;
+	$key0 = $2;
+	$key = $4;
+	$msd = $6;
+	$keylink = substr($key, 0, 2)."/$key";
+	if ($msd == $oldmsd) {
+		$rank = $oldrank;
+	} else {
+		$oldrank = $rank;
+		$oldmsd = $msd;
+	}
+
+	$command = "gpg --options $options --list-keys $key";
+	$output = `$command`;
+	if ($output =~ /\d\d\d\d\-\d\d\-\d\d (.*) <.*/) {
+		$name = $1;
+	} elsif ($output =~ /\d\d\d\d\-\d\d\-\d\d (.*)\n/) {
+		$name = $1;
+	} else {
+		print "failed to parse: $output";
+		$name = $rank;
+	}
+
+	$command = 'grep "'.$key.'" msd-sorted.txt';
+	$rawmsd = `$command`;
+	if ($rawmsd) {
+		$rawmsd =~ / *(\d+) \w+ \w+ *((\d|\.)+)/;
+		$grank = $1;
+		$gmsd = $2;
+	} else {
+		$grank = '';
+		$gmsd = '';
+	}
+
+	print "<TR><TD>$rank</TD><TD><A href=\"${keylink}\">$key</A></TD><TD><A href=\"${server}pks/lookup?search=0x$key\&amp;op=vindex\">$name</A></TD><TD align=\"right\">$msd</TD><TD align=\"right\">$grank</TD><TD align=\"right\">$gmsd</TD></TR>\n";
+}

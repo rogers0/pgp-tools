@@ -1,0 +1,45 @@
+.\" pgpring, a key ring dumper
+.\" Manpage Copyright (c) 2004 Matthew Wilcox
+.\"
+.\" This program is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License
+.\" as published by the Free Software Foundation; either version 2
+.\" of the License, or (at your option) any later version.
+.\" 
+.TH PGPRING 1
+.SH NAME
+pgpring \- key ring dumper
+
+.SH SYNTAX
+\fBpgpring\fP [ \fB\-k\fP \fIkeyring\fP | \fB\-2\fP | \fB\-5\fP ]
+[ \fB\-s\fP ] [ \fB\-S\fP ]
+
+.SH DESCRIPTION
+
+\fIpgpring\fP is a key ring dumper.  It extracts information from PGP's
+binary key ring and emits it in an (almost) readable output format
+understood by
+.BR mutt (1)
+and
+.BR process_keys (1)
+.  This output format mimics the one used by the GNU Privacy Guard (GPG).
+
+.SH OPTIONS
+.TP
+.BI \-k " keyring"
+Dump the contents of the specified keyring.
+.TP
+.B \-2
+Use the default keyring for PGP 2.x.
+.TP
+.B \-5
+Use the default keyring for PGP 5.
+.TP
+.B \-s
+Dump the secret keyring.
+.TP
+.B \-S
+Include signatures.
+
+.SH AUTHORS
+Thomas Roessler <roessler@does\-not\-exist.org>

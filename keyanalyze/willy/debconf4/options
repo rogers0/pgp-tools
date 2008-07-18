@@ -1,0 +1,5 @@
+lock-once
+no-default-keyring
+keyserver subkeys.pgp.net
+keyserver-options honor-http-proxy
+keyring debconf4/pubring.gpg

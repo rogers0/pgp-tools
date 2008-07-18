@@ -1,0 +1,122 @@
+#!/bin/sh
+
+input=${1%%/}
+output=$1/output
+
+if [ ! -e $input ]; then
+	echo Directory $input not found
+	exit 1
+fi
+
+# functions
+
+update() {
+	if [ -e $input/pubring.ids ]; then
+		grep -v '^#' $input/pubring.ids | xargs \
+			gpg --options $input/options --recv-keys
+	fi
+	test -e $input/pubring.gpg && chmod 644 $input/pubring.gpg
+	rm -f $input/pubring.gpg~
+}
+
+analyse() {
+	rm -rf $output
+	pgpring -S -k $input/pubring.gpg \
+		| grep "\(pub\|sig\|rev\|uid\)" \
+		| sed -e "s/^\([a-z]*\).*:\([0-9A-F]\{16\}\):.*/\1 \2/g" \
+			-e "s/^uid:.*/uid/" \
+		| process_keys > $input/preprocess.keys
+	keyanalyze -i $input/preprocess.keys -o $output/
+	rm $input/preprocess.keys
+
+	sort -n -k 3 < $output/msd.txt | nl -s ' ' > $output/msd-sorted.txt
+
+	./unsign $input
+	cat $output/msd-sorted.txt | ./msd2html $input/options \
+		> $output/top50table.html
+	cp $input/pubring.ids $input/pubring.gpg $output/
+	gpg --options $input/options --export -a >$output/pubring.asc
+}
+
+graph() {
+	if [ -e $input/showall ]; then
+		ALL=-a
+	fi
+
+	if [ -e $input/nograph ]; then
+		RSYNC_DELETE=no
+	else
+		echo -n "Graph generation started at "
+		date
+		gpg --options $input/options --list-sigs | \
+			sig2dot $ALL 2>/dev/null | \
+			neato -Tps > $output/graph.ps
+		echo -n "Finished at "
+		date
+		convert $output/graph.ps $output/graph.jpg
+		convert -geometry 320x240 $output/graph.ps \
+			$output/graph-small.jpg
+	fi
+}
+
+party() {
+	if [ -e $input/party.ids ]; then
+		gpg --options $input/options --export \
+			`grep -v '^#' $input/party.ids` >$output/party.gpg
+		./party-table.pl $output/party.gpg >$output/party.html
+		gpg --options $input/options --fingerprint \
+			`grep -v '^#' $input/party.ids` >$output/sassaman.txt
+		md5sum $output/sassaman.txt >$output/sassaman.md5
+		sha1sum $output/sassaman.txt >$output/sassaman.sha1
+	fi
+}
+
+report() {
+	if [ -e $input/report_top.$1.in ]; then
+		date=$(date '+%d %B %Y')
+		sed "s/&date;/$date/" <$input/report_top.$1.in \
+				> $output/report.$1
+		cat $output/top50table.html $input/report_bottom.$1.in \
+				>> $output/report.$1
+		rm $output/top50table.html
+	fi
+	if [ -e $input/index.$1 ]; then
+		cp -a $input/index.$1 $output/
+	fi
+}
+
+nonrecip() {
+	if [ -e $input/non-recip.in ]; then
+		./cosign $output/*/* | \
+			grep -E 'has not signed ([1-9][0-9]|[5-9])' | \
+			sort -g -k 1.28 |tac | \
+			./non-recip $input >$output/non-recip.html
+	fi
+}
+
+upload() {
+	if [ -e $input/destination ]; then
+		dest=$(sed -e "s/\$input/$input/" < $input/destination)
+		if [ "$RSYNC_DELETE" = "no" ]; then
+			rsync -az $output/ $dest
+		else
+			rsync -az --delete $output/ $dest
+		fi
+	fi
+}
+
+# program
+
+update
+analyse
+graph
+party
+report html
+report php
+nonrecip
+
+if [ -x $input/update.sh ]; then
+	$input/update.sh $input $output
+fi
+
+upload

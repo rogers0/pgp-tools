@@ -1,0 +1,13 @@
+200203
+  * Significant improvements to scripts to create HTML output.
+
+200112
+  * Applied Steve Langasek's patch to include farthest hop statistic
+  and a fix for a one-off bug causing the last hop count not to be displayed.
+  * Cleaned up some packaging, so that a few more of the simple command
+  lines are automated via analyze.sh
+
+200111
+  * Applied Matt Kraai's patch to use Tarjan's algorighm and increse
+  efficiency somewhat in finding set connectivity.
+

@@ -9,6 +9,7 @@ This is a collection of several projects relating to OpenPGP.
 * gpgsigs: annotates list of GnuPG keys with already done signatures
 * gpgparticipants: create a list of key signing party participants,
   for use by the party organiser
+* keyanalyze: minimum signing distance (MSD) analysis on keyrings
 * keylookup: ncurses wrapper around gpg --search
 * sig2dot: converts a list of GnuPG signatures to a .dot file
 * springgraph: creates a graph from a .dot file

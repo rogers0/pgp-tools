@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+$cmd = "gpg --option $ARGV[0]/options --list-keys";
+
+print "<html><head><title>Non-reciprocating signers</title></head>\n";
+print "<body>\n";
+print `cat $ARGV[0]/non-recip.in`;
+print "<table><tr><td>Name</td><td>Key ID</td><td>Slackness</td><td>Excuse</td></tr>\n";
+
+while (<STDIN>) {
+	s/Key //;
+	($key,$number) = split(/ has not signed /, $_, 2);
+	$name = `$cmd $key |head -1`;
+	chomp $name;
+	$name =~ s#.*-[0-9][0-9] ##;
+	$name =~ s/&/&amp;/;
+	$name =~ s/</&lt;/;
+	$name =~ s/>/&gt;/;
+	$name =~ s/\([^)]*\)//;
+
+	$number =~ s/://;
+	chomp $number;
+
+	$excuse = `grep -s $key $ARGV[0]/excuses`;
+	chomp $excuse;
+	$excuse =~ s/$key //;
+
+	print "<tr><td>$name</td><td>$key</td><td>$number</td><td>$excuse</td></tr>\n";
+}
+
+print "</table></body></html>";

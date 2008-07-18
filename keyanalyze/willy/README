@@ -1,0 +1,5 @@
+My scripts require a copy of the global keyring msd-sorted.txt
+file in the current directory.  You can download it from
+http://keyserver.kjsl.com/~jharris/ka/current/msd-sorted.txt.bz2 and
+use bunzip to uncompress it.  This file is updated approximately every
+2 weeks.
