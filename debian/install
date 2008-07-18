@@ -7,5 +7,5 @@ gpg-mailkeys/gpg-mailkeys usr/bin
 gpgparticipants/gpgparticipants usr/bin
 
 keyanalyze/analyze.sh usr/share/doc/signing-party/examples
-keyanalyze/scripts/   usr/share/doc/signing-party/examples
-keyanalyze/willy/     usr/share/doc/signing-party/examples
+keyanalyze/scripts/*  usr/share/doc/signing-party/examples
+keyanalyze/willy/*    usr/share/doc/signing-party/examples
