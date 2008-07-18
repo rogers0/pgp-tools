@@ -6,6 +6,6 @@ gpg-key2ps/gpg-key2ps usr/bin
 gpg-mailkeys/gpg-mailkeys usr/bin
 gpgparticipants/gpgparticipants usr/bin
 
-keyanalyze/analyze.sh usr/share/doc/signing-party/examples
-keyanalyze/scripts/*  usr/share/doc/signing-party/examples
-keyanalyze/willy/*    usr/share/doc/signing-party/examples
+keyanalyze/analyze.sh usr/share/doc/signing-party/examples/keyanalyze
+keyanalyze/scripts/*  usr/share/doc/signing-party/examples/keyanalyze/scripts
+keyanalyze/willy/*    usr/share/doc/signing-party/examples/keyanalyze/willy
