@@ -11,11 +11,12 @@ signing-party (1.1-1) UNRELEASED; urgency=low
       (Closes: #309101)
     + Update config.{sub,guess}. (Closes: #365148)
     + Add patch by Stephan Beyer to improve process_keys' input parsing,
-      remedying to need of weird grep and sed commands. (Closes: #370571)
+      remedying the need of weird grep and sed commands. (Closes: #370571)
+    + Add -h option to keyanalyze, and update manpage. (Closes: #370570)
   * Put examples in .../examples/$prog, not the other way round.
   * Use dh_lintian.
 
- -- Christoph Berg <myon@debian.org>  Fri, 18 Jul 2008 15:30:06 +0200
+ -- Christoph Berg <myon@debian.org>  Fri, 18 Jul 2008 15:41:28 +0200
 
 signing-party (1.0-2) unstable; urgency=low
 

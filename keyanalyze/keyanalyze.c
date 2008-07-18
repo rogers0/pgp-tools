@@ -293,10 +293,14 @@ void ParseArgs(int argc, char **argv)
 	int outdirlen;
 
 	while (1) {
-		int option = getopt(argc, argv, "i:o:1");
+		int option = getopt(argc, argv, "hi:o:1");
 		if (option == -1)
 			break;
 		switch (option) {
+		case 'h':
+			printf ("Usage: %s [-h1] [-i infile] [-o outdir]\n", argv[0]);
+			exit (0);
+			break;
 		case 'i':
 			infile = optarg;
 			break;

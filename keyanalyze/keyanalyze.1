@@ -12,13 +12,17 @@
 keyanalyze \- Web of Trust analysis
 
 .SH SYNTAX
-\fBkeyanalyze\fP [ \fB\-i\fP \fIinfile\fP ] [ \fB\-o\fP \fIoutdir\fP ] [ \fB\-1\fP ]
+\fBkeyanalyze\fP [ \fB\-h1\fP ] [ \fB\-i\fP \fIinfile\fP ] [ \fB\-o\fP \fIoutdir\fP ]
 
 .SH DESCRIPTION
 \fIkeyanalyze\fP analyses the web of trust within a group of keys.  It
 takes preprocessed keys as input (see
 .BR process_keys (1))
 and produces an output directory full of statistics about the keys.
+
+Usually called like
+ $ pgpring -S -k ./keyring.gpg | process_keys > preprocess.keys
+ $ keyanalyze
 
 .SH OPTIONS
 .TP
@@ -28,6 +32,9 @@ Read from \fIinfile\fP instead of \fBpreprocess.keys\fP.
 .BI \-o " outdir"
 Put the results in \fIoutdir\fP instead of \fBoutput/\fP.  The directory
 will be created if it does not already exist.
+.TP
+.BI \-h
+Print help.
 .TP
 .BI \-1
 Per default, \fBkeyanalyze\fP writes the output into subdirectories named after
