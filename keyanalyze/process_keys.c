@@ -184,7 +184,7 @@ int main (int argc, char *argv[])
 
   while (fgets (buff, sizeof (buff), stdin))
   {
-    if ((s = strtok (buff, " \t\r\n")))
+    if ((s = strtok (buff, ":")))
     {
       if (!strcmp (s, "pub"))
       {
@@ -194,8 +194,12 @@ int main (int argc, char *argv[])
 
 	lastuid = &k->uids->next;
 	lastsig = &k->uids->sigs;
-	
-	sprintf (k->id, "%.16s", strtok (NULL, " \t\r\n"));
+
+	strtok (NULL, ":");
+	strtok (NULL, ":");
+	strtok (NULL, ":");
+
+	sprintf (k->id, "%s", strtok (NULL, ":"));
       }
       else if (!strcmp (s, "rev"))
 	k->rev = 1;
@@ -209,7 +213,7 @@ int main (int argc, char *argv[])
       {
 	struct sig *sig = *lastsig = new_sig();
 	lastsig = &sig->next;
-	sprintf (sig->id, "%.16s", strtok (NULL, " \t\r\n"));
+	sprintf (sig->id, "%s", strtok (NULL, ":"));
       }
     }
   }

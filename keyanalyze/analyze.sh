@@ -5,11 +5,7 @@ make
 
 # comment these next lines out if you are working with an existing
 # preprocess.keys file
-pgpring -S -k $1							\
-	| grep "\(pub\|sig\|rev\|uid\)"					\
-	| sed -e "s/^\([a-z]*\).*:\([0-9A-F]\{16\}\):.*/\1 \2/g"	\
-		-e "s/^uid:.*/uid/"	> all.keys
-cat all.keys | process_keys $2 > preprocess.keys
+pgpring -S -k "$1" | process_keys $2 > preprocess.keys
 
 # the actual processing of the main report
 keyanalyze
