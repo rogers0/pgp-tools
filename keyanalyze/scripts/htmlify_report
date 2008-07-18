@@ -1,0 +1,53 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Std;
+
+my %options;
+getopts('k:', \%options);
+my $keyring = $options{k} ? "--no-default-keyring --keyring=$options{k}" : "";
+my %UID;
+
+sub get_uid {
+	my $key = shift;
+	return $UID{$key} if $UID{$key};
+	open G, "gpg --list-key --fixed-list-mode --with-colon $keyring $key |" or die "gpg: $!";
+	while(<G>) {
+		next unless /^uid:[-qmfue]::::\d*::[\dA-F]*::(.+):$/;
+		my $name = $1;
+		$name =~ s/</&lt;/g;
+		$name =~ s/>/&gt;/g;
+		$name =~ s/\@/&#64;/g;
+		close G;
+		return $UID{$key} = $name;
+	}
+	close G;
+}
+
+sub uid_link {
+	my $key = shift;
+	#$key =~ /^([\dA-F]{2})/;
+	#return "<a href=\"../$1/$key.html\">$key</a>";
+	return "<a href=\"$key.html\">$key</a>";
+}
+
+for my $file (@ARGV) {
+	#print STDERR "$file...\n";
+	open F, "$file" or die "$file: $!";
+	open H, ">$file.html" or die "$file.html: $!";
+	print H <<EOF;
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>$file</title>
+</head>
+<body>
+<pre>
+EOF
+	while(<F>) {
+		next if /^(This individual|report at)/;
+		s/([\dA-F]{8})$/uid_link($1)." ".get_uid($1);/e;
+		print H;
+	}
+	print H "</pre>\n</body></html>\n";
+}
