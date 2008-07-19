@@ -12,7 +12,7 @@ Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 Package: signing-party
 Section: misc
 Architecture: any
-Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl, libmailtools-perl
+Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl, libmailtools-perl, ${shlibs:Depends}
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
 # springraph
  libgd-gd2-noxpm-perl | libgd-gd2-perl
