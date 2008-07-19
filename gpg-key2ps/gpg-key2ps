@@ -2,7 +2,7 @@
 #
 # gpg-key2ps: convert a PGP/GnuPG key into paper slips.
 # Copyright (C) 2001-2005  Simon Richter
-# Copyright (C) 2005-2007  Thijs Kinkhorst
+# Copyright (C) 2005-2008  Thijs Kinkhorst
 # Copyright (C) 2005-2008  Christoph Berg <cb@df7cb.de>
 # Licenced under the GNU General Public License,
 # version 2 or later.
@@ -14,6 +14,7 @@ use Getopt::Long;
 
 my $version = '$Rev$';
 $version =~ s/\$Rev:\s*(\d+)\s*\$/$1/;
+my $showsubkeys = 0;
 my $revokestyle = "hide";
 my $columns = 2;
 my $creationdate = scalar(localtime);
@@ -27,9 +28,10 @@ sub usage($$) {
 	my ($fd, $exitcode) = @_;
 	version ($fd);
 	print $fd <<EOF;
-Usage: $0 [-p papersize] [-r revoked-style] [-1] keyid-or-name ...
+Usage: $0 [-p papersize] [-r revoked-style] [-1] [-s] keyid-or-name ...
 Options:
  -p --paper-size
+ -s --show-subkeys
  -r --revoked-style
         hide   - Don't show revoked uids and subkeys (default)
         grey   - Print text in grey
@@ -51,6 +53,8 @@ if (!GetOptions (
 	'--help'            => \$opts->{help},
 	'-v'                => \$opts->{version},
 	'--version'         => \$opts->{version},
+	'-s'                => \$opts->{showsubkeys},
+	'--show-subkeys'    => \$opts->{showsubkeys},
 	'-p=s'              => \$opts->{papersize},
 	'--paper-size=s'    => \$opts->{papersize},
 	'-r=s'              => \$opts->{revokestyle},
@@ -69,8 +73,9 @@ if ($opts->{version}) {
 	exit 0;
 }
 
-if ( $opts->{revokestyle} ) { $revokestyle = $opts->{revokestyle}; }
 if ( $opts->{papersize} ) { $ENV{'PAPERSIZE'} = $opts->{papersize}; }
+if ( $opts->{showsubkeys} ) { $showsubkeys = 1; }
+if ( $opts->{revokestyle} ) { $revokestyle = $opts->{revokestyle}; }
 
 if ( $revokestyle !~ /^(grey|hide|note|show|strike)$/ ) {
 	print STDERR "Unknown revoked-style \"$revokestyle\".\n";
@@ -255,9 +260,11 @@ while(<GPG>) {
 		next if $revokestyle eq "hide";
 	}
 	# subkey
-	s/^sub:[^r:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/;
+	if (s/^sub:[^r:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) sbk/) {
+		next if ! $showsubkeys;
+	}
 	if (s/^sub:r[^:]*:([^:]*):([0-9]*):.{8,8}(.{8,8}):([^:]*):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:.*/	($4) ($3) $2 ($1) revsbk/) {
-		next if $revokestyle eq "hide";
+		next if (!$showsubkeys) || $revokestyle eq "hide";
 	}
 	$numlines++;
 	# print this line
@@ -323,7 +330,7 @@ B<gpg-key2ps> - generates a PS file from a GnuPG keyring
 
 =head1 SYNOPSIS
 
-B<gpg-key2ps> [B<-r> I<revoked-style>] [B<-p> I<papersize>] I<keyid-or-name> [ I<...> ]
+B<gpg-key2ps> [B<-r> I<revoked-style>] [B<-p> I<papersize>] [B<-1>] [B<-s>] I<keyid-or-name> [ I<...> ]
 
 =head1 DESCRIPTION
 
@@ -341,6 +348,11 @@ The PS data is written to stdout.
 Select the output paper size. Default is to look into /etc/papersize or A4 if
 libpaper isn't installed.
 
+=item B<-s> B<--show-subkeys>
+
+Enable subkey information to be printed on the slips. Subkey information is
+normally not relevant to the key signing process.
+
 =item B<-r> B<--revoked-style> I<revoked-style>
 
 Select how to mark revoked UIDs and subkeys. Five styles are available:
@@ -349,6 +361,11 @@ Select how to mark revoked UIDs and subkeys. Five styles are available:
  B<grey> display in 50% grey,
  B<note> add "[revoked]", and
  B<strike> strike through.
+
+=item B<-1>
+
+Print only one column of paper slips instead of the default two. Useful for keys
+with long UIDs that otherwise won't fit.
 
 =item I<keyid>
 
@@ -390,7 +407,7 @@ include fingerprints.
 
 =item (c) 2001-2005 Simon Richter <sjr@debian.org>
 
-=item (c) 2005-2007 Thijs Kinkhorst <thijs@kinkhorst.com>
+=item (c) 2005-2008 Thijs Kinkhorst <thijs@kinkhorst.com>
 
 =item (c) 2005-2008 Christoph Berg <cb@df7cb.de>
 
