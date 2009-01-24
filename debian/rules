@@ -44,13 +44,12 @@ install: build
 	$(INSTALL_PROGRAM) $(GPGDIR_DIR)/$(GPGDIR_PROG) $(DESTDIR_BIN)
 	dh_install
 	dh_installman */*.1 */*/*.1
-	install -d $(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
 	$(INSTALL_DATA) caff/README \
-		caff/README.gpg-agent \
-		caff/README.many-keys \
-		caff/README.v3-keys \
-		caff/caffrc.sample \
-			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
+			caff/README.gpg-agent \
+			caff/README.many-keys \
+			caff/README.v3-keys \
+			caff/caffrc.sample \
+			$(DESTDIR_DOC)/caff
 	$(INSTALL_DATA) $(GPGDIR_DIR)/ChangeLog $(DESTDIR_DOC)/changelog.gpgdir
 	$(INSTALL_DATA) $(GPGWRAP_DIR)/NEWS $(DESTDIR_DOC)/changelog.gpgwrap
 	# ignore errors with older debhelper versions
