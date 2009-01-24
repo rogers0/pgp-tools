@@ -1,0 +1,19 @@
+gpgwrap 0.04-20060904
+	* new option: -P
+	* in previous versions the --passphrase-fd option was appended after
+	  --homedir <arg> or --options <arg>, now also --homedir=<arg> and
+	  --options=<arg> should be handled correctly
+
+gpgwrap 0.03-20050321
+	* new options: -o, -c
+	* do not always ignore the exit code of child processes as in
+	  version 0.02 (see manpage for more)
+	* format of verbose output changed
+
+gpgwrap 0.02-20041014
+	* new options: -V, -F, -v, -i, -a
+	* the passphrase may also be given via stdin, via environment
+	  variable or via prompt
+
+gpgwrap 0.01-20040601
+	* first official release

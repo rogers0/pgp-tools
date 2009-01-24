@@ -1,0 +1,35 @@
+Author:   Karsten Scheibler
+Homepage: http://unusedino.de/gpgwrap/
+eMail:    gpgwrap@unusedino.de
+
+
+  =======================
+  [1] GENERAL INFORMATION
+  =======================
+
+
+See doc/gpgwrap.1 for more
+
+
+  ============================
+  [2] SHORT BUILD INSTRUCTIONS
+  ============================
+
+
+To build gpgwrap a simple 'make' should be enough. You may build gpgwrap with
+dietlibc, just set and export the environment variable DIET to the location
+of your 'diet' binary and run 'make'. Dietlibc is a libc that is optimized
+for small size, look at http://www.fefe.de/dietlibc/ for more.
+
+
+  ===================================
+  [3] SHORT INSTALLATION INSTRUCTIONS
+  ===================================
+
+
+Copy the files from bin/ and doc/ to your favorite directories, for example:
+
+chown root bin/* doc/*.1
+chgrp root bin/* doc/*.1
+(cd bin && tar cf - *)   | (cd /usr/bin && tar xvf -)
+(cd doc && tar cf - *.1) | (cd /usr/man/man1 && tar xvf -)

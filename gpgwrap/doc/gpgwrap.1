@@ -1,0 +1,232 @@
+.ds Q" ""
+.de Vb
+.ft CW
+.nf
+.ne \\$1
+..
+.de Ve
+.ft R
+
+.fi
+..
+
+.TH gpgwrap 1 "gpgwrap 0.04"
+
+.SH NAME
+gpgwrap \- a small wrapper for gpg
+
+.SH SYNOPSIS
+.B gpgwrap
+\-V
+
+.B gpgwrap
+\-P
+[\-v]
+[\-i]
+[\-a]
+[\-p \fI<file>\fR]
+
+.B gpgwrap
+\-F
+[\-v]
+[\-i]
+[\-a]
+[\-c]
+[\-p \fI<file>\fR]
+[\-o \fI<name>\fR]
+[\-\-]
+\fI<file>\fR [\fI<file>\fR ... ]
+
+.B gpgwrap
+[\-v]
+[\-i]
+[\-a]
+[\-p \fI<file>\fR]
+[\-o \fI<name>\fR]
+[\-\-]
+\fBgpg\fR [gpg options]
+
+.SH DESCRIPTION
+.PP
+The GNU Privacy Guard (\fBgpg\fR) supplies the option \-\-passphrase\-fd. This instructs \fBgpg\fR to read the passphrase from the given file descriptor. Usually this file descriptor is opened before \fBgpg\fR is executed via \fBexecvp(3)\fR. Exactly that is what \fBgpgwrap\fR is doing. The passphrase may be passed to \fBgpgwrap\fR in 4 ways:
+.RS
+.IP * 2
+as file path, whereat the passphrase is stored as plain text in the file
+.IP * 2
+it is piped from another program to the stdin of \fBgpgwrap\fR
+.IP * 2
+through the \fBGPGWRAP_PASSPHRASE\fR environment variable
+.IP * 2
+\fBgpgwrap\fR prompts for it
+.RE
+
+With no precautions the first point undermines the secure infrastructure \fBgpg\fR provides. But in pure batch oriented environments this may be what you want. Otherwise if you are willing to enter passphrases once and don't want them to be stored as plain text in a file \fBgpg\-agent\fR is what you are looking for. Another security objection could be the use of the environment variable \fBGPGWRAP_PASSPHRASE\fR which contains the passphrase and may be read by other processes of the same user.
+
+.SH OPTIONS
+.IP "\-V, \-\-version" 8
+Print out version and exit.
+.IP "\-P, \-\-print" 8
+Get the passphrase and print it mangled to stdout.
+.IP "\-F, \-\-file" 8
+Read \fBgpg\fR commands from the given files. If \fI<file>\fR is \- it is read from stdin. Exactly one command per line is expected. The given line is handled in the following way:
+.RS
+.IP * 2
+In the first place the passphrase is mangled. This means that unusual characters are replaced by their backslash escaped octal numbers.
+.IP * 2
+Secondly the mangled passphrase is stored in the environment variable \fBGPGWRAP_PASSPHRASE\fR.
+.IP * 2
+\*(Q"exec gpgwrap \-\- \*(Q" is prepended to each line, before the result is passed as argument to \*(Q"sh \-c\*(Q".
+.RE
+.IP "\-h, \-\-help" 8
+Print out usage information.
+.IP "\-v, \-\-verbose" 8
+Increase verbosity level.
+.IP "\-i, \-\-interactive" 8
+Always prompt for passphrase (ignores \-p and the environment variable).
+.IP "\-a, \-\-ask\-twice" 8
+Ask twice if prompting for a passphrase.
+.IP "\-c, \-\-check\-exit\-code" 8
+While reading gpg commands from a file, \fBgpgwrap\fR ignores per default the exit code of its child processes. This option enables the check of the exit code. If a child terminates abnormal or with an exit code not equal 0 \fBgpgwrap\fR stops immediately and does return with this exit code. See also section \fBBUGS\fR.
+.IP "\-p \fI<file>\fR, \-\-passphrase\-file \fI<file>\fR" 8
+Read passphrase from \fI<file>\fR. If \fI<file>\fR is \- it is read from stdin. The passphrase is expected to be in plain text. If this option is not given the passphrase will be taken either from the environment variable \fBGPGWRAP_PASSPHRASE\fR or it will be prompted on the controlling tty if the environment variable is not set.
+.IP "\-o \fI<name>\fR, \-\-option\-name \fI<name>\fR" 8
+Specify the name of the \*(Q"\-\-passphrase\-fd\*(Q" option understood by the program to be executed. This is useful if you want to use \fBgpgwrap\fR in combination with other programs than \fBgpg\fR.
+
+.SH LIMITATIONS
+The given passphrase is subject to several limitations depending on the way it was passed to \fBgpgwrap\fR:
+.RS
+.IP * 2
+There is a size limitation: the passphrase should be not larger than some kilobytes (examine the source code for the exact limit).
+.IP * 2
+\fBgpgwrap\fR allows you to use all characters in a passphrase even \\000, but this does not mean that \fBgpg\fR will accept it. \fBgpg\fR may reject your passphrase or may only read a part of it, if it contains characters like \\012 (in C also known as \\n).
+.IP * 2
+If you set the environment variable \fBGPGWRAP_PASSPHRASE\fR you should take special care with the backslash character, because \fBgpgwrap\fR uses backslash to escape octal numbers, (see option \-F). Therefore write backslash itself as octal number: \\134.
+.RE
+
+.SH EXAMPLES
+.IP "1." 8
+.Vb
+\&\fBgpgwrap\fR \-p /path/to/a/secret/file  \\
+\&\fBgpg\fR \-c \-z 0 \-\-batch \-\-no\-tty  \\
+\&    \-\-cipher\-algo blowfish < infile > outfile
+.Ve
+Read passphrase from /path/to/a/secret/file and execute \fBgpg\fR to do symmetric encryption of infile and write it to outfile.
+
+.IP "2." 8
+.Vb
+\&\fBgpgwrap\fR \-i \-a  \\
+\&\fBgpg\fR \-c \-z 0 \-\-batch \-\-no\-tty  \\
+\&    \-\-cipher\-algo blowfish < infile > outfile
+.Ve
+Same as above except that \fBgpgwrap\fR prompts twice for the passphrase.
+
+.IP "3." 8
+.Vb
+\&\fBgpgwrap\fR \-F \-i \- <<EOL
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile1\*(Q" > \*(Q"$HOME/outfile1\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile2\*(Q" > \*(Q"$HOME/outfile2\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile3\*(Q" > \*(Q"$HOME/outfile3\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile4\*(Q" > \*(Q"$HOME/outfile4\*(Q"
+\&EOL
+.Ve
+\fBgpgwrap\fR prompts for the passphrase and executes four instances of \fBgpg\fR to decrypt the given files.
+
+.IP "4." 8
+.Vb
+\&\fBGPGWRAP_PASSPHRASE\fR=\*(Q"mysecretpassphrase\*(Q"
+\&export \fBGPGWRAP_PASSPHRASE\fR
+\&\fBgpgwrap\fR \-F \-c \-v /tmp/cmdfile1 \- /tmp/cmdfile2 <<EOL
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile1\*(Q" > \*(Q"$HOME/outfile1\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile2\*(Q" > \*(Q"$HOME/outfile2\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile3\*(Q" > \*(Q"$HOME/outfile3\*(Q"
+\&\fBgpg\fR \-\-decrypt \-\-batch \-\-no\-tty < \*(Q"$HOME/infile4\*(Q" > \*(Q"$HOME/outfile4\*(Q"
+\&EOL
+.Ve
+Same as above except that \fBgpgwrap\fR gets the passphrase via the environment variable, reads commands additionally from other files and checks the exit code of every \fBgpg\fR instance. This means if one \fBgpg\fR command has a non zero exit code, no further commands are executed. Furthermore \fBgpgwrap\fR produces verbose output.
+
+.IP "5." 8
+.Vb
+\&\fBGPGWRAP_PASSPHRASE\fR=\*(Q"$(\fBgpgwrap\fR \-P \-i \-a)\*(Q"
+\&export \fBGPGWRAP_PASSPHRASE\fR
+\&
+\&\fBfind\fR . \-maxdepth 1 \-type f |
+\&while read FILE; do
+\&    FILE2=\*(Q"$FILE.bz2.gpg\*(Q"
+\&    \fBbzip2\fR \-c \*(Q"$FILE\*(Q" |
+\&    \fBgpgwrap\fR \fBgpg\fR \-c \-z 0 \-\-batch \-\-no\-tty  \\
+\&        \-\-cipher\-algo blowfish > \*(Q"$FILE2\*(Q" &&
+\&    \fBtouch\fR \-r \*(Q"$FILE\*(Q" \*(Q"$FILE2\*(Q" &&
+\&    \fBrm\fR \-f \*(Q"$FILE\*(Q"
+\&done
+.Ve
+Read in passphrase, compress all files in the current directory, encrypt them and keep date from original file.
+
+.IP "6." 8
+.Vb
+\&\fBfind\fR . \-maxdepth 1 \-type f \-name '*.bz2.gpg' |
+\&\fBawk\fR '{
+\&    printf(\*(Q"gpg \-\-decrypt \-\-batch \-\-no\-tty \-\-quiet \*(Q");
+\&    printf(\*(Q"\-\-no\-secmem\-warning < %s\\n\*(Q", $0);
+\&    }' |
+\&\fBgpgwrap\fR \-F \-i \-c \- |
+\&\fBbzip2\fR \-d \-c \- |
+\&\fBgrep\fR \-i 'data'
+.Ve
+Decrypt all *.bz2.gpg files in the current directory, decompress them and print out all occurances of data. If you pipe the result to \fBless\fR you get into trouble because \fBgpgwrap\fR and \fBless\fR try to read from the TTY at the same time. In such a case it is better to use the environment variable to give the passphrase (the example above shows how to do this).
+
+.IP "7." 8
+.Vb
+\&\fBGPGWRAP_PASSPHRASE\fR=\*(Q"$(\fBgpgwrap\fR \-P \-i \-a)\*(Q"
+\&export \fBGPGWRAP_PASSPHRASE\fR
+\&
+\&\fBgpgwrap\fR \-P |
+\&\fBssh\fR \-C \-x \-P \-l user host \*(Q"
+\&    \fBGPGWRAP_PASSPHRASE\fR=\\\*(Q"\\$(\fBcat\fR)\\\*(Q"
+\&    ...
+\&    \*(Q"
+.Ve
+Prompt for a passphrase twice and write it to the \fBGPGWRAP_PASSPHRASE\fR environment variable.
+
+.IP "8." 8
+.Vb
+\&\fBecho\fR \-n \*(Q"Passphrase: \*(Q"
+\&\fBstty\fR \-echo
+\&read \fBGPGWRAP_PASSPHRASE\fR
+\&\fBecho\fR
+\&\fBstty\fR echo
+\&export \fBGPGWRAP_PASSPHRASE\fR
+.Ve
+Another way to prompt manually for the passphrase. It was needed in combination with older versions of \fBgpgwrap\fR, because they did not upport \-P. Be aware that with this method no automatic conversion to backslash escaped octal numbers takes place.
+
+.IP "9." 8
+.Vb
+\&\fBecho\fR \*(Q"mysecretpassphrase\*(Q" |
+\&\fBgpg\fR \-\-batch \-\-no\-tty \-\-passphrase\-fd 0  \\
+\&    \-\-output outfile \-\-decrypt infile
+.Ve
+Cheap method to give passphrase to \fBgpg\fR without \fBgpgwrap\fR. Note that you can't use stdin to pass a file to \fBgpg\fR, because stdin is already used for the passphrase.
+
+.IP "10." 8
+.Vb
+\&\fBgpg\fR \-\-batch \-\-no\-tty  \\
+\&    \-\-passphrase\-fd 3 3< /path/to/a/secret/file  \\
+\&    < infile > outfile
+.Ve
+This is a more advanced method to give the passphrase, it is equivalent to Option \-p of \fBgpgwrap\fR. This example should at least work with the bash.
+
+.IP "11." 8
+.Vb
+\&\fBgpg\fR \-\-batch \-\-no\-tty \-\-passphrase\-fd 3  \\
+\&    3< <(echo \*(Q"mysecretpassphrase\*(Q")  \\
+\&    < infile > outfile
+.Ve
+Like above, but the passphrase is given directly. This example should at least work with the bash.
+
+.SH BUGS
+In version 0.02 of \fBgpgwrap\fR the exit code of \fBgpg\fR was only returned if \fBgpgwrap\fR read the passphrase from a file. Since version 0.03, only \-F omits exit code checking by default, but it can be enabled with \-c.
+
+.SH "SEE ALSO"
+\fBgpg\fR, \fBgpg\-agent\fR
+
+.SH AUTHOR
+Karsten Scheibler

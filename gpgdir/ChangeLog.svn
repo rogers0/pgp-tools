@@ -1,0 +1,65 @@
+------------------------------------------------------------------------
+r329 | mbr | 2008-11-05 00:12:52 -0500 (Wed, 05 Nov 2008) | 1 line
+Changed paths:
+   A /gpgdir/branches/gpgdir-1.9.3 (from /gpgdir/trunk:328)
+
+created gpgdir-1.9.3 branch
+------------------------------------------------------------------------
+r328 | mbr | 2008-11-05 00:04:20 -0500 (Wed, 05 Nov 2008) | 1 line
+Changed paths:
+   M /gpgdir/trunk/ChangeLog
+   M /gpgdir/trunk/VERSION
+   M /gpgdir/trunk/gpgdir
+   M /gpgdir/trunk/packaging/gpgdir-nodeps.spec
+   M /gpgdir/trunk/packaging/gpgdir.spec
+   M /gpgdir/trunk/test/gpgdir_test.pl
+
+1.9.3 release
+------------------------------------------------------------------------
+r326 | mbr | 2008-10-13 21:55:56 -0400 (Mon, 13 Oct 2008) | 1 line
+Changed paths:
+   M /gpgdir/trunk/VERSION
+   M /gpgdir/trunk/gpgdir
+   M /gpgdir/trunk/test/gpgdir_test.pl
+
+bumped version to 1.9.3-pre1
+------------------------------------------------------------------------
+r325 | mbr | 2008-10-03 00:04:46 -0400 (Fri, 03 Oct 2008) | 3 lines
+Changed paths:
+   M /gpgdir/trunk/CREDITS
+   M /gpgdir/trunk/ChangeLog
+   M /gpgdir/trunk/gpgdir
+
+- Bugfix for using -f instead of -I for non-interactive file erasure
+(Franck Joncourt).
+
+------------------------------------------------------------------------
+r324 | mbr | 2008-10-02 23:57:33 -0400 (Thu, 02 Oct 2008) | 1 line
+Changed paths:
+   M /gpgdir/trunk/ChangeLog
+
+minor date update
+------------------------------------------------------------------------
+r323 | mbr | 2008-10-02 23:57:11 -0400 (Thu, 02 Oct 2008) | 3 lines
+Changed paths:
+   M /gpgdir/trunk/ChangeLog
+   M /gpgdir/trunk/gpgdir
+   M /gpgdir/trunk/test/gpgdir_test.pl
+
+Simplified test suite code by creating a set of default arguments for
+the gpgdir command line as each test is executed
+
+------------------------------------------------------------------------
+r322 | mbr | 2008-09-10 23:40:35 -0400 (Wed, 10 Sep 2008) | 1 line
+Changed paths:
+   M /gpgdir/trunk/CREDITS
+   M /gpgdir/trunk/gpgdir.1
+
+applied gpgdir man page fix from Franck
+------------------------------------------------------------------------
+r321 | mbr | 2008-09-01 00:24:35 -0400 (Mon, 01 Sep 2008) | 1 line
+Changed paths:
+   M /gpgdir/trunk/gpgdir
+
+merged in 'signed' vs. 'verified' text fix
+------------------------------------------------------------------------

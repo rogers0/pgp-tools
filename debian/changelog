@@ -1,5 +1,9 @@
 signing-party (1.1-1) UNRELEASED; urgency=low
 
+  [ Franck Joncourt ]
+  * Imported gpgdir. (Closes: #498167)
+  * Imported gpgwrap. (Closes: #454074)
+
   [ Thijs Kinkhorst ]
   * Checked for policy 3.8.0, no changes.
   * caff: Fix pod syntax problems (Closes: #485653).

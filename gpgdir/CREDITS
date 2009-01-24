@@ -1,0 +1,49 @@
+Per Ronny Westin
+    - Found PLAINTEXT vs. DECRYPTION_OKAY return code bug for GnuPG 1.2.6.
+    - Reported directory decryption bug in gpgdir-1.6.  The result was the
+      addition of the gpgdir test suite.
+
+Kai Raven
+    - Bugfix in man page for file compression/decompression wording.
+
+Craig Needs
+    - Suggested --gnupg-dir option, testing help.
+
+Chris P
+    - Found bug where gpgdir would not decrypt files that contained spaces.
+
+Ian Scott
+    - Reported "protocol error: expected SHM_GET_XXX got GOOD_PASSPHRASE"
+      bug in GnuPG module.
+
+Mate Wierdl
+    - Contributed patch (originally for the psad project) for building the
+      RPM on x86_64 platforms.
+
+pyllyukko
+    - Added the gpgdir.SlackBuild script (adapted from the psad project).
+
+Anthony Chivetta
+    - Submitted patch to fix a bug where files named "0.gpg" could not be
+      decrypted.
+    - Submitted patch to implement the --overwrite-encrypted command line
+      argument to allow previously encrypted files to be overwritten. This
+      is useful for updating an encrypted directory with new versions of
+      the previously encrypted files.
+
+Fermin Manzanedo
+    - Suggested the --Symmetric option so that files can be encrypted/
+      decrypted via a symmetric cipher (GnuPG supports CAST5 by default).
+
+Franck Joncourt
+    - Performed analysis of locale settings for fwknop installer and suggested
+      using the LC_ALL environmental variable instead of the LANG variable
+      (which is superseded by LC_* vars).
+    - Suggested moving perl modules to the deps/ directory.  This is to
+      support the integration of the Cipherdyne projects with Debian.
+    - Added Short description to the gpgdir man page.  This fixes the
+      following lintian warning:
+
+        http://lintian.debian.org/tags/manpage-has-bad-whatis-entry.html
+    - Suggested the appropriate bugfix to interface non-interactively with the
+      wipe program (-f instead of -I in later versions).
