@@ -4,6 +4,8 @@ signing-party (1.1-1) UNRELEASED; urgency=low
   * Imported gpgdir. (Closes: #498167)
   * Imported gpgwrap. (Closes: #454074)
     Added Quilt framework/README.source to handle gpgwrap.
+  * Refreshed debian/control and README files with the new descriptions.
+  
 
   [ Thijs Kinkhorst ]
   * Checked for policy 3.8.0, no changes.
