@@ -1,0 +1,26 @@
+From: Franck Joncourt <franck.mail@dthconnex.com>
+Subject: [PATCH] fixes/gpgwrap_makefile
+
+This allows gpgwrap to be installed with the main Makefile.
+
+Signed-off-by: Franck Joncourt <franck.mail@dthconnex.com>
+
+---
+ gpgwrap/Makefile |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/gpgwrap/Makefile b/gpgwrap/Makefile
+index 30064df..ff6ead2 100644
+--- a/gpgwrap/Makefile
++++ b/gpgwrap/Makefile
+@@ -5,5 +5,8 @@ MAKE=make
+ all:
+ 	cd src && ${MAKE} all DIET="${DIET}"
+ 
++install:
++	install bin/gpgwrap $(DESTDIR)/usr/bin
++
+ clean:
+ 	cd src && ${MAKE} clean
+-- 
+tg: (9286c56..) fixes/gpgwrap_makefile (depends on: master)

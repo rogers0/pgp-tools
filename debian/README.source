@@ -1,0 +1,5 @@
+Quilt
+===============================================================================
+This package uses quilt to manage all modifications to the upstream tarball.
+So, you may have a look at the /usr/share/doc/quilt/README.source file to get 
+further information on how to use it.
