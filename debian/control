@@ -12,11 +12,13 @@ Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 Package: signing-party
 Section: misc
 Architecture: any
-Depends: gnupg, libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl, libmailtools-perl, ${shlibs:Depends}
+Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg, 
+ libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl,
+ libmailtools-perl, libterm-readkey-perl, libclass-methodmaker-perl
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
 # springraph
  libgd-gd2-noxpm-perl | libgd-gd2-perl
-Suggests: imagemagick | graphicsmagick-imagemagick-compat,
+Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe,
 # keyanalyze
  mutt
 Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
@@ -31,9 +33,11 @@ Description: Various OpenPGP related tools
   * pgp-fixkey: removes broken packets from keys
   * gpg-mailkeys: simply mail out a signed key to its owner
   * gpg-key2ps: generate PostScript file with fingerprint paper strips
+  * gpgdir: recursive directory encryption tool
   * gpglist: show who signed which of your UIDs
   * gpgsigs: annotates list of GnuPG keys with already done signatures
   * gpgparticipants: create list of party participants for the organiser
+  * gpgwrap: a passphrase wrapper
   * keyanalyze: minimum signing distance (MSD) analysis on keyrings
   * keylookup: ncurses wrapper around gpg --search
   * sig2dot: converts a list of GnuPG signatures to a .dot file
