@@ -11,8 +11,11 @@ INSTALL_DATA        = $(INSTALL) -m 644
 GPGDIR_DIR          = gpgdir
 GPGDIR_PROG         = gpgdir
 
+GPGWRAP_DIR         = gpgwrap
+
 DESTDIR             = $(CURDIR)/debian/signing-party
-DESTDIR_BIN         = $(CURDIR)/debian/signing-party/usr/bin
+DESTDIR_BIN         = $(DESTDIR)/usr/bin
+DESTDIR_DOC         = $(DESTDIR)/usr/share/doc/signing-party
 
 configure: configure-stamp
 configure-stamp:
@@ -48,6 +51,8 @@ install: build
 		caff/README.v3-keys \
 		caff/caffrc.sample \
 			$(CURDIR)/debian/signing-party/usr/share/doc/signing-party/caff
+	$(INSTALL_DATA) $(GPGDIR_DIR)/ChangeLog $(DESTDIR_DOC)/changelog.gpgdir
+	$(INSTALL_DATA) $(GPGWRAP_DIR)/NEWS $(DESTDIR_DOC)/changelog.gpgwrap
 	# ignore errors with older debhelper versions
 	-dh_lintian
 
