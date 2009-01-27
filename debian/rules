@@ -12,6 +12,7 @@ GPGDIR_DIR          = gpgdir
 GPGDIR_PROG         = gpgdir
 
 GPGWRAP_DIR         = gpgwrap
+GPGWRAP_PROG        = bin/gpgwrap
 
 DESTDIR             = $(CURDIR)/debian/signing-party
 DESTDIR_BIN         = $(DESTDIR)/usr/bin
@@ -41,7 +42,6 @@ install: build
 	dh_clean -k
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(DESTDIR)
-	$(INSTALL_PROGRAM) $(GPGDIR_DIR)/$(GPGDIR_PROG) $(DESTDIR_BIN)
 	dh_install
 	dh_installman */*.1 */*/*.1
 	$(INSTALL_DATA) caff/README \
@@ -50,8 +50,13 @@ install: build
 			caff/README.v3-keys \
 			caff/caffrc.sample \
 			$(DESTDIR_DOC)/caff
+	
+	$(INSTALL_PROGRAM) $(GPGDIR_DIR)/$(GPGDIR_PROG) $(DESTDIR_BIN)		
 	$(INSTALL_DATA) $(GPGDIR_DIR)/ChangeLog $(DESTDIR_DOC)/changelog.gpgdir
+	
+	$(INSTALL_PROGRAM) $(GPGWRAP_DIR)/$(GPGWRAP_PROG) $(DESTDIR_BIN)		
 	$(INSTALL_DATA) $(GPGWRAP_DIR)/NEWS $(DESTDIR_DOC)/changelog.gpgwrap
+	
 	# ignore errors with older debhelper versions
 	-dh_lintian
 
