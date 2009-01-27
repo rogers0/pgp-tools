@@ -10,7 +10,6 @@ Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
-Section: misc
 Architecture: any
 Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg, 
  libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl,
