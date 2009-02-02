@@ -1,9 +1,12 @@
 DRAFT
+There is still keyanalyze to finish
 
 Format-Specification: http://wiki.debian.org/Proposals/CopyrightFormat
 Upstream-Name: pgp-tools 
 Upstream-Maintainer: Thijs Kinkhorst <thijs@debian.org>
 Upstream-Source: http://pgp-tools.alioth.debian.org/
+
+/******************* Done ****************************/
 
 http://www.cipherdyne.com/gpgdir/download/
 Files: gpgdir/*
@@ -15,17 +18,12 @@ Files: gpgwrap/*
 Copyright: Copyright 2004-2006 by Karsten Scheibler <gpgwrap@unusedino.de>
 License: GPL-2+
 
-http://dtype.org/keyanalyze/code/
-Files: keyanalyse/*
-Copyright: Copyright (c) 2004-2008 Christphe Berg <cb@df7cb.de>
-Copyright: Copyright (c) 2004 Matthew Wilcox - process_keys.1/pgpring.1
-Copyright: Copyright (c) 2001 M Drew Strieb
-Copyright: Copyright (c) 1997-2001 Thomas Roessler <roessler@does-not-exist.org>
-Copyright: Copyright (c) 1996-2000 M R.Elkins - pgplib.h/lib.*
-License: GPL-2+
-
 Files: gpgparticipants/*
 Copyright: Copyright (c) 2008 Philippe Teuwen <phil@teuwen.org>
+License: GPL2+
+
+Files: gpgparticipants/gpgparticipants.1
+Copyright: Copyright (c) 2008-2009 Thijs Kinkhorst <thijs@debian.org>
 License: GPL2+
 
 Files: gpg-key2ps/*
@@ -34,30 +32,42 @@ Copyright: Copyright (C) 2005-2008  Thijs Kinkhorst <thijs@debian.org>
 Copyright: Copyright (C) 2005-2008  Christoph Berg <cb@df7cb.de>
 License: GPL2+
 
+http://www.chaosreigns.com/code/sig2dot/
+Files: sig2dot/*
+Copyright: Copyright (c) ??? Darxus@ChaosReigns.com
+Copyright: Copyright (c) ???-2006 Kevin M. Rosenberg <kmr@debian.org>
+Copyright: Copyright (c) 2005, 2006 Christoph Berg <cb@df7cb.de>
+License: GPL2+
+
+http://www.chaosreigns.com/code/springgraph/
+Files: springgrpah/*
+Copyright: Copyright (c) 2002-2003 Darxus@ChaosReigns.com
+Copyright: Copyright (c) 2005 Christoph Berg <cb@df7cb.de>
+License: GPL2+
+
 Files: gpg-mailkeys/*
-Copyright: Copyright (c) 2001-2005 Simon Richter and Thijs Kinkhorst
+Copyright: Copyright (c) 2001-2005 Simon Richter <sjr@debian.org>
+Copyright: Copyright (c) 2001-2005 Thijs Kinkhorst <thijs@debian.org>
+License: GPL2+
+
+Files: springrpah/springgraph.1
+Copyright: Copyright (c) 2005 Kevin M. Rosenberg <kmr@debian.org>
 License: GPL2+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version. You can find a copy of it in your
  Debian system under /usr/share/common-licenses/
- 
+
 Files: debian/*
 Copyright: Copyright 2008-2009 Thijs Kinkhorst <thijs@debian.org>
 License: GPL-2+
  Debian packaging is licensed under the same terms as the software itself
  (see above).
 
-Files: gpgsigs/*
+Files: gpglist/*
 Copyright: Copyright (c) 2004 Uli Martens <uli@youam.net>
-Copyright: Copyright (c) 2004-2005 Peter Palfrader <peter@palfrader.org>
-Copyright: Copyright (c) 2005-2007 Christoph Berg <cb@df7cb.de>
-License: other
-
-Files: caff/*
-Copyright: Copyright (c) 2004-2006 Peter Palfrader <peter@palfrader.org>
-Copyright: Copyright (c) 2005-2006 Christoph Berg <cb@df7cb.de>
+Copyright: Copyright (c) 2005 Peter Palfrader <peter@palfrader.org>
 License: other
 
 Files: keylookup/*
@@ -65,12 +75,18 @@ Copyright: Copyright (c) 2000, 2002 Christian Kurz <shorty@debian.org>,
 Copyright: Copyright (c) 2000, 2002, 2005 Peter Palfrader <peter@palfrader.org>
 License: other
 
-Files: gpglist/*
+Files: caff/*
+Copyright: Copyright (c) 2004-2006 Peter Palfrader <peter@palfrader.org>
+Copyright: Copyright (c) 2005-2007 Christoph Berg <cb@df7cb.de>
+License: other
+
+Files: gpgsigs/*
 Copyright: Copyright (c) 2004 Uli Martens <uli@youam.net>
-Copyright: Copyright (c) 2005 Peter Palfrader <peter@palfrader.org>
+Copyright: Copyright (c) 2004-2005 Peter Palfrader <peter@palfrader.org>
+Copyright: Copyright (c) 2004-2007 Christoph Berg <cb@df7cb.de>
 License: other
  All rights reserved.
-
+ .
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
@@ -81,7 +97,7 @@ License: other
     documentation and/or other materials provided with the distribution.
  3. The name of the author may not be used to endorse or promote products
     derived from this software without specific prior written permission.
-
+ .
  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -93,6 +109,13 @@ License: other
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Files: sig2dot/*
-Files: springgrpah/*
+/****************************** End of done *********************/
 
+http://dtype.org/keyanalyze/code/
+Files: keyanalyse/*
+Copyright: Copyright (c) 2004-2008 Christphe Berg <cb@df7cb.de>
+Copyright: Copyright (c) 2004 Matthew Wilcox - process_keys.1/pgpring.1
+Copyright: Copyright (c) 2001 M Drew Strieb
+Copyright: Copyright (c) 1997-2001 Thomas Roessler <roessler@does-not-exist.org>
+Copyright: Copyright (c) 1996-2000 M R.Elkins - pgplib.h/lib.*
+License: GPL-2+
