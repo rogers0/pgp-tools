@@ -82,3 +82,25 @@ License for keyanalyze:
   License version 2.
 
   On Debian/GNU systems, this can be found as /usr/share/common-licenses/GPL-2.
+
+License for gpgdir:
+  It was downloaded from http://www.cipherdyne.com/gpgdir/
+
+  Copyright: Copyright 2002-2009 by Michael B. Rash <mbr@cipherdyne.com>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version. You can find a copy of it in your
+  Debian system under /usr/share/common-licenses/
+
+License for gpgwrap:
+  It was downloaded from http://unusedino.de/gpgwrap/
+
+  Copyright: Copyright 2004-2006 by Karsten Scheibler <gpgwrap@unusedino.de>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version. You can find a copy of it in your
+  Debian system under /usr/share/common-licenses/
