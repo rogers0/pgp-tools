@@ -9,7 +9,7 @@
 #
 # Author: Michael Rash (mbr@cipherdyne.org)
 #
-# Version: 1.9.3
+# Version: 1.9.4
 #
 # Copyright (C) 2008 Michael Rash (mbr@cipherdyne.org)
 #
@@ -27,7 +27,7 @@
 #
 #############################################################################
 #
-# $Id: gpgdir_test.pl 328 2008-11-05 05:04:20Z mbr $
+# $Id: gpgdir_test.pl 335 2009-02-13 04:48:54Z mbr $
 #
 
 use Digest::MD5 'md5_base64';
