@@ -49,18 +49,3 @@ Description: transitional package to pull in signing-party
  This is an empty package to pull in signing-party in which keyanalyze is
  now included. It can safely be removed.
 
-Package: sig2dot
-Section: graphics
-Architecture: all
-Depends: signing-party (>= 1.0)
-Description: transitional package to pull in signing-party
- This is an empty package to pull in signing-party in which sig2dot is
- now included. It can safely be removed.
-
-Package: springgraph
-Section: graphics
-Architecture: all
-Depends: signing-party (>= 1.0)
-Description: transitional package to pull in signing-party
- This is an empty package to pull in signing-party in which springgraph is
- now included. It can safely be removed.
