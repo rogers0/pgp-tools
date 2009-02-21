@@ -3,10 +3,10 @@ Section: misc
 Priority: extra
 Maintainer: Thijs Kinkhorst <thijs@debian.org>
 Uploaders: Simon Richter <sjr@debian.org>, Peter Palfrader <weasel@debian.org>, Christoph Berg <myon@debian.org>
-Build-Depends: debhelper (>= 5), quilt (>= 0.40)
+Build-Depends: debhelper (>= 7), quilt (>= 0.40)
 Standards-Version: 3.8.0
 Homepage: http://pgp-tools.alioth.debian.org/
-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools
+Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
