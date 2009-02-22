@@ -1,4 +1,4 @@
-signing-party (1.1-1) UNRELEASED; urgency=low
+signing-party (1.1-1) unstable; urgency=low
 
   [ Franck Joncourt ]
   * Imported gpgdir. (Closes: #498167)
@@ -30,7 +30,7 @@ signing-party (1.1-1) UNRELEASED; urgency=low
   * Put examples in .../examples/$prog, not the other way round.
   * Use dh_lintian.
 
- -- Thijs Kinkhorst <thijs@debian.org>  Sat, 21 Feb 2009 12:26:51 +0100
+ -- Thijs Kinkhorst <thijs@debian.org>  Sun, 22 Feb 2009 17:58:09 +0100
 
 signing-party (1.0-2) unstable; urgency=low
 
