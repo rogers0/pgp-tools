@@ -57,10 +57,10 @@ install: build
 	$(INSTALL_PROGRAM) $(GPGWRAP_DIR)/$(GPGWRAP_PROG) $(DESTDIR_BIN)		
 	$(INSTALL_DATA) $(GPGWRAP_DIR)/NEWS $(DESTDIR_DOC)/changelog.gpgwrap
 	
-	# ignore errors with older debhelper versions
-	-dh_lintian
+	dh_lintian
 
 binary-indep: build install
+binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_installdocs
@@ -78,8 +78,6 @@ binary-indep: build install
 	dh_md5sums
 	dh_builddeb
 
-# Build architecture-dependent files here.
-binary-arch: build install
+binary: binary-indep binary-arch
 
-binary: binary-indep
 .PHONY: build clean binary-indep binary-arch binary install configure
