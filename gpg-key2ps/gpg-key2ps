@@ -253,7 +253,7 @@ while(<GPG>) {
 	}
 	# user ids
 	s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-	$_ = `echo "$_" | iconv -ct latin1`;
+	$_ = `echo "$_" | iconv -c -f utf-8 -t latin1`;
 	s/^uid:[^:r]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) uid/;
 	# revoked user id
 	if (s/^uid:r[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):.*/	($1) revuid/) {
