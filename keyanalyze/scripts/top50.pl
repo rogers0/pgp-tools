@@ -34,7 +34,7 @@ if (open F, $comments) {
 
 my %msd;
 while (my $line = <>) {
-	$line =~ /^\w+\s+(\w+)\s+([\d\.]+)/ or die "cannot parse line $.: $_";
+	$line =~ /^\w+\s+(\w+)\s+([\d\.]+)/ or die "cannot parse line $.: $line";
 	$msd{$1} = $2;
 }
 
