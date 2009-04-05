@@ -933,18 +933,17 @@ $CONFIG{'local-user'}  = $params->{'local-user'}  if defined $params->{'local-us
 $CONFIG{'no-download'} = $params->{'no-download'} if defined $params->{'no-download'};
 $CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'};
 
-# If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
-if ( $CONFIG{'no-mail'} || defined $params->{'no-mail'} ||
-	( defined $params->{'mail'} && $params->{'mail'}  eq 'no' ) ) {
-	$CONFIG{'mail'} = 'no';
-} elsif ( defined $params->{'mail'} ) {
-	$CONFIG{'mail'} = $params->{'mail'};
-} else {
-	$CONFIG{'mail'} = 'ask-yes';
-}
-
 $CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
 $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
+
+# If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
+if ( defined $CONFIG{'no-mail'} || 
+     ( defined $CONFIG{'mail'} && $CONFIG{'mail'}  eq 'no' ) ) {
+	$CONFIG{'mail'} = 'no';
+
+} elsif ( !defined $CONFIG{'mail'} ) {
+	$CONFIG{'mail'} = 'ask-yes';
+}
 
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
