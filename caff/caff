@@ -82,7 +82,9 @@ Do not sign the keys.
 =item B<-u> I<yourkeyid>, B<--local-user> I<yourkeyid>
 
 Select the key that is used for signing, in case you have more than one key.
-To sign with multiple keys at once, separate multiple keyids by comma.
+To sign with multiple keys at once, separate multiple keyids by comma. This
+option requires the key(s) to be defined through the keyid variable in the
+configuration file.
 
 =item B<--key-file> I<file>
 
