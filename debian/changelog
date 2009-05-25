@@ -6,10 +6,12 @@ signing-party (1.1-3) unstable; urgency=low
 
   [ Franck Joncourt ]
   * caff:
-    + Take the mail config variable from .caffrc into count.
+    + Take the CONFIG{'mail'} variable from .caffrc into count.
       (Closes: #520387)
     + Update caff's manpage to mention a keyid specified with -u requires to
       be listed in the configuration file through the keyid variable.
+      Add a note in caffrc.sample about using the -u option to select which keyid
+      from the CONFIG{'keyid'} as to be used for signing. 
       (Closes: #482693)
 
  -- Christoph Berg <myon@debian.org>  Tue, 10 Mar 2009 17:18:21 +0100
