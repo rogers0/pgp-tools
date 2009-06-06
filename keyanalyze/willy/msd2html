@@ -6,7 +6,7 @@
 # Modifications (c) Copyright 2003-2004 Matthew Wilcox for subset analyses.
 
 $options = $ARGV[0];
-$server='http://keyserver.kjsl.com:11371/';
+$server='http://pool.sks-keyservers.net:11371/';
 $oldmsd = 0;
 $oldrank = 0;
 

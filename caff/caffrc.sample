@@ -31,7 +31,7 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 # $CONFIG{'export-sig-age'} = 24*60*60;
 
 # Keyserver to download keys from. Default: pool.sks-keyservers.net.
-# $CONFIG{'keyserver'}      = 'keyserver.kjsl.com';
+# $CONFIG{'keyserver'}      = 'pgp.surfnet.nl';
 
 # Boolean options, all default to false (0).
 #
