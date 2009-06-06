@@ -16,7 +16,7 @@ use Getopt::Std;
 
 #my $keyserver = "http://pks.gpg.cz:11371/pks/lookup?op=vindex&fingerprint=on&search=0x";
 #my $keyserver = "http://keyserver.noreply.org/pks/lookup?op=index&fingerprint=on&search=0x";
-my $keyserver = "http://subkeys.pgp.net:11371/pks/lookup?op=index&fingerprint=on&search=0x";
+my $keyserver = "http://pool.sks-keyservers.net:11371/pks/lookup?op=index&fingerprint=on&search=0x";
 my %options;
 getopts('c:k:n:', \%options);
 my $comments = $options{c} || "top50comments.txt";

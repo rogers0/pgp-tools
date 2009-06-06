@@ -22,7 +22,10 @@ signing-party (1.1-3) unstable; urgency=low
     + Allowed the top1000 report to report the first 1000 ranks by passing
       *-n 1000* to top50.pl. Set to 50 by default.
 
- -- Christoph Berg <myon@debian.org>  Tue, 10 Mar 2009 17:18:21 +0100
+  [ Thijs Kinkhorst ]
+  * Make pool.sks-keyservers.net the default keyserver (closes: #527941).
+
+ -- Thijs Kinkhorst <thijs@debian.org>  Sat, 06 Jun 2009 17:46:07 +0200
 
 signing-party (1.1-2) unstable; urgency=low
 

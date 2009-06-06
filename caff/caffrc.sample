@@ -30,7 +30,7 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 # Don't export UIDs by default, on which your latest signature is older than this age.
 # $CONFIG{'export-sig-age'} = 24*60*60;
 
-# Keyserver to download keys from. Default: subkeys.pgp.net.
+# Keyserver to download keys from. Default: pool.sks-keyservers.net.
 # $CONFIG{'keyserver'}      = 'keyserver.kjsl.com';
 
 # Boolean options, all default to false (0).
@@ -57,7 +57,7 @@ $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
 # 
 # If you want this new signature to be available to others, please upload
 # it yourself. With GnuPG this can be done using
-# 	gpg --keyserver subkeys.pgp.net --send-key {$key}
+# 	gpg --keyserver pool.sks-keyservers.net --send-key {$key}
 # 
 # If you have any questions, don't hesitate to ask.
 # 
