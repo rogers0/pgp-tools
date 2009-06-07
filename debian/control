@@ -46,6 +46,8 @@ Description: Various OpenPGP related tools
   * springgraph: creates a graph from a .dot file
 
 Package: keyanalyze
+Section: utils
+Priority: optional
 Architecture: all
 Depends: signing-party (>= 1.1)
 Description: transitional package to pull in signing-party
