@@ -1,4 +1,4 @@
-signing-party (1.1-3) unstable; urgency=low
+signing-party (1.1.1-1) unstable; urgency=low
 
   [ Christoph Berg ]
   * gpg-key2ps: assume gpg output to be in utf-8, instead of depending on the
