@@ -242,28 +242,37 @@ close MD;
 open MD, "gpg --with-colons --print-md sha256 $keytxt|" or warn "can't get gpg sha256\n";
 my $SHA256 = <MD>;
 close MD;
+open MD, "gpg --with-colons --print-md ripemd160 $keytxt|" or warn "can't get gpg ripemd160\n";
+my $RIPEMD160 = <MD>;
+close MD;
 
 my @MD5 = split /:/, $MD5;
 my @SHA1 = split /:/, $SHA1;
 my @SHA256 = split /:/, $SHA256;
+my @RIPEMD160 = split /:/, $RIPEMD160;
 $MD5 = $MD5[2];
 $SHA1 = $SHA1[2];
 $SHA256 = $SHA256[2];
+$RIPEMD160 = $RIPEMD160[2];
 
 $MD5 =~ s/(.{16})/$1 /;
 $SHA1 =~ s/(.{20})/$1 /;
 $SHA256 =~ s/(.{32})/$1 /;
+$RIPEMD160 =~ s/(.{20})/$1 /;
 $MD5 =~ s/([0-9A-Z]{2})/$1 /ig;
 $SHA1 =~ s/([0-9A-Z]{4})/$1 /ig;
 $SHA256 =~ s/([0-9A-Z]{4})/$1 /ig;
+$RIPEMD160 =~ s/([0-9A-Z]{4})/$1 /ig;
 
 chomp $MD5;
 chomp $SHA1;
 chomp $SHA256;
+chomp $RIPEMD160;
 my $metatxt = quotemeta($keytxt);
 $MD5 =~ s/^$metatxt:\s*//;
 $SHA1 =~ s/^$metatxt:\s*//;
 $SHA256 =~ s/^$metatxt:\s*//;
+$RIPEMD160 =~ s/^$metatxt:\s*//;
 
 
 # write out result
@@ -314,6 +323,9 @@ while (<TXT>) {
 	}
 	if (/^SHA256 Checksum:/ && defined $SHA256) {
 		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA256/;
+	}
+	if (/^RIPEMD160 Checksum:/ && defined $RIPEMD160) {
+		s/[_[:xdigit:]][_ [:xdigit:]]+_/$RIPEMD160/;
 	}
 	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
@@ -404,8 +416,9 @@ B<gpgsigs> [I<options>] I<keyid>I<[>B<,>I<keyidI<[>B<,>I<...>I<]>>I<]> F<keytxt>
 B<gpgsigs> was written to assist the user in signing keys during a keysigning
 party. It takes as input a file containing keys in C<gpg --list-keys> format
 and prepends every line with a tag indicating if the user has already signed
-that uid. When the file contains C<MD5 Checksum:> or C<SHA1 Checksum:> lines
-and placeholders (C<__ __>), the checksum is inserted.
+that uid. When the file contains C<ALGO Checksum:> lines and placeholders
+(C<__ __>), the checksum is inserted. ALGO can be set to the following algorithms:
+MD5 SHA1 SHA256 or RIPEMD160.
 
 =head1 OPTIONS
 

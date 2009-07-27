@@ -1,6 +1,10 @@
 signing-party (1.1.1-2) UNRELEASED; urgency=low
 
-  * 
+  [ Franck Joncourt ]
+  * gpgsigs: 
+    + Added patch from Roland Rosenfeld to support RIPEMD160 checksum.
+      (Closes: #533747).
+    + Updated man page to mention support for SHA256 and RIPEMD160 checksum.
 
  -- Thijs Kinkhorst <thijs@debian.org>  Fri, 12 Jun 2009 08:59:50 +0200
 
