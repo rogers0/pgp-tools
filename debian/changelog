@@ -6,6 +6,8 @@ signing-party (1.1.1-2) UNRELEASED; urgency=low
       (Closes: #533747).
     + Updated man page to mention support for SHA256 and RIPEMD160 checksum.
 
+  * Bumped Standards-Version up to 3.8.2 (no changes).
+
  -- Thijs Kinkhorst <thijs@debian.org>  Fri, 12 Jun 2009 08:59:50 +0200
 
 signing-party (1.1.1-1) unstable; urgency=low
