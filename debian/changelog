@@ -5,6 +5,10 @@ signing-party (1.1.1-2) UNRELEASED; urgency=low
     + Added patch from Roland Rosenfeld to support RIPEMD160 checksum.
       (Closes: #533747).
     + Updated man page to mention support for SHA256 and RIPEMD160 checksum.
+  * caff: Updated check for the local-user keyids.
+    + Moved the current check to a new function get_local_user_keys().
+    + Warned the user if a local-user keyid is not listed as a keyid in
+      ./caffrc. (Closes: #540165).
 
   * Bumped Standards-Version up to 3.8.2 (no changes).
 

@@ -328,6 +328,17 @@ my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
 
+##
+# Display an error message on STDERR and then exit.
+#
+# @param $exitcode exit code status to use to end the program
+# @param $line     error message to display on STDERR
+#
+sub myerror($$) {
+	my ($exitcode, $line) = @_;
+	print "[ERROR] $line\n";	
+	exit $exitcode;
+};
 
 sub mywarn($) {
 	my ($line) = @_;
@@ -891,6 +902,63 @@ sub delete_signatures($$$$$$) {
 	return $signed_by_me;
 };
 
+##
+# Check the local user keys.
+#
+# This function checks if the keyids defined through the --local-user
+# command line option or set in .caffrc are valid and known to be one of the
+# keyids listed in ./caffrc. The last check ensure we have those keyids
+# available in the caff's gnupghome directory.
+#
+# @return an array containing the local user keys\n
+#         (undef) if no key has been specified
+#
+sub get_local_user_keys()
+{
+	my @local_user = ();
+	my @key_list;
+	
+	# No user-defined key id has been specified by the user, no need for
+	# further checks
+	if (!$CONFIG{'local-user'}) {
+		return (undef);
+	}	
+	
+	# Parse the list of keys
+	if (ref($CONFIG{'local-user'})) {
+		@key_list = @{$CONFIG{'local-user'}};
+	}
+	else {
+		@key_list = split /\s*,\s*/, $CONFIG{'local-user'};
+	}
+
+	# Check every key defined by the user...
+	for my $user_key (@key_list) {
+		
+		$user_key =~ s/^0x//i;
+		$user_key = uc($user_key);
+		
+		unless ($user_key =~ m/^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/) {
+			mywarn "Local-user $user_key is not a valid keyid.";
+			next;
+		}
+		
+		unless (grep (/$user_key$/, @{$CONFIG{'keyid'}})) {
+			mywarn "Local-user $user_key is not defined as one of your keyid in ./caffrc (it will not be used).";
+			next;
+		}
+		
+		push (@local_user, $user_key);
+	}
+
+	# If no local-user key are valid, there is no need to go further
+	unless (defined $local_user[0]) {
+		myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ./caffrc.");
+	}
+
+	return @local_user;
+}
+
 
 ###################
 # argument handling
@@ -1074,25 +1142,9 @@ if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
 	
-unless ($CONFIG{'no-sign'}) {
-	my @local_user;
-	if ($CONFIG{'local-user'}) {
-		if (ref($CONFIG{'local-user'})) {
-			@local_user = @{$CONFIG{'local-user'}};
-		} else {
-			@local_user = split /\s*,\s*/, $CONFIG{'local-user'};
-		};
-		foreach (@local_user) {
-			s/^0x//i;
-			unless (/^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/i) {
-				print STDERR "Local-user $_ is not a keyid.\n";
-				usage(\*STDERR, 1);
-			};
-			$_ = uc($_);
-		};
-	} else {
-		@local_user = (undef);
-	};
+unless ($CONFIG{'no-sign'})
+{
+	my @local_user = &get_local_user_keys();
 
 	info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 	for my $keyid (@keyids_ok) {
