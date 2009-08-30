@@ -181,7 +181,7 @@ while (<SIGS>) {
 		next if $uidstatus eq "r";
 		if ($latex and not $photocount) { # call once per key
 			my ($shortkey) = substr $key, -8;
-			system "rm $shortkey.[1-9]*.eps";
+			system "rm -f $shortkey.[1-9]*.eps";
 			system "gpg --photo-viewer 'gpgsigs-eps-helper $shortkey' --list-options show-photos --list-key $key > /dev/null";
 			$photocount = 1;
 		}
@@ -307,6 +307,7 @@ if ($latex) {
 \usepackage[margin=2cm]{geometry}
 \usepackage{alltt}
 \usepackage{graphicx}
+\usepackage{grffile}
 \begin{document}
 \begin{alltt}
 EOF
@@ -354,7 +355,7 @@ while (<TXT>) {
 				if ($latex and ($uid =~ /^\[jpeg image/)) {
 					$photocount++;
 					print WRITE "\\begin{flushright}\n";
-					print WRITE "\\includegraphics[height=3cm]{$key.$photocount.eps}\n";
+					print WRITE "\\includegraphics[height=3cm]{$key.$photocount}\n";
 					print WRITE "\\end{flushright}\n";
 				}
 			}

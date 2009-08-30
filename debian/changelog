@@ -5,6 +5,12 @@ signing-party (1.1.1-2) UNRELEASED; urgency=low
     + Added patch from Roland Rosenfeld to support RIPEMD160 checksum.
       (Closes: #533747).
     + Updated man page to mention support for SHA256 and RIPEMD160 checksum.
+    + Made removal of nonexistent photos quiet by the use of the force option.
+    + Updated generated tex file in latex mode so that it uses the grffile
+      package. This allows pdflatex to process our tex file assuming the photos
+      are previously converted to PDF. (Closes: #542478)
+    + Added texlive-latex-recommended as a suggested package in debian/control.
+      It contains the grffile latex package.
   * caff: Updated check for the local-user keyids.
     + Moved the current check to a new function get_local_user_keys().
     + Warned the user if a local-user keyid is not listed as a keyid in

@@ -20,7 +20,7 @@ Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg,
 Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
 # springraph
  libgd-gd2-noxpm-perl | libgd-gd2-perl
-Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe,
+Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, texlive-latex-recommended,
 # keyanalyze
  mutt
 Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
