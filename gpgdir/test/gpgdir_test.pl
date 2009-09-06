@@ -9,9 +9,9 @@
 #
 # Author: Michael Rash (mbr@cipherdyne.org)
 #
-# Version: 1.9.4
+# Version: 1.9.5
 #
-# Copyright (C) 2008 Michael Rash (mbr@cipherdyne.org)
+# Copyright (C) 2008-2009 Michael Rash (mbr@cipherdyne.org)
 #
 # License (GNU Public License):
 #
@@ -27,7 +27,7 @@
 #
 #############################################################################
 #
-# $Id: gpgdir_test.pl 335 2009-02-13 04:48:54Z mbr $
+# $Id: gpgdir_test.pl 341 2009-08-26 02:43:51Z mbr $
 #
 
 use Digest::MD5 'md5_base64';
@@ -284,7 +284,7 @@ sub recursively_decrypted() {
     find(\&find_files, $data_dir);
     for my $file (@data_dir_files) {
         if (-f $file and not ($file =~ m|^\.| or $file =~ m|/\.|)) {
-            if ($file =~ m|\.gpg$|) {
+            if ($file =~ m|\.gpg$| or $file =~ m|\.pgp$|) {
                 return &print_errors("[-] File $file not encrypted");
             }
         }
@@ -410,7 +410,8 @@ sub skipped_hidden_files_dirs() {
         if ($file =~ m|^\.| or $file =~ m|/\.|) {
             ### check for any .gpg or .asc extensions except
             ### for the gpgdir_map_file
-            if ($file =~ m|\.gpg$| or $file =~ m|\.asc$|) {
+            if ($file =~ m|\.gpg$| or $file =~ m|\.asc$|
+                    or $file =~ m|\.pgp$|) {
                 return &print_errors("[-] Encrypted hidden file");
             }
         }
@@ -426,7 +427,7 @@ sub obf_skipped_hidden_files_dirs() {
             ### check for any .gpg or .asc extensions except
             ### for the gpgdir_map_file
             if ($file !~ m|gpgdir_map_file| and ($file =~ m|\.gpg$|
-                    or $file =~ m|\.asc$|)) {
+                    or $file =~ m|\.asc$| or $file =~ m|\.pgp$|)) {
                 return &print_errors("[-] Encrypted hidden file");
             }
         }

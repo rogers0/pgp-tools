@@ -1,5 +1,8 @@
 signing-party (1.1.1-2) UNRELEASED; urgency=low
 
+  TODOs:
+  * Check for Debian policy 3.8.3
+
   [ Franck Joncourt ]
   * gpgsigs: 
     + Added patch from Roland Rosenfeld to support RIPEMD160 checksum.
@@ -15,6 +18,7 @@ signing-party (1.1.1-2) UNRELEASED; urgency=low
     + Moved the current check to a new function get_local_user_keys().
     + Warned the user if a local-user keyid is not listed as a keyid in
       ./caffrc. (Closes: #540165).
+  * gpgdir: New upstream release.
 
   * Bumped Standards-Version up to 3.8.2 (no changes).
 

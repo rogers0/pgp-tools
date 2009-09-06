@@ -1,42 +1,61 @@
 ------------------------------------------------------------------------
-r336 | mbr | 2009-02-14 00:09:07 -0500 (Sat, 14 Feb 2009) | 1 line
+r349 | mbr | 2009-09-05 14:52:04 -0400 (Sat, 05 Sep 2009) | 1 line
 Changed paths:
-   A /gpgdir/branches/gpgdir-1.9.4 (from /gpgdir/trunk:335)
+   A /gpgdir/branches/gpgdir-1.9.5 (from /gpgdir/trunk:348)
 
-created gpgdir-1.9.4 branch
+recreated gpgdir-1.9.5 branch
 ------------------------------------------------------------------------
-r335 | mbr | 2009-02-12 23:48:54 -0500 (Thu, 12 Feb 2009) | 1 line
+r347 | mbr | 2009-09-05 14:50:48 -0400 (Sat, 05 Sep 2009) | 10 lines
 Changed paths:
-   M /gpgdir/trunk/ChangeLog
-   M /gpgdir/trunk/VERSION
-   M /gpgdir/trunk/gpgdir
+   A /gpgdir/trunk/packaging/gpgdir-nobuildreqs.spec
+   M /gpgdir/trunk/packaging/gpgdir.spec
+
+For all RPM's built on the local system (Ubuntu for now), updated to reference the
+"-nobuildreqs.spec" file so that the "BuildRequires: perl-ExtUtils-MakeMaker" directive
+is not used.  Using this results in the following error on an Ubuntu system where no
+software is installed/upgrade with RPM:
+
+rpm: To install rpm packages on Debian systems, use alien. See README.Debian.
+error: cannot open Packages index using db3 - No such file or directory (2)
+error: cannot open Packages database in /var/lib/rpm
+
+
+------------------------------------------------------------------------
+r344 | mbr | 2009-09-05 14:28:24 -0400 (Sat, 05 Sep 2009) | 1 line
+Changed paths:
    M /gpgdir/trunk/packaging/gpgdir-nodeps.spec
    M /gpgdir/trunk/packaging/gpgdir.spec
+
+updated to include 1.9.5 release
+------------------------------------------------------------------------
+r342 | mbr | 2009-09-05 14:24:38 -0400 (Sat, 05 Sep 2009) | 1 line
+Changed paths:
+   M /gpgdir/trunk/ChangeLog
+
+updated 1.9.5 release date
+------------------------------------------------------------------------
+r341 | mbr | 2009-08-25 22:43:51 -0400 (Tue, 25 Aug 2009) | 1 line
+Changed paths:
+   M /gpgdir/trunk/gpgdir
    M /gpgdir/trunk/test/gpgdir_test.pl
 
-version 1.9.4
+minor copyright update
 ------------------------------------------------------------------------
-r333 | mbr | 2008-11-09 15:23:13 -0500 (Sun, 09 Nov 2008) | 1 line
+r340 | mbr | 2009-08-23 14:32:29 -0400 (Sun, 23 Aug 2009) | 1 line
 Changed paths:
    M /gpgdir/trunk/VERSION
    M /gpgdir/trunk/gpgdir
    M /gpgdir/trunk/test/gpgdir_test.pl
 
-tagged gpgdir-1.9.4-pre1
+bumped version to 1.9.5
 ------------------------------------------------------------------------
-r332 | mbr | 2008-11-09 15:22:46 -0500 (Sun, 09 Nov 2008) | 5 lines
+r339 | mbr | 2009-08-23 14:31:48 -0400 (Sun, 23 Aug 2009) | 3 lines
 Changed paths:
-   M /gpgdir/trunk/CREDITS
    M /gpgdir/trunk/ChangeLog
    M /gpgdir/trunk/gpgdir
-   A /gpgdir/trunk/test/data-dir/files_with_spaces
-   A /gpgdir/trunk/test/data-dir/files_with_spaces/file1 space1
-   A /gpgdir/trunk/test/data-dir/files_with_spaces/file2  space2
-   A /gpgdir/trunk/test/data-dir/files_with_spaces/file3 -dash
+   M /gpgdir/trunk/test/gpgdir_test.pl
 
-- Fixed a bug in missing the proper handling of files with spaces when
-using the --Wipe secure deletion mode (reported by Lars Wilke).
-- The --Force option now supports the ability to encrypt/decrypt hidden
-files (suggested by Lars Wilke).
+- Added support for the decryption of PGP encrypted files (to round out 
+the support of GnuPG).
 
 ------------------------------------------------------------------------

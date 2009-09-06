@@ -10,9 +10,9 @@
 #
 # Author: Michael Rash (mbr@cipherdyne.com)
 #
-# Version: 1.9.4
+# Version: 1.9.5
 #
-# Copyright (C) 2002-2008 Michael Rash (mbr@cipherdyne.org)
+# Copyright (C) 2002-2009 Michael Rash (mbr@cipherdyne.org)
 #
 # License: GNU General Public License version 2 (GPLv2)
 #
@@ -28,7 +28,7 @@
 #
 ###########################################################################
 #
-# $Id: gpgdir 335 2009-02-13 04:48:54Z mbr $
+# $Id: gpgdir 341 2009-08-26 02:43:51Z mbr $
 #
 
 use File::Find;
@@ -40,8 +40,8 @@ use Cwd;
 use strict;
 
 ### set the current gpgdir version and file revision numbers
-my $version = '1.9.4';
-my $revision_svn = '$Revision: 335 $';
+my $version = '1.9.5';
+my $revision_svn = '$Revision: 341 $';
 my $rev_num = '1';
 ($rev_num) = $revision_svn =~ m|\$Rev.*:\s+(\S+)|;
 
@@ -817,6 +817,8 @@ sub gpg_operation() {
                 $decrypt_filename = $1;
             } elsif ($filename =~ /^(.+)\.asc$/) {
                 $decrypt_filename = $1;
+            } elsif ($filename =~ /^(.+)\.pgp$/) {
+                $decrypt_filename = $1;
             }
 
             if ($obfuscate_mode) {
@@ -1180,7 +1182,7 @@ sub check_file_criteria() {
     if (-e $file and not -l $file and -s $file != 0
             and $file !~ m|\.gpgdir\.pid| and $file !~ m|\.gnupg|) {
         if ($encrypt_mode or $signing_mode) {
-            if ($file =~ m|\.gpg| or $file =~ m|\.asc|) {
+            if ($file =~ m|\.gpg| or $file =~ m|\.asc| or $file =~ m|\.pgp|) {
                 print "[-] Skipping encrypted/signed file: $file\n" unless $quiet;
                 return;
             }
@@ -1190,7 +1192,8 @@ sub check_file_criteria() {
                 return;
             }
         } else {
-            unless ($file =~ m|\.gpg| or $file =~ m|\.asc|) {
+            unless ($file =~ m|\.gpg| or $file =~ m|\.asc|
+                    or $file =~ m|\.pgp|) {
                 print "[-] Skipping unencrypted file: $file\n" unless $quiet;
                 return;
             }
