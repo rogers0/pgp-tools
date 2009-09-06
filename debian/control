@@ -49,7 +49,7 @@ Package: keyanalyze
 Section: utils
 Priority: optional
 Architecture: all
-Depends: signing-party (>= 1.1)
+Depends: ${misc:Depends}, signing-party (>= 1.1)
 Description: transitional package to pull in signing-party
  This is an empty package to pull in signing-party in which keyanalyze is
  now included. It can safely be removed.
