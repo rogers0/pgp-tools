@@ -8,6 +8,33 @@ set -e
 
 VERSION='$Rev$'
 
+# Define the charset used in the text message of the mail
+LOCAL_CHARSET=""
+
+##
+# Get the local charset.
+#
+# The local charset is deduced from the charset used by both ~/.gpg-mailkeysrc
+# and ~/.signature. If none of these files exist, the local charset is assumed
+# to be us-ascii.
+
+get_local_charset ()
+{
+    local charset="us-ascii"
+    local file_list="$HOME/.signature $HOME/.gpg-mailkeysrc"
+
+    for filename in $file_list; do
+
+        if [ -e $filename ]; then
+            charset=`file --mime-encoding $filename | cut -d ' ' -f 2`
+            break
+        fi
+
+    done;
+
+    LOCAL_CHARSET=$charset
+}
+
 if [ -z "$*" ]; then
 	printf "Send people their newly signed GPG key by mail.\n"
 	printf "Usage: $0 keyid ...\n"
@@ -34,6 +61,8 @@ Here is your signed GPG key.
 Enjoy,
 $NAME"
 fi
+
+get_local_charset
 
 FAILKEYS=
 
@@ -66,18 +95,18 @@ Content-Disposition: inline
 
 
 --$BOUNDARY
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=$LOCAL_CHARSET
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
  
 
-$TEXT
+`echo "$TEXT" | qprint -e`
 
 EOM
 
 if [ -f ~/.signature ]; 
 	then printf -- "--=20\n" >> $TEMPFILE 
-	cat ~/.signature >> $TEMPFILE
+	qprint -e ~/.signature >> $TEMPFILE
 fi
 
 cat << EOM >> $TEMPFILE
