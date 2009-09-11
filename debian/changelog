@@ -2,8 +2,6 @@ signing-party (1.1.2-1) UNRELEASED; urgency=low
 
   TODOs:
   * Check for Debian policy 3.8.3
-  * Update of the gpg-mailkeys man page to mention both the signature and
-    gpg-mailkeysrc files.
 
   [ Franck Joncourt ]
   * gpgsigs: 
@@ -21,11 +19,12 @@ signing-party (1.1.2-1) UNRELEASED; urgency=low
     + Warned the user if a local-user keyid is not listed as a keyid in
       ./caffrc. (Closes: #540165).
   * gpgdir: New upstream release.
-  * gpg-mailkeys: (Closes: #545186)
+  * gpg-mailkeys:
     + The charset for the text of the message is deduced from the charset used
       by ~/.gpg-mailkeysrc and ~/.signature.
-    + The text message is encoded in quoted printable and thus it requires a
-      new dependency on qprint in debian/control.
+      The text message is encoded in quoted printable and thus it requires a
+      new dependency on qprint in debian/control. (Closes: #545186)
+    + Mentionned both the .gpg-mailkeysrc and .signature files in the manpage.
   * debian.control: added ${misc:Depends} as Depends for the keyanalyze
     package.
 
