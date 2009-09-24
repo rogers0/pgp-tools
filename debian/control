@@ -7,7 +7,7 @@ Uploaders: Simon Richter <sjr@debian.org>,
  Christoph Berg <myon@debian.org>,
  Franck Joncourt <franck.mail@dthconnex.com>
 Build-Depends: debhelper (>= 7), quilt
-Standards-Version: 3.8.2
+Standards-Version: 3.8.3
 Homepage: http://pgp-tools.alioth.debian.org/
 Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools

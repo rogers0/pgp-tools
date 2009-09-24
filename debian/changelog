@@ -1,7 +1,4 @@
-signing-party (1.1.2-1) UNRELEASED; urgency=low
-
-  TODOs:
-  * Check for Debian policy 3.8.3
+signing-party (1.1.2-1) unstable; urgency=low
 
   [ Franck Joncourt ]
   * gpgsigs: 
@@ -27,10 +24,9 @@ signing-party (1.1.2-1) UNRELEASED; urgency=low
     + Mentionned both the .gpg-mailkeysrc and .signature files in the manpage.
   * debian.control: added ${misc:Depends} as Depends for the keyanalyze
     package.
+  * Bumped Standards-Version up to 3.8.3 (no changes).
 
-  * Bumped Standards-Version up to 3.8.2 (no changes).
-
- -- Franck Joncourt <franck.mail@dthconnex.com>  Sun, 06 Sep 2009 16:56:22 +0200
+ -- Franck Joncourt <franck.mail@dthconnex.com>  Thu, 24 Sep 2009 19:29:07 +0200
 
 signing-party (1.1.1-1) unstable; urgency=low
 
