@@ -1,6 +1,5 @@
 signing-party (1.1.2-1) unstable; urgency=low
 
-  [ Franck Joncourt ]
   * gpgsigs: 
     + Added patch from Roland Rosenfeld to support RIPEMD160 checksum.
       (Closes: #533747).
