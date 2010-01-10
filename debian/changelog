@@ -1,3 +1,11 @@
+signing-party (1.1.2-2) UNRELEASED; urgency=low
+
+  * Debian package:
+    + Updated my email address in d.control.
+    + Added myself as contributor in d.copyright
+
+ -- Franck Joncourt <franck@debian.org>  Sun, 10 Jan 2010 13:37:23 +0100
+
 signing-party (1.1.2-1) unstable; urgency=low
 
   * gpgsigs: 
