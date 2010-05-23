@@ -907,8 +907,8 @@ sub delete_signatures($$$$$$) {
 # Check the local user keys.
 #
 # This function checks if the keyids defined through the --local-user
-# command line option or set in .caffrc are valid and known to be one of the
-# keyids listed in ./caffrc. The last check ensure we have those keyids
+# command line option or set in ~/.caffrc are valid and known to be one of the
+# keyids listed in ~/.caffrc. The last check ensure we have those keyids
 # available in the caff's gnupghome directory.
 #
 # @return an array containing the local user keys\n
@@ -945,7 +945,7 @@ sub get_local_user_keys()
 		}
 		
 		unless (grep (/$user_key$/, @{$CONFIG{'keyid'}})) {
-			mywarn "Local-user $user_key is not defined as one of your keyid in ./caffrc (it will not be used).";
+			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used).";
 			next;
 		}
 		
@@ -954,7 +954,7 @@ sub get_local_user_keys()
 
 	# If no local-user key are valid, there is no need to go further
 	unless (defined $local_user[0]) {
-		myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ./caffrc.");
+		myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc.");
 	}
 
 	return @local_user;
