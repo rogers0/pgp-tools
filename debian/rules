@@ -1,7 +1,5 @@
 #!/usr/bin/make -f
 
-include /usr/share/quilt/quilt.make
-
 VERSION := $(shell dpkg-parsechangelog | grep ^Version | cut -d' ' -f2)
 
 INSTALL             = install
@@ -24,12 +22,12 @@ configure-stamp:
 	touch $@
 
 build: build-stamp
-build-stamp: $(QUILT_STAMPFN) configure-stamp
+build-stamp: configure-stamp
 	dh_testdir
 	$(MAKE)
 	touch $@
 
-clean: unpatch
+clean:
 	dh_testdir
 	dh_testroot
 	$(MAKE) clean
