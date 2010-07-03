@@ -327,6 +327,9 @@ my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
+# Global variables
+my @KEYIDS;
+my $params;
 
 ##
 # Display an error message on STDERR and then exit.
@@ -908,11 +911,10 @@ sub delete_signatures($$$$$$) {
 #
 # This function checks if the keyids defined through the --local-user
 # command line option or set in ~/.caffrc are valid and known to be one of the
-# keyids listed in ~/.caffrc. The last check ensure we have those keyids
-# available in the caff's gnupghome directory.
+# keyids listed in ~/.caffrc.
 #
 # @return an array containing the local user keys\n
-#         (undef) if no key has been specified
+#         (undef) if no valid key has been found
 #
 sub get_local_user_keys()
 {
@@ -960,13 +962,121 @@ sub get_local_user_keys()
 	return @local_user;
 }
 
+##
+# Import a key from the user gnupghome into a specified gnupghome.
+#
+# @param asciikey      ascii format of the gpg key to import
+# @param dst_gnupghome gnupghome directory where to import the key
+#
+# @return 0 if successful\n
+#         1 if the key could not be exported.\n
+#         2 if the key could not be imported.
+#
+sub import_key_from_user_gnupghome()
+{
+    my $err;
+    my ($asciikey, $dst_gpghome) = @_;
+
+    trace("Exporting key $asciikey from your normal GnuPGHOME.");
+    my $key = export_key(undef, $asciikey);
+    if (defined $key && $key ne '')
+    {
+        trace("Importing key $asciikey into $GNUPGHOME.");
+        if (import_key($GNUPGHOME, $key))
+        {
+            $err = 0;
+        }
+        else
+        {
+            warn("Could not import $asciikey into caff's gnupghome.");
+            $err = 2;
+        }
+    }
+    else
+    {
+        $err = 1;
+    }
+
+    return $err;
+}
+
+##
+# Import a key file into a specified gnupghome.
+#
+# @param keyfile       file containing the keys to import
+# @param dst_gnupghome gnupghome directory where to import the key
+#
+# @return 0 if successful\n
+#         1 if an error occured.
+#
+sub import_key_files()
+{
+    my $err;
+    my ($keyfile, $dst_gpghome) = @_;
+
+    my $gpg = GnuPG::Interface->new();
+    $gpg->call( $CONFIG{'gpg'} );
+    $gpg->options->hash_init(
+        'homedir' => $dst_gpghome,
+        'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
+    $gpg->options->meta_interactive( 0 );
+    my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+    my $pid = $gpg->import_keys(handles => $handles, command_args => $keyfile);
+    my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+    info("Importing keys from file $keyfile");
+    waitpid $pid, 0;
+
+    if ($status !~ /^\[GNUPG:\] IMPORT_OK/m)
+    {
+        warn $stderr;
+        $err = 1;
+    }
+    else
+    {
+        $err = 0;
+    }
+
+    return $err;
+}
+
+##
+# Import keys to be signed into caff gnupghome directory.
+#
+# This function imports the keys the user wants to sign into the caff gnupghome
+# directory. We looks for the keys in the the user gnupghome directory first,
+# and in the key files specified by the user if not all of the keys have been
+# found.
+#
+sub import_keys_to_sign()
+{
+    # Check if we can find the gpg key from our normal gnupghome, and then
+    # try to import it into our working gnupghome directory
+    my $imported_keys = 0;
+    foreach my $keyid (@KEYIDS)
+    {
+        if (!&import_key_from_user_gnupghome($keyid, $GNUPGHOME))
+        {
+            info("Key $keyid imported from your normal GnuPGHOME.");
+            $imported_keys++;
+        }
+    }
+
+    # If all of the keys have been successfully imported, there is no need to
+    # go further
+    return 1 if ($imported_keys == scalar (@KEYIDS));
+
+    # Import user specified key files
+    foreach my $keyfile (@{$CONFIG{'key-files'}})
+    {
+        &import_key_files($keyfile, $GNUPGHOME);
+    }
+
+    return 0;
+}
 
 ###################
 # argument handling
 ###################
-my @KEYIDS;
-my $params;
-
 Getopt::Long::config('bundling');
 if (!GetOptions (
 	'-h'              =>  \$params->{'help'},
@@ -1035,37 +1145,16 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 # import own keys
 #################
-for my $keyid (@{$CONFIG{'keyid'}}) {
-		info("Importing key $keyid from your normal GnuPGHome.");
-		my $key = export_key(undef, $keyid);
-		if (!defined $key || $key eq '') {
-			warn ("Did not get key $keyid from your normal GnuPGHome\n");
-			next;
-		};
-		my $result = import_key($GNUPGHOME, $key);
-		unless ($result) {
-			warn ("Could not import $keyid into caff's gnupghome.\n");
-			next;
-		};
-}
-
-########################
-# import keys from files
-########################
-foreach my $keyfile (@{$CONFIG{'key-files'}}) {
-    my $gpg = GnuPG::Interface->new();
-    $gpg->call( $CONFIG{'gpg'} );
-    $gpg->options->hash_init('homedir' => $GNUPGHOME);
-    $gpg->options->meta_interactive( 0 );
-    my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-    my $pid = $gpg->import_keys(handles => $handles, command_args => $keyfile);
-    my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-    info ("Importing keys from $keyfile");
-    waitpid $pid, 0;
-    if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
-	warn $stderr;
+for my $keyid (@{$CONFIG{'keyid'}})
+{
+    info("Importing key $keyid from your normal GnuPGHome.");
+    if (&import_key_from_user_gnupghome($keyid, $GNUPGHOME))
+    {
+        mywarn("Key $keyid not found.");
     }
 }
+
+&import_keys_to_sign();
 
 #############################
 # receive keys from keyserver
