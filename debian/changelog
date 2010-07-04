@@ -4,10 +4,13 @@ signing-party (1.1.3-2) UNRELEASED; urgency=low
   * Correct path of ~/.caffrc in informational messages (Closes: #582603).
 
   [ Franck Joncourt ]
-  * Switch to dpkg-source 3.0 (quilt) format.
-    + Removed README.source which was needed only for documentation purpose.
-    + Removed quilt framework in d.rules.
-    + Removed BD on quilt.
+  * Debian package:
+    + Switch to dpkg-source 3.0 (quilt) format.
+      - Removed README.source which was needed only for documentation purpose.
+      - Removed quilt framework in d.rules.
+      - Removed BD on quilt.
+    + Depend on "default-mta | mail-transport-agent" rather than the old
+      "exim4 | mail-transport-agent".
   * gpg-mailkeys:
     + Correct path of ~/.gpg-mailkeysrc and ~/.signature in manpage.
   * caff:

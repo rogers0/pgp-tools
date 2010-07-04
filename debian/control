@@ -14,15 +14,16 @@ Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Architecture: any
-Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg, 
+Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg,
  libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl,
  libmailtools-perl, libterm-readkey-perl, libclass-methodmaker-perl, qprint
-Recommends: exim4 | mail-transport-agent, libtext-iconv-perl | libintl-perl | recode, dialog | whiptail, libpaper-utils,
+Recommends: default-mta | mail-transport-agent, libpaper-utils,
+ libgd-gd2-noxpm-perl | libgd-gd2-perl,
+ libtext-iconv-perl | libintl-perl | recode, dialog | whiptail
 # springraph
- libgd-gd2-noxpm-perl | libgd-gd2-perl
-Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, texlive-latex-recommended,
+Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, mutt
+ texlive-latex-recommended
 # keyanalyze
- mutt
 Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
 Conflicts: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
 Provides: sig2dot, springgraph, keyanalyze
