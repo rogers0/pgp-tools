@@ -9,8 +9,10 @@ signing-party (1.1.3-2) UNRELEASED; urgency=low
       - Removed README.source which was needed only for documentation purpose.
       - Removed quilt framework in d.rules.
       - Removed BD on quilt.
+      - Added source/format file.
     + Depend on "default-mta | mail-transport-agent" rather than the old
       "exim4 | mail-transport-agent".
+    + Bumped Standards-Version up to 3.9.0 (no changes).
   * gpg-mailkeys:
     + Correct path of ~/.gpg-mailkeysrc and ~/.signature in manpage.
   * caff:
