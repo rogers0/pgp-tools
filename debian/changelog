@@ -1,4 +1,4 @@
-signing-party (1.1.3-2) UNRELEASED; urgency=low
+signing-party (1.1.4-1) UNRELEASED; urgency=low
 
   [ Thijs Kinkhorst ]
   * Correct path of ~/.caffrc in informational messages (Closes: #582603).
