@@ -756,13 +756,13 @@ sub import_key($$) {
 
 
 ######
-# Send an email to $address.  If $can_encrypt is true then the mail
+# Create an email to $address.  If $can_encrypt is true then the mail
 # will be PGP/MIME encrypted to $longkeyid.
 #
 # $longkeyid, $uid, and @attached will be used in the email and the template.
 ######
-#send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
-sub send_mail($$$@) {
+# create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
+sub create_mail($$$@) {
 	my ($address, $can_encrypt, $key_id, @keys) = @_;
 
 	my $template = Text::Template->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'})
@@ -855,9 +855,21 @@ sub send_mail($$$@) {
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
 	$message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
 	$message_entity->head->add("User-Agent", $USER_AGENT);
-	mywarn("You have set arguments to pass to Mail::Mailer.  Better fix your MTA.  (Also, Mail::Mailer's error reporting is non existant, so it won't tell you when it doesn't work.)") if (scalar @{$CONFIG{'mailer-send'}} > 0);
+	return $message_entity;
+};
+
+######
+# send a mail message (MIME::Entity)
+######
+my $warned_about_broken_mailer_send = 0;
+sub send_message($) {
+	my ($message_entity) = @_;
+
+	if ( (scalar @{$CONFIG{'mailer-send'}} > 0) && !$warned_about_broken_mailer_send) {
+		mywarn("You have set arguments to pass to Mail::Mailer.  Better fix your MTA.  (Also, Mail::Mailer's error reporting is non existant, so it won't tell you when it doesn't work.)");
+		$warned_about_broken_mailer_send = 1;
+	};
 	$message_entity->send(@{$CONFIG{'mailer-send'}});
-	$message_entity->stringify();
 };
 
 ######
@@ -1451,17 +1463,18 @@ for my $keyid (@keyids_ok) {
 			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
-				if (ask("Mail signature for $uid->{'text'} to '$address'?", $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes')) {
-					my $mail = send_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
-					if (defined $mail) {
-						my $keydir = "$KEYSBASE/$DATE_STRING";
-						my $mailfile = "$keydir/$longkeyid.mail.".$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
-						open (KEY, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
-						print KEY $mail;
-						close KEY;
-					} else {
-						warn "Generating mail failed.\n";
-					};
+				my $mail = create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
+				if (defined $mail) {
+					my $should_send_mail = ask("Mail signature for $uid->{'text'} to '$address'?", $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes');
+					send_message($mail) if $should_send_mail;
+
+					my $keydir = "$KEYSBASE/$DATE_STRING";
+					my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
+					open (MAILFILE, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
+					print MAILFILE $mail->stringify();
+					close MAILFILE;
+				} else {
+					warn "Generating mail failed.\n";
 				};
 			};
 		};

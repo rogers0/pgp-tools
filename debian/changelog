@@ -35,8 +35,10 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
     + Make importing of keys to be signed from the normal gpg optional
       (--keys-from-gnupg).
     + refactor copying of command line options into global config variable.
+    + Create the mail files in ~/.caff/keys even if mail is not sent
+      (closes: #590666).
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:32:57 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 14:18:09 +0200
 
 signing-party (1.1.3-1) unstable; urgency=low
 
