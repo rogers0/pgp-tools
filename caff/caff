@@ -90,6 +90,10 @@ configuration file.
 
 Import keys from file. Can be supplied more than once.
 
+=item B<--keys-from-gnupg> I<file>
+
+Try to import keys from your standard GnuPG keyrings.
+
 =back
 
 =head1 FILES
@@ -1039,11 +1043,13 @@ sub import_key_files($$) {
 sub import_keys_to_sign() {
 	# Check if we can find the gpg key from our normal gnupghome, and then
 	# try to import it into our working gnupghome directory
-	foreach my $keyid (@KEYIDS) {
-		if (!import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
-			info("Key $keyid imported from your normal GnuPGHOME.");
+	if ($CONFIG{'keys-from-gnupg'}) {
+		foreach my $keyid (@KEYIDS) {
+			if (!import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
+				info("Key $keyid imported from your normal GnuPGHOME.");
+			}
 		}
-	}
+	};
 
 	# Import user specified key files
 	foreach my $keyfile (@{$CONFIG{'key-files'}}) {
@@ -1077,6 +1083,7 @@ if (!GetOptions (
 	'-S'              =>  \$params->{'no-sign'},
 	'--no-sign'       =>  \$params->{'no-sign'},
 	'--key-file=s@'   =>  \$params->{'key-files'},
+	'--keys-from-gnupg' =>  \$params->{'keys-from-gnupg'},
 	)) {
 	usage(\*STDERR, 1);
 };
@@ -1095,6 +1102,8 @@ $CONFIG{'no-sign'}     = $params->{'no-sign'}     if defined $params->{'no-sign'
 
 $CONFIG{'no-mail'}     = $params->{'no-mail'}     if defined $params->{'no-mail'};
 $CONFIG{'mail'}        = $params->{'mail'}        if defined $params->{'mail'};
+
+$CONFIG{'keys-from-gnupg'} = $params->{'keys-from-gnupg'} if defined $params->{'keys-from-gnupg'};
 
 # If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
 if ( defined $CONFIG{'no-mail'} || 

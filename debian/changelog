@@ -32,8 +32,10 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
       keyrings we still need to import them (again) from any keyrings
       passed with --key-files - the keys there might be newer, containing
       new subkeys (for encryption), uids (for signing) or revocations.
+    + Make importing of keys to be signed from the normal gpg optional
+      (--keys-from-gnupg).
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:18:38 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:30:54 +0200
 
 signing-party (1.1.3-1) unstable; urgency=low
 
