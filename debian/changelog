@@ -16,9 +16,11 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
   * gpg-mailkeys:
     + Correct path of ~/.gpg-mailkeysrc and ~/.signature in manpage.
   * caff:
-    + Imported keys to be signed from the user GnuPGHome first. Thus, keys
-      from the key files are not imported if all of the keys are found in the
-      user GnuPGHome. (Closes: #539643)
+    + Refactor import of own key and import for keys to sign from keyrings.
+    + Also automatically import keys to sign from the user's normal gpg
+      keyrings.
+    + Use --no-auto-check-trustdb when importing keys from files or
+      the user's normal gpg keyrings (closes: #539643).
 
   [ Peter Palfrader ]
   * caff:
