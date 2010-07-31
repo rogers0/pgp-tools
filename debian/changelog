@@ -20,7 +20,13 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
       from the key files are not imported if all of the keys are found in the
       user GnuPGHome. (Closes: #539643)
 
- -- Franck Joncourt <franck@debian.org>  Sun, 27 Jun 2010 13:33:57 +0200
+  [ Peter Palfrader ]
+  * caff:
+    + manpage: Refer to all of /usr/share/doc/signing-party/caff/ and not
+      just to /usr/share/doc/signing-party/caff/caffrc.sample
+      (closes: #568052).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:11:28 +0200
 
 signing-party (1.1.3-1) unstable; urgency=low
 
