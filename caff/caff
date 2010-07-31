@@ -972,7 +972,7 @@ sub get_local_user_keys() {
 #         1 if the key could not be exported.\n
 #         2 if the key could not be imported.
 #
-sub import_key_from_user_gnupghome() {
+sub import_key_from_user_gnupghome($$) {
     my $err;
     my ($asciikey, $dst_gpghome) = @_;
 
@@ -1002,7 +1002,7 @@ sub import_key_from_user_gnupghome() {
 # @return 0 if successful\n
 #         1 if an error occured.
 #
-sub import_key_files() {
+sub import_key_files($$) {
     my $err;
     my ($keyfile, $dst_gpghome) = @_;
 
@@ -1041,7 +1041,7 @@ sub import_keys_to_sign() {
     # try to import it into our working gnupghome directory
     my $imported_keys = 0;
     foreach my $keyid (@KEYIDS) {
-        if (!&import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
+        if (!import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
             info("Key $keyid imported from your normal GnuPGHOME.");
             $imported_keys++;
         }
@@ -1053,7 +1053,7 @@ sub import_keys_to_sign() {
 
     # Import user specified key files
     foreach my $keyfile (@{$CONFIG{'key-files'}}) {
-        &import_key_files($keyfile, $GNUPGHOME);
+        import_key_files($keyfile, $GNUPGHOME);
     }
 
     return 0;
@@ -1132,7 +1132,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 for my $keyid (@{$CONFIG{'keyid'}}) {
     info("Importing key $keyid from your normal GnuPGHome.");
-    if (&import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
+    if (import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
         mywarn("Key $keyid not found.");
     }
 }
@@ -1216,7 +1216,7 @@ if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 }
 	
 unless ($CONFIG{'no-sign'}) {
-	my @local_user = &get_local_user_keys();
+	my @local_user = get_local_user_keys();
 
 	info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 	for my $keyid (@keyids_ok) {
