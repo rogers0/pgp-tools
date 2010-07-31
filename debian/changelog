@@ -28,8 +28,12 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
       just to /usr/share/doc/signing-party/caff/caffrc.sample
       (closes: #568052).
     + Fix horrible &function calls used because of broken prototypes.
+    + Even if all keys to sign were found in the user's normal gpg
+      keyrings we still need to import them (again) from any keyrings
+      passed with --key-files - the keys there might be newer, containing
+      new subkeys (for encryption), uids (for signing) or revocations.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:12:41 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 13:18:38 +0200
 
 signing-party (1.1.3-1) unstable; urgency=low
 

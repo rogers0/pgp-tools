@@ -1039,17 +1039,11 @@ sub import_key_files($$) {
 sub import_keys_to_sign() {
     # Check if we can find the gpg key from our normal gnupghome, and then
     # try to import it into our working gnupghome directory
-    my $imported_keys = 0;
     foreach my $keyid (@KEYIDS) {
         if (!import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
             info("Key $keyid imported from your normal GnuPGHOME.");
-            $imported_keys++;
         }
     }
-
-    # If all of the keys have been successfully imported, there is no need to
-    # go further
-    return 1 if ($imported_keys == scalar (@KEYIDS));
 
     # Import user specified key files
     foreach my $keyfile (@{$CONFIG{'key-files'}}) {
