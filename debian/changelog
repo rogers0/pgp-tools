@@ -13,6 +13,8 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
     + Depend on "default-mta | mail-transport-agent" rather than the old
       "exim4 | mail-transport-agent".
     + Bumped Standards-Version up to 3.9.0 (no changes).
+    + Added missing dependencies (libgd-gd2-noxpm-perl | libgd-gd2-perl) for
+      springgraph (closes: #604028).
   * gpg-mailkeys:
     + Correct path of ~/.gpg-mailkeysrc and ~/.signature in manpage.
   * caff:
@@ -38,7 +40,7 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
     + Create the mail files in ~/.caff/keys even if mail is not sent
       (closes: #590666).
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jul 2010 14:18:09 +0200
+ -- Franck Joncourt <franck@debian.org>  Mon, 22 Nov 2010 21:44:10 +0100
 
 signing-party (1.1.3-1) unstable; urgency=low
 
