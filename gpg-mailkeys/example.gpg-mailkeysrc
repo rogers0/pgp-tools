@@ -15,3 +15,10 @@ Hi, here you are: your signed key.
 
 See you!
 "
+
+# You can add here whatever arguments you want to pass to sendmail.
+# For example, if you use ssmtp, you may want to set your credentials this way
+#     SENDMAIL_ARGS="-au myusername -aps3cr3t"
+# to authenticate to the smtp server with username myusername and password
+# s3cr3t.
+SENDMAIL_ARGS=""

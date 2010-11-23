@@ -1,5 +1,5 @@
 .\"
-.TH GPG-MAILKEYS 1 "June 29, 2010"
+.TH GPG-MAILKEYS 1 "Nov 23, 2010"
 .SH NAME
 .B gpg\-mailkeys
 \- sends emails containing keys to their owners
@@ -31,6 +31,11 @@ Set the subject of the messages you send
 .TP 13
 .I TEXT
 Set the body text of the messages
+.TP 13
+.I SENDMAIL_ARGS
+Set arguments to pass to /usr/sbin/sendmail. This can be useful to set
+credentials in order to authenticate to an smtp server when using ssmtp
+for example.
 
 .SH FILES
 The behavior of
