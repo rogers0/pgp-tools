@@ -297,6 +297,7 @@ sub print_tag
 $key = undef;
 $uid = undef;
 my $line = 0;
+my $keys = 0;
 print STDERR "Annotating $keytxt, writing into $outfile\n";
 open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
@@ -328,6 +329,19 @@ while (<TXT>) {
 	if (/^RIPEMD160 Checksum:/ && defined $RIPEMD160) {
 		s/[_[:xdigit:]][_ [:xdigit:]]+_/$RIPEMD160/;
 	}
+
+	if ( m/^[0-9]+\s+\[ \] Fingerprint OK/ ){
+		if ($latex) {
+			if ($keys > 0) {
+				print WRITE "\\end{samepage}\n";
+			}
+			print WRITE "\\begin{samepage}\n";
+			++$keys;
+		}
+		print WRITE;
+		next;
+	}
+
 	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
 		$uid = $2;
@@ -375,6 +389,10 @@ while (<TXT>) {
 		next;
 	}
 	print WRITE;
+}
+
+if ($latex && ($keys > 0)) {
+	print WRITE "\\end{samepage}\n";
 }
 
 print WRITE "Legend:\n";
