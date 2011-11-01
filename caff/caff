@@ -375,7 +375,7 @@ sub trace2($) {
 
 
 sub generate_config() {
-	notice("Error: \$LOGNAME is not set.\n") unless defined $ENV{'LOGNAME'};
+	notice("Error: \$LOGNAME is not set.") unless defined $ENV{'LOGNAME'};
 	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
 	my $email;
 	my @keys;
@@ -1185,7 +1185,7 @@ if ($CONFIG{'no-download'}) {
 				$speced_key = $spec if $local_keyids{$spec};
 			};
 			unless ($speced_key) {
-			    notice ("Imported unexpected key; got: $imported_key\n");
+			    notice ("Imported unexpected key; got: $imported_key\nAre you trying to work on a subkey?");
 			    next;
 			};
 			debug ("Imported $imported_key for $speced_key");
