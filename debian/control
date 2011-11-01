@@ -7,7 +7,7 @@ Uploaders: Simon Richter <sjr@debian.org>,
  Christoph Berg <myon@debian.org>,
  Franck Joncourt <franck@debian.org>
 Build-Depends: debhelper (>= 7)
-Standards-Version: 3.8.4
+Standards-Version: 3.9.2
 Homepage: http://pgp-tools.alioth.debian.org/
 Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
@@ -24,8 +24,8 @@ Recommends: default-mta | mail-transport-agent, libpaper-utils,
 Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, mutt,
  texlive-latex-recommended
 # keyanalyze
-Replaces: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
-Conflicts: keylookup (<< 3.0), sig2dot (<< 1), springgraph (<< 1), keyanalyze (<< 0.1)
+Replaces: keyanalyze (<< 0.1)
+Conflicts: keyanalyze (<< 0.1)
 Provides: sig2dot, springgraph, keyanalyze
 Description: Various OpenPGP related tools
  signing-party is a collection for all kinds of PGP/GnuPG related things,
