@@ -13,8 +13,6 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
     + Depend on "default-mta | mail-transport-agent" rather than the old
       "exim4 | mail-transport-agent".
     + Bumped Standards-Version up to 3.9.0 (no changes).
-    + Added missing dependencies (libgd-gd2-noxpm-perl | libgd-gd2-perl) for
-      springgraph (closes: #604028).
   * gpg-mailkeys:
     + Correct path of ~/.gpg-mailkeysrc and ~/.signature in manpage.
     + Add new environment variable SENDMAIL_ARGS to allow user to pass
