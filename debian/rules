@@ -1,5 +1,9 @@
 #!/usr/bin/make -f
 
+export DEB_BUILD_MAINT_OPTIONS := hardening=+bindnow
+DPKG_EXPORT_BUILDFLAGS = 1
+-include /usr/share/dpkg/buildflags.mk
+
 VERSION := $(shell dpkg-parsechangelog | grep ^Version | cut -d' ' -f2)
 
 INSTALL             = install
