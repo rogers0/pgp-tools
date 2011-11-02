@@ -121,7 +121,21 @@ print <<EOF;
 /w $w def
 /h $h def
 
-/Times-Roman findfont 9 scalefont setfont 
+/reencode {
+	exch findfont
+	dup length dict
+	begin {
+		1 index /FID eq
+		{ pop pop }
+		{ def } ifelse
+	} forall
+	/Encoding ISOLatin1Encoding def
+	currentdict
+	end
+	definefont
+} bind def
+
+/Times-Roman /trlatin1 reencode 9 scalefont setfont
 
 /newline {
 	/y y 10 sub def
