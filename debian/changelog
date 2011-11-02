@@ -6,7 +6,7 @@ signing-party (1.1.4-1) UNRELEASED; urgency=low
     + Be more verbose on unexpected key ID (Closes: #645792).
   * gpg-key2ps:
     + Apply patch from Uwe Kleine-König to deal with latin1 characters
-      (partially addresses #596377).
+      (Closes: #596377).
   * Debian package:
     + Import dpkg build flags, plus small cleanups.
 
