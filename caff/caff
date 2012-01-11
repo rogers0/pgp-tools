@@ -90,7 +90,7 @@ configuration file.
 
 Import keys from file. Can be supplied more than once.
 
-=item B<--keys-from-gnupg> I<file>
+=item B<--keys-from-gnupg>
 
 Try to import keys from your standard GnuPG keyrings.
 
