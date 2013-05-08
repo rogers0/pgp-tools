@@ -23,9 +23,6 @@ Recommends: default-mta | mail-transport-agent, libpaper-utils,
 # springraph
 Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, mutt,
  texlive-latex-recommended
-# keyanalyze
-Replaces: keyanalyze (<< 0.1)
-Conflicts: keyanalyze (<< 0.1)
 Provides: sig2dot, springgraph, keyanalyze
 Description: Various OpenPGP related tools
  signing-party is a collection for all kinds of PGP/GnuPG related things,
@@ -45,13 +42,3 @@ Description: Various OpenPGP related tools
   * keylookup: ncurses wrapper around gpg --search
   * sig2dot: converts a list of GnuPG signatures to a .dot file
   * springgraph: creates a graph from a .dot file
-
-Package: keyanalyze
-Section: utils
-Priority: optional
-Architecture: all
-Depends: ${misc:Depends}, signing-party (>= 1.1)
-Description: transitional package to pull in signing-party
- This is an empty package to pull in signing-party in which keyanalyze is
- now included. It can safely be removed.
-
