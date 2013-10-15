@@ -41,20 +41,20 @@ cat <<EOF
 
 Here's what you have to do with this file:
 (1) Print this file to paper.
-(2) Compute this file's MD5 checksum and optionally also its SHA1 checksum.
-   gpg --print-md md5  $output  (or use md5sum)
-   gpg --print-md sha1 $output  (or use sha1sum)
+(2) Compute this file's SHA1 checksum and optionally also its SHA256 checksum.
+      gpg --print-md sha1 $output         (or use sha1sum)
+      gpg --print-md sha256 $output       (or use sha256sum)
 (3) Fill in the hash values on the printout.
 (4) Bring the printout, a pen, and proof of identity to the key signing party
     (and be on time!).
 
-MD5 Checksum:  __ __ __ __ __ __ __ __    __ __ __ __ __ __ __ __      [ ]
+SHA1 Checksum:   ____ ____ ____ ____ ____    ____ ____ ____ ____ ____    [ ]
 
 
 
-SHA1 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____    [ ]
+SHA256 Checksum: ____ ____   ____ ____   ____ ____   ____ ____           [ ]
 
-
+                 ____ ____   ____ ____   ____ ____   ____ ____
 
 
 EOF
