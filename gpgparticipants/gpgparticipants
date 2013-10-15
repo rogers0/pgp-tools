@@ -65,6 +65,7 @@ for i in $(cat $input); do
     printf "\n%03d  [ ] Fingerprint OK        [ ] ID OK\n" $k;
     gpg --fingerprint $i | grep -v "^sub" | \
     	grep -v '^uid.*jpeg image of size';
+	echo "_______________________________________________________________________________"
 done
 
 
