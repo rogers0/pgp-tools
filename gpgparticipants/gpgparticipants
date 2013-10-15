@@ -41,15 +41,11 @@ cat <<EOF
 
 Here's what you have to do with this file:
 (1) Print this file to paper.
-(2) Compute this file's SHA1 checksum and optionally also its SHA256 checksum.
-      gpg --print-md sha1 $output         (or use sha1sum)
+(2) Compute this file's SHA256 checksum.
       gpg --print-md sha256 $output       (or use sha256sum)
 (3) Fill in the hash values on the printout.
 (4) Bring the printout, a pen, and proof of identity to the key signing party
     (and be on time!).
-
-SHA1 Checksum:   ____ ____ ____ ____ ____    ____ ____ ____ ____ ____    [ ]
-
 
 
 SHA256 Checksum: ____ ____   ____ ____   ____ ____   ____ ____           [ ]
