@@ -1,0 +1,30 @@
+.TH GPGPARTICIPANTS-PREFILL 1 "October 17, 2013"
+.SH NAME
+gpgparticipants-prefill \- insert checksum-digits in a gpgparticicpants' form
+.SH SYNOPSIS
+.B gpgparticipants-prefill
+.RI emptylist
+filledlist
+.SH DESCRIPTION
+.B gpgparticipants-prefill
+takes a file produced by gpgparticipants (emptylist) and trys to fill in some
+digits into the SHA256 field such that the resulting list actually has a SHA256
+checksum that starts with those digits. Whenever a match is found a file with
+the digits filled in is written to `filledlist.DIGITS`.
+
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print the usage text.
+.TP
+.B \-\-fastforward
+If a match is found of given length and --fastforward is given then the program
+immediately jumps to the next length.
+.TP
+.B \-\-min-length NUM
+Start search with given length.
+
+.SH SEE ALSO
+.BR gpgparticipants (1)
+.SH AUTHOR
+This manual page was written by Stefan Huber <shuber@sthu.org>.
