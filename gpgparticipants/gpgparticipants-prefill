@@ -1,0 +1,131 @@
+#!/usr/bin/python
+"""Fill in the first digits of the hash in a form created by gpgparticipants."""
+
+__version__ = "1.0"
+
+__author__ = "Stefan Huber"
+__email__ = "shuber@sthu.org"
+__copyright__ = "Copyright 2013, Stefan Huber"
+
+__license__ = "MIT"
+
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+
+
+import sys
+import hashlib
+import getopt
+
+
+def insertspaces(s):
+    """Inserts a space after every 4-th character, and three spaces after every
+    8-th character of string s."""
+
+    def inpacks(s, n):
+        while len(s) > 0:
+            yield s[0:n]
+            s = s[n:]
+
+    out = "   ".join([ " ".join(inpacks(octp, 4)) for octp in inpacks(s, 8)])
+    return out
+
+
+def range_hex(length):
+    """Give all hex-strings from 00...0 until ff...f of given length."""
+
+    if length == 0:
+        yield ""
+
+    elif length == 1:
+        for c in "0123456789abcdef":
+            yield c
+    elif length > 1:
+        for prefix in range_hex(length-1):
+            for postfix in range_hex(1):
+                yield prefix + postfix
+
+
+def usage():
+    """Print --help text"""
+
+    print("""Usage:
+  {0} <emptylist> <filledlist>
+  {0} --help
+  {0} -h
+
+Takes a file produced by gpgparticipants as <emptylist> and trys to fill in
+some digits into the SHA256 field such that the resulting list actually has
+a SHA256 checksum that starts with those digits. Whenever a match is found a
+file with the digits filled in is written to `<filledlist>.DIGITS`.
+
+OPTIONS:
+
+  --fastforward        If a match is found of given length and --fastforward
+                       is given then the programm immediately jumps to the next
+                       length.
+  --min-length NUM     Start looking for hex strings of given length
+
+""".format(sys.argv[0]))
+
+
+if __name__ == "__main__":
+
+    fastforward = False
+    minlength = 1
+
+    optlist, args = getopt.getopt(sys.argv[1:], 'h', ['fastforward', 'min-length=', 'help'])
+    for o, a in optlist:
+
+        if o in ("-h", "--help"):
+            usage()
+            exit(0)
+
+        if o in ("--fastforward"):
+            fastforward = True
+
+        if o in ("--min-length"):
+            minlength = int(a)
+
+    if len(args) < 2:
+        print >>sys.stderr, "You need to give two filenames."""
+        exit(1)
+
+    emptyfile = open(args[0]).read()
+
+    idx = emptyfile.find("SHA256 Checksum:")
+    idx = emptyfile.find("_", idx)
+
+    for l in range(minlength, 32):
+        print "Looking at length", l
+
+        for h in range_hex(l):
+
+            H = insertspaces(h.upper())
+            filledfile = emptyfile[:idx] + H + emptyfile[idx+len(H):]
+            actual = hashlib.sha256(filledfile).hexdigest()
+
+            if actual[:len(h)] == h:
+                print "Found: ", H
+                open(args[1] + "." + h, "w").write(filledfile)
+
+                if fastforward:
+                    break

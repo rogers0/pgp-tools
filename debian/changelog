@@ -8,6 +8,9 @@ signing-party (1.1.5-1) UNRELEASED; urgency=low
   [ Stefan Huber ]
   * gpgparticipants: Use more modern hashes than md5.
 
+  [ Peter Palfrader ]
+  * Add gpgparticipants-prefill by Stefan Huber.
+
  -- Thijs Kinkhorst <thijs@debian.org>  Wed, 11 Jan 2012 20:57:54 +0100
 
 signing-party (1.1.4-1) unstable; urgency=low
