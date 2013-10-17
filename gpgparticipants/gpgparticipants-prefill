@@ -80,9 +80,9 @@ file with the digits filled in is written to `<filledlist>.DIGITS`.
 OPTIONS:
 
   --fastforward        If a match is found of given length and --fastforward
-                       is given then the programm immediately jumps to the next
+                       is given then the program immediately jumps to the next
                        length.
-  --min-length NUM     Start looking for hex strings of given length
+  --min-length NUM     Start search with given length.
 
 """.format(sys.argv[0]))
 
