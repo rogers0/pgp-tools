@@ -3,25 +3,26 @@
 gpgparticipants-prefill \- insert checksum-digits in a gpgparticicpants' form
 .SH SYNOPSIS
 .B gpgparticipants-prefill
-.RI emptylist
-filledlist
+\fIemptylist\fP \fIfilledlist\fP
 .SH DESCRIPTION
 .B gpgparticipants-prefill
-takes a file produced by gpgparticipants (emptylist) and trys to fill in some
+takes a file produced by \fBgpgparticipants\fP (\fIemptylist\fP) and trys to fill in some
 digits into the SHA256 field such that the resulting list actually has a SHA256
-checksum that starts with those digits. Whenever a match is found a file with
-the digits filled in is written to `filledlist.DIGITS`.
+checksum that starts with those digits.  In other words, it tries to produce a
+file that hashes to a checksum that is partially written down in the file.
+Whenever a match is found a file with the digits filled in is written to
+\fIfilledlist\fP\fB.\fP\fIDIGITS\fP.
 
 .SH OPTIONS
-.TP
-.B \-h, \-\-help
+
+.IP "\fB\-h\fP, \fB\-\-help\fP" 8
 Print the usage text.
-.TP
-.B \-\-fastforward
+
+.IP "\fB\-\-fastforward\fP" 8
 If a match is found of given length and --fastforward is given then the program
 immediately jumps to the next length.
-.TP
-.B \-\-min-length NUM
+
+.IP "\fB\-\-min-length\fP \fINUM\fP" 8
 Start search with given length.
 
 .SH SEE ALSO
