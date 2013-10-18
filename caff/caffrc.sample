@@ -10,9 +10,9 @@ $CONFIG{'email'}       = 'user@example.com';
 # if you have a v4 key, it will simply be the last 16 digits of
 # your fingerprint.
 
-# You can define multiple keys below, but be aware that caff will use
-# the first key defined by default and will not use the second one
-# unless you explicitly mention it through the -u option on the command-line
+# This is the list of keys whose signatures you want to mail around.  Usually
+# you would list all your keys here.  To specify which keys to sign with, set
+# local-user.  See the manpage for further details.
 $CONFIG{'keyid'}       = [ qw{DE7AAF6E94C09C7F 62AF4031C82E0039} ];
 $CONFIG{'also-encrypt-to'} = [ qw{DE7AAF6E94C09C7F} ];
 $CONFIG{'caffhome'}    = $ENV{'HOME'}.'/.caff';
