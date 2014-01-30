@@ -1,8 +1,9 @@
 signing-party (1.1.5-1) UNRELEASED; urgency=low
 
   [ Thijs Kinkhorst ]
-  * caff:
-    + correct man page for keys-from-gnupg (closes: #652683)
+  * caff: correct man page for keys-from-gnupg (closes: #652683)
+  * caff: fix infinite loop after signing a key with newer gpg.
+    Thanks Bernd Zeimetz for the patch. (closes: #722206, #735536)
   * Drop keyanalyze transitional package, present since 2009.
 
   [ Stefan Huber ]

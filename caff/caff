@@ -596,7 +596,7 @@ sub readwrite_gpg($$$$$%) {
 			}
 		}
 
-		next unless (defined(@$readyr)); # Wait some more.
+		next unless ($readyr); # Wait some more.
 
 		for my $rfd (@$readyr) {
 			$readwrote_stuff_this_time = 1;
@@ -732,10 +732,30 @@ sub export_key($$) {
 };
 
 ######
+# create trustdb in $gnupghome
+######
+sub create_trustdb($) {
+	my ($gnupghome) = @_;
+
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'homedir' => $gnupghome,
+		'extra_args' => [ qw{ --import-ownertrust } ] );
+	$gpg->options->meta_interactive( 0 );
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+	my $pid = $gpg->wrap_call(handles => $handles);
+	my ($stdout, $stderr, $status) = readwrite_gpg('#\n', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+	waitpid $pid, 0;
+};
+
+######
 # import a key from the scalar $asciikey into a gpg homedirectory in $tempdir
 ######
 sub import_key($$) {
 	my ($gnupghome, $asciikey) = @_;
+
+	create_trustdb($gnupghome);
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
