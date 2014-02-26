@@ -684,8 +684,8 @@ my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
 my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
 my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
 
--d $KEYSBASE  || mkpath($KEYSBASE , 0, 0700) or die ("Cannot create $KEYSBASE: $!\n");
--d $GNUPGHOME || mkpath($GNUPGHOME, 0, 0700) or die ("Cannot create $GNUPGHOME: $!\n");
+-d $KEYSBASE  || make_path($KEYSBASE , {mode => 0700}) or die ("Cannot create $KEYSBASE: $!\n");
+-d $GNUPGHOME || make_path($GNUPGHOME, {mode => 0700}) or die ("Cannot create $GNUPGHOME: $!\n");
 
 my $NOW = time;
 my  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($NOW);
@@ -1207,6 +1207,7 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	my $had_v3_keys = 0;
+	print STDERR $stderr if $stderr;
 	for my $line (split /\n/, $status) {
 		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
 			my $imported_key = $1;
@@ -1459,7 +1460,7 @@ for my $keyid (@keyids_ok) {
 				next unless $write;
 			};
 			my $keydir = "$KEYSBASE/$DATE_STRING";
-			-d $keydir  || mkpath($keydir , 0, 0700) or die ("Cannot create $keydir $!\n");
+			-d $keydir  || make_path($keydir , {mode => 0700}) or die ("Cannot create $keydir $!\n");
 
 			my $keyfile = "$keydir/$longkeyid.key.$uid_number.".sanitize_uid($this_uid_text).".asc";
 			open (KEY, ">$keyfile") or die ("Cannot open $keyfile: $!\n");
