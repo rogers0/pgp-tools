@@ -316,7 +316,7 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 use strict;
 use IO::Handle;
 use English;
-use File::Path;
+use File::Path qw{make_path};
 use File::Temp qw{tempdir};
 use Text::Template;
 use MIME::Entity;
@@ -977,7 +977,7 @@ sub get_local_user_keys() {
 		
 		$user_key = uc($user_key);
 
-		unless ($user_key =~ m/^(?:0X)?[A-F0-9]{8}|(?:0X)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5}$/) {
+		unless ($user_key =~ m/^((?:0X)?[A-F0-9]{8}|(?:0X)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
 			mywarn "Local-user $user_key is not a valid keyid.";
 			next;
 		}
