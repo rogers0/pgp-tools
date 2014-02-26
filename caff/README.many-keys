@@ -13,10 +13,10 @@ Some hints to get the signing done faster:
   from having to check the fingerprint yourself. If you have a text file with
   all fingerprints, use that and then run
 
-  $ caff <options> "`cat ksp-fingerprints.txt`"
+  $ xargs caff <options> <ksp-fingerprints.txt
 
   For convenience, caff also allows spaces in fingerprints/keyids as output by
-  gpg --fingerprint. (Remember to properly quote arguments as shown above.)
+  gpg --fingerprint.
 
 * v3 keys are evil.
 
@@ -37,9 +37,9 @@ Some hints to get the signing done faster:
 
   Going through retrieving, signing, and mailing keys can help, e.g.:
 
-  $ caff --no-sign --no-export-old --no-mail "`cat ksp-fingerprints.txt`"
-  $ caff --no-download --no-export-old --no-mail "`cat ksp-fingerprints.txt`"
-  $ caff --no-download --no-sign --no-export-old "`cat ksp-fingerprints.txt`"
+  $ xargs caff --no-sign --no-export-old --no-mail     <ksp-fingerprints.txt
+  $ xargs caff --no-download --no-export-old --no-mail <ksp-fingerprints.txt
+  $ xargs caff --no-download --no-sign --no-export-old <ksp-fingerprints.txt
 
 * If you have multiple local keys, use -u <mykey1>,<mykey2>.
 

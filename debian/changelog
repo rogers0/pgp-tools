@@ -5,6 +5,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Properly MIME-Q encode e-mail headrs. (Closes: #659971)
     + Convert internationalized addresses to ASCII in e-mail envelopes and
       headers. (Closes: #637222)
+    + Adapt patch from Julius Seemayer to reopen STDIN as a TTY.
+      (Closes: #723024)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 
