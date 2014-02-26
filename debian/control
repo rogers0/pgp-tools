@@ -16,7 +16,8 @@ Package: signing-party
 Architecture: any
 Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg,
  libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl,
- libmailtools-perl, libterm-readkey-perl, libclass-methodmaker-perl, qprint
+ libmailtools-perl, libterm-readkey-perl, libclass-methodmaker-perl,
+ libnet-idn-encode-perl, qprint
 Recommends: default-mta | mail-transport-agent, libpaper-utils,
  libgd-gd2-noxpm-perl | libgd-gd2-perl,
  libtext-iconv-perl | libintl-perl | recode, dialog | whiptail

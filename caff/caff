@@ -322,6 +322,7 @@ use Text::Template;
 use MIME::Entity;
 use Encode;
 use I18N::Langinfo;
+use Net::IDN::Encode qw{email_to_ascii};
 use Fcntl;
 use IO::Select;
 use Getopt::Long;
@@ -521,6 +522,8 @@ sub load_config() {
 	my $locale = Encode::find_encoding(langinfo(I18N::Langinfo::CODESET()));
 	if (defined $locale) {
 		$CONFIG{$_} = $locale->decode($CONFIG{$_}) for qw/owner mail-template/;
+		$CONFIG{$_} = email_to_ascii($locale->decode($CONFIG{$_}))
+			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
 	}
 };
 
@@ -874,7 +877,7 @@ sub create_mail($$$@) {
 	};
 
 	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
-	$message_entity->head->add("To", $address);
+	$message_entity->head->add("To", email_to_ascii(Encode::decode('utf-8', $address)));
 	$message_entity->head->add("From", '"'.Encode::encode('MIME-Q', $CONFIG{'owner'}).'" <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Sender", '"'.Encode::encode('MIME-Q', $CONFIG{'owner'}).'" <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
