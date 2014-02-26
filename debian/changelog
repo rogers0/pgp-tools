@@ -7,6 +7,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       headers. (Closes: #637222)
     + Adapt patch from Julius Seemayer to reopen STDIN as a TTY.
       (Closes: #723024)
+    + Allow local and owner keyids to be specified as fingerprints.
+      (Closes: #635359)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 

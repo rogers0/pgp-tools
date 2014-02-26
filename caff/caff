@@ -495,9 +495,10 @@ sub load_config() {
 	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
 	die ("$PROGRAM_NAME: keyid is not an array ref in $config.\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
 	for my $keyid (@{$CONFIG{'keyid'}}) {
-		$keyid =~ /^[A-F0-9]{16}$/i or die ("$PROGRAM_NAME: key $keyid is not a long (16 digit) keyid in $config.\n");
+		$keyid =~ /^((?:0x)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/i
+		  or die ("$PROGRAM_NAME: key $keyid is not specified as a long (16 digit) keyid or fingerprint in $config.\n");
 	};
-	@{$CONFIG{'keyid'}} = map { uc } @{$CONFIG{'keyid'}};
+	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
 	$CONFIG{'keyserver'} = 'pool.sks-keyservers.net' unless defined $CONFIG{'keyserver'};
 	$CONFIG{'gpg'} = 'gpg' unless defined $CONFIG{'gpg'};
@@ -974,14 +975,16 @@ sub get_local_user_keys() {
 	# Check every key defined by the user...
 	for my $user_key (@key_list) {
 		
-		$user_key =~ s/^0x//i;
 		$user_key = uc($user_key);
-		
-		unless ($user_key =~ m/^([A-F0-9]{8}|[A-F0-9]{16}|[A-F0-9]{40})$/) {
+
+		unless ($user_key =~ m/^(?:0X)?[A-F0-9]{8}|(?:0X)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5}$/) {
 			mywarn "Local-user $user_key is not a valid keyid.";
 			next;
 		}
 		
+		$user_key =~ s/^0x//i;
+		$user_key =~ y/ //d;
+
 		unless (grep (/$user_key$/, @{$CONFIG{'keyid'}})) {
 			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used).";
 			next;
