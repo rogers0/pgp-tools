@@ -12,6 +12,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Dump gpg's STDERR after importing the keys. (Closes: #612178)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
+    + Wrap long UIDs (when used with --latex) and digest lines.
+      (Closes: #738718)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 

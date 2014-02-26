@@ -322,17 +322,31 @@ EOF
 while (<TXT>) {
 	$line++;
 	$_ = myrecode($_, $fromcharset, $charset);
-	if (/^MD5 Checksum:/ && defined $MD5) {
-		s/[_[:xdigit:]][_ [:xdigit:]]+_/$MD5/;
-	}
-	if (/^SHA1 Checksum:/ && defined $SHA1) {
-		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA1/;
-	}
-	if (/^SHA256 Checksum:/ && defined $SHA256) {
-		s/[_[:xdigit:]][_ [:xdigit:]]+_/$SHA256/;
-	}
-	if (/^RIPEMD160 Checksum:/ && defined $RIPEMD160) {
-		s/[_[:xdigit:]][_ [:xdigit:]]+_/$RIPEMD160/;
+	my $md;
+	if (/^(?<md>\S+) Checksum:/) {
+		if ($+{md} eq 'MD5') {
+			$md = $MD5;
+		} elsif ($+{md} eq 'SHA1') {
+			$md = $SHA1;
+		} elsif ($+{md} eq 'SHA256') {
+			$md = $SHA256;
+		} elsif ($+{md} eq 'RIPEMD160') {
+			$md = $RIPEMD160;
+		}
+		if (!defined $md) {
+			warn "Unknown digest $+{md}";
+		} else {
+			$md =~ s/\s//g;
+			my $r = $_;
+			while ( /^(?:.*_)?$/ ) {
+				$line++;
+				$_ = <TXT>;
+				$r .= $_;
+			}
+			$r =~ s/_/%c/g;
+			print WRITE sprintf ($r, unpack ("C*", $md));
+			next;
+		}
 	}
 
 	if ( m/^[0-9]+\s+\[ \] Fingerprint OK/ ){
@@ -372,7 +386,15 @@ while (<TXT>) {
 		print WRITE "[$inc] incoming signatures\n" if $inc =~ /\S/;
 		if ($refresh or $latex) {
 			foreach $uid (@{$uids{$key}}) {
-				print WRITE print_tag($key, $uid) . " $uid\n";
+				my $tag = print_tag($key, $uid);
+				if (!$latex) {
+					print WRITE $tag .' '. $uid,"\n";
+				} else {
+					for (my $i = 0; $i < length $uid; $i+=78) {
+						print WRITE ($i ? ' ' x length $tag : $tag ), ' ',
+									substr ($uid, $i, 78), "\n";
+					}
+				}
 				if ($latex and ($uid =~ /^\[jpeg image/)) {
 					$photocount++;
 					print WRITE "\\begin{flushright}\n";
