@@ -321,6 +321,7 @@ use File::Temp qw{tempdir};
 use Text::Template;
 use MIME::Entity;
 use Encode;
+use I18N::Langinfo;
 use Fcntl;
 use IO::Select;
 use Getopt::Long;
@@ -517,6 +518,10 @@ sub load_config() {
 	if ((defined $CONFIG{'also-encrypt-to'}) && ! (ref($CONFIG{'also-encrypt-to'}) eq 'ARRAY')) {
 		$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ];
 	};
+	my $locale = Encode::find_encoding(langinfo(I18N::Langinfo::CODESET()));
+	if (defined $locale) {
+		$CONFIG{$_} = $locale->decode($CONFIG{$_}) for qw/owner mail-template/;
+	}
 };
 
 sub make_gpg_fds() {
@@ -790,7 +795,7 @@ sub create_mail($$$@) {
 
 	my @uids;
 	for my $key (@keys) {
-	    push @uids, $key->{'text'};
+	    push @uids, Encode::decode('utf-8',$key->{'text'});
 	};
 	my $message = $template->fill_in(HASH => { key => $key_id,
 						   uids => \@uids,
@@ -801,7 +806,7 @@ sub create_mail($$$@) {
 		Type        => "text/plain",
 		Charset     => "utf-8",
 		Disposition => 'inline',
-		Data        => $message);
+		Data        => Encode::encode('utf-8',$message));
 
 	my @key_entities;
 	for my $key (@keys) {
