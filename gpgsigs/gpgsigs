@@ -50,7 +50,8 @@ sub usage($$)
 
 Usage: $PROGRAM_NAME [-r] [-t <charset>] <keyid> <keytxt> [<outfile>]
 
-keyid is a long or short keyid (e.g. DE7AAF6E94C09C7F or 94C09C7F)
+keyid is a long or short keyid (e.g. DE7AAF6E94C09C7F or 94C09C7F) or a
+key fingerprint
 separate multiple keyids with ','
 -r            call gpg --recv-keys before proceeding
 -f <charset>  convert <keytxt> from charset
@@ -118,7 +119,9 @@ my @mykeys = split /,/, uc(shift @ARGV);
 my $keytxt = (shift @ARGV) || usage(*STDERR, 1);
 my $outfile = (shift @ARGV) || '-';
 
-map { s/^0x//i; } @mykeys;
+map { y/ //d if /^(?:[0-9A-F]{4} ){5}(?: [0-9A-F]{4}){5}$/; # remove spaces in fprs
+	  /^[0-9A-F]{40}$/ ? s/.{24}// : s/^0x//i;
+	} @mykeys;
 my %uids = map { $_ => [] } @mykeys;
 
 if (!@mykeys || scalar @ARGV) {
@@ -132,15 +135,18 @@ foreach my $falsekey (grep { $_ !~ /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys
 -r $keytxt or die ("$keytxt does not exist\n");
 
 
-# get list of keys in file
-my @keys;
+# get list of keys in file (from fingerprints if available)
+my (@keys, @shortkeys);
 open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
 while (<TXT>) {
-	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
-		push @keys, $1;
+	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2}/ ) {
+		push @shortkeys, $1;
+	} elsif ( m/^\s+Key fingerprint = ((?:[0-9A-F]{4} ){5}(?: [0-9A-F]{4}){5}|[0-9A-F]{40})$/ ) {
+		push @keys, substr ($1 =~ y/ //dr, -16);
 	}
 }
 close TXT;
+@keys = @shortkeys unless @keys;
 
 
 # get all known signatures
@@ -167,10 +173,9 @@ while (<SIGS>) {
 		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
 		$uid = myrecode($uid, "UTF-8", $charset);
 
-		my ($shortkey) = substr $key, -8;
 		# Remember non-revoked uids
 		next if $uidstatus eq "r";
-		push @{$uids{$shortkey}}, $uid;
+		push @{$uids{$key}}, $uid;
 		next;
 	}
 	if ( m/^uat:(.)::::[^:]+::([0-9A-F]+)::\d+ (\d+)/ ) { # uat:-::::2006-08-03::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
@@ -180,13 +185,11 @@ while (<SIGS>) {
 		$uid = "[jpeg image of size $size]";
 		next if $uidstatus eq "r";
 		if ($latex and not $photocount) { # call once per key
-			my ($shortkey) = substr $key, -8;
-			system "rm -f $shortkey.[1-9]*.eps";
-			system "gpg --photo-viewer 'gpgsigs-eps-helper $shortkey' --list-options show-photos --list-key $key > /dev/null";
+			system "rm -f $key.[1-9]*.eps";
+			system "gpg --photo-viewer 'gpgsigs-eps-helper $key' --list-options show-photos --list-key $key >/dev/null";
 			$photocount = 1;
 		}
-		my ($shortkey) = substr $key, -8;
-		push @{$uids{$shortkey}}, $uid;
+		push @{$uids{$key}}, $uid;
 		next;
 	}
 	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
@@ -225,9 +228,11 @@ while (<SIGS>) {
 close SIGS;
 print STDERR "\n";
 
-for my $k ( keys %{$sigs} ) {
-	if ( $k =~ m/^[0-9A-F]{8}([0-9A-F]{8})$/ ) {
+foreach my $k ( keys %uids ) {
+	# if @mykeys were given as short keyids, copy sigs and uids for these keyids
+	if ( $k =~ m/^[0-9A-F]{8}([0-9A-F]{8})$/ and grep { $1 eq $_ } @mykeys ) {
 		$sigs->{$1} = $sigs->{$k};
+		$uids{$1} = $uids{$k};
 	}
 }
 
@@ -342,7 +347,7 @@ while (<TXT>) {
 		next;
 	}
 
-	if ( m/^pub  +(?:\d+)[DR]\/([0-9A-F]{8}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
+	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
 		$key = $1;
 		$uid = $2;
 		#if ($uid) { # in gpg 1.2, the first uid is here
@@ -354,7 +359,9 @@ while (<TXT>) {
 		next;
 	}
 
-	if ( m/^ *Key fingerprint/ ) {
+	if ( m/^\s+Key fingerprint = ((?:[0-9A-F]{4} ){5}(?: [0-9A-F]{4}){5}|[0-9A-F]{40})$/ ) {
+		# derive the keyid from the fingerprint if available
+		$key = substr $1 =~ y/ //dr, -16;
 		print WRITE;
 		my $inc = "";
 		foreach my $mykey (@mykeys) {

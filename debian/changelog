@@ -10,6 +10,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Allow local and owner keyids to be specified as fingerprints.
       (Closes: #635359)
     + Dump gpg's STDERR after importing the keys. (Closes: #612178)
+  * gpgsigs:
+    + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 
