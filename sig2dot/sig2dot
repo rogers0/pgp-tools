@@ -232,7 +232,7 @@ while (my $line = <>)
 	$name{$owner} = $id; # gpg 1.4 fixup
       }
   
-#      unless (defined @{$sigs{$owner}})
+#      unless (@{$sigs{$owner}})
 #      {
 #        @{$sigs{$owner}} = ();
 #      }
