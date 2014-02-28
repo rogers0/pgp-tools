@@ -47,6 +47,10 @@ fi
 if [ -n "$EMAIL" ]; then
 	FROM="$EMAIL"
 fi
+if [ -z "$FROM" ]; then
+       echo "Error: No EMAIL set in ~/.gpg-mailkeysrc and no FROM set in environment."
+       exit 1
+fi
 if [ -z "$SUBJECT" ]; then
 	SUBJECT="Your signed GPG key"
 fi
@@ -83,9 +87,7 @@ while [ -n "$1" ]; do
 	BOUNDARY="ksp-$$-boundary-$NANOTIME"
 	
 	printf "$ADDR:"
-	if [ $FROM ]; then
-		printf >$TEMPFILE "From: $NAME <$FROM>\n"
-	fi
+	printf >$TEMPFILE "From: $NAME <$FROM>\n"
 cat << EOM >> $TEMPFILE
 To: $ADDR
 Subject: $SUBJECT
