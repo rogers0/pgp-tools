@@ -10,8 +10,9 @@
 if [ $# -ne 5 ]; then
     cat <<EOF
 Usage: $0 input output datestring organizer title
-Or:    $0 -     output datestring organizer title
-       to read from STDIN
+
+Use a single hyphen-minus (-) in place of input to read from STDIN
+(resp. of output to write to STDOUT).
 Example:
        echo 9AD7E3DB 54C12701 |\\
        $0 - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
@@ -26,7 +27,7 @@ date="$3"
 org="$4"
 title=$(echo "$5"|tr a-z A-Z|sed 's/\(.\)/\1 /g')
 
-exec > "$output"
+[ "$output" = - ] && output=/path/to/ksp-file.txt || { exec > "$output"; }
 
 # Date of event
 LANG=C date --date="$date" +"%A, %B %e, %Y;  %H:%M"
