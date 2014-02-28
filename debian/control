@@ -23,7 +23,7 @@ Recommends: default-mta | mail-transport-agent, libpaper-utils,
  libtext-iconv-perl | libintl-perl | recode, dialog | whiptail
 # springraph
 Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, mutt,
- texlive-latex-recommended
+ texlive-latex-recommended, texlive-xetex, fonts-droid
 Provides: sig2dot, springgraph, keyanalyze
 Description: Various OpenPGP related tools
  signing-party is a collection for all kinds of PGP/GnuPG related things,

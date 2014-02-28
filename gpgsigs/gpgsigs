@@ -185,10 +185,10 @@ while (<SIGS>) {
 		$uid = "[jpeg image of size $size]";
 		next if $uidstatus eq "r";
 		if ($latex and not $photocount) { # call once per key
-			unlink glob "$key.[1-9]*.eps";
+			unlink glob "$key.[1-9]*.jpg";
 			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
 			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
-			system 'gpg', '--photo-viewer', "/usr/share/signing-party/gpgsigs-eps-helper $key",
+			system 'gpg', '--photo-viewer', "/usr/share/signing-party/gpgsigs-helper $key",
 						  '--list-options', 'show-photos', '--list-key', $key;
 			open STDOUT, '>&=', $stdout or die "can't restore STDOUT: $!";
 			$photocount = 1;
@@ -317,8 +317,19 @@ if ($latex) {
 \documentclass{article}
 \usepackage[margin=2cm]{geometry}
 \usepackage{alltt}
-\usepackage{graphicx}
-\usepackage{grffile}
+\usepackage{graphicx,grffile}
+\usepackage{ifluatex,ifxetex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0
+  \usepackage[utf8x]{inputenc}
+\else
+  \usepackage[log-declarations=false]{xparse}
+  \usepackage{fontspec}
+  \setmonofont{Droid Sans Mono}
+  \ifxetex
+    \usepackage[quiet]{xeCJK}
+    \CJKfontspec{Droid Sans Fallback}
+  \fi
+\fi
 \begin{document}
 \begin{alltt}
 EOF
@@ -422,6 +433,9 @@ while (<TXT>) {
 		print WRITE print_tag($key, $uid) . " $_";
 		next;
 	}
+	if ( /^[_-]{50,}$/ and $latex ) {
+		$_ = "\n\\hrule\n";
+	}
 	print WRITE;
 }
 
@@ -498,7 +512,7 @@ since the input text was generated.
 =item B<--latex>
 
 Generate LaTeX output, including photo IDs. Implies B<--refresh>.
-B<Note:> This writes eps files to the current directory.
+B<Note:> This writes jpg files to the current directory.
 
 =item I<keyid>
 

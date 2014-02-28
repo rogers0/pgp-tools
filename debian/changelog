@@ -18,6 +18,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       (Closes: #738718)
     + Apply patch from Tanguy Ortolo to specify the photo-viewer with its
       absolute path. (Closes: #693906)
+    + Make --latex produce a {pdf,lua,Xe}LaTeX-compatible output.
+      (Closes: #618781)
   * gpg-mailkeys:
     + Apply patch from Stefan Huber to check for empty FROM. (Closes: #727000)
   * gpgparticipants:
