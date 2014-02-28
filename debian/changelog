@@ -11,6 +11,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Allow local and owner keyids to be specified as fingerprints.
       (Closes: #635359)
     + Dump gpg's STDERR after importing the keys. (Closes: #612178)
+    + Create the mail files in ~/.caff/keys when mail=no. (Closes: #652686)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.

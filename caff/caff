@@ -235,7 +235,7 @@ With multiple keyids, sign with each key in turn.
 
 =over
 
-=item B<mail> [boolean]
+=item B<mail> [yes|ask-yes|ask-no|no]
 
 Whether to send mails. This is a quad-option, with which you can set the
 behaviour: yes always sends, no never sends; ask-yes and ask-no asks, for
@@ -1478,16 +1478,14 @@ for my $keyid (@keyids_ok) {
 	if (scalar @UIDS == 0) {
 		info("found no signed uids for $keyid");
 	} else {
-		next if ($CONFIG{'mail'} eq 'no'); # do not send mail
-
 		my @attached;
 		for my $uid (@UIDS) {
 			trace("UID: $uid->{'text'}\n");
 			if ($uid->{'is_uat'}) {
-				my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email sent?", 1);
+				my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email?", 1);
 				push @attached, $uid if $attach;
 			} elsif ($uid->{'text'} !~ /@/) {
-				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email sent?", 1);
+				my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email?", 1);
 				push @attached, $uid if $attach;
 			};
 		};
@@ -1499,7 +1497,8 @@ for my $keyid (@keyids_ok) {
 				$address =~ s/.*<(.*)>.*/$1/;
 				my $mail = create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 				if (defined $mail) {
-					my $should_send_mail = ask("Mail signature for $uid->{'text'} to '$address'?", $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes');
+					my $should_send_mail = $CONFIG{'mail'} eq 'no' ? 0 :
+						ask("Mail signature for $uid->{'text'} to '$address'?", $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes');
 					send_message($mail) if $should_send_mail;
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
