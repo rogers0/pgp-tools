@@ -20,7 +20,6 @@
 # see the Debian changelog for further changes.
 
 my $VERSION = qq$Rev$;
-$ENV{PATH} .= ":/usr/share/signing-party";
 
 use strict;
 use warnings;
@@ -189,7 +188,8 @@ while (<SIGS>) {
 			unlink glob "$key.[1-9]*.eps";
 			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
 			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
-			system 'gpg', '--photo-viewer', "gpgsigs-eps-helper $key", '--list-options', 'show-photos', '--list-key', $key;
+			system 'gpg', '--photo-viewer', "/usr/share/signing-party/gpgsigs-eps-helper $key",
+						  '--list-options', 'show-photos', '--list-key', $key;
 			open STDOUT, '>&=', $stdout or die "can't restore STDOUT: $!";
 			$photocount = 1;
 		}
