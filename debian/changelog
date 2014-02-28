@@ -1,6 +1,7 @@
 signing-party (1.1.6-1) UNRELEASED; urgency=low
 
   [ Guilhem Moulin ]
+  * Avoid unnecessary forks and calls to the command shell.
   * caff:
     + Properly MIME-Q encode e-mail headrs. (Closes: #659971)
     + Convert internationalized addresses to ASCII in e-mail envelopes and

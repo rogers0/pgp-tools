@@ -443,8 +443,8 @@ while($continue > $done)
   if (0)
   {
     &draw;
-    open (XV,"| xv -wait 1 -");
-    #open (XV,"| xloadimage -delay 1 stdin");
+    open XV,'|-', qw/xv -wait 1 -/;
+    #open XV,'|-', qw/xloadimage -delay 1 stdin/;
     binmode XV;
     print XV $im->png;
     close XV;

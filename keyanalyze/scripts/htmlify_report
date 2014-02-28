@@ -11,7 +11,7 @@ my %UID;
 sub get_uid {
 	my $key = shift;
 	return $UID{$key} if $UID{$key};
-	open G, "gpg --list-key --fixed-list-mode --with-colon $keyring $key |" or die "gpg: $!";
+	open G, '-|', qw/gpg --list-key --fixed-list-mode --with-colon/, $keyring, $key or die "gpg: $!";
 	while(<G>) {
 		next unless /^uid:[-qmfue]::::\d*::[\dA-F]*::(.+):$/;
 		my $name = $1;

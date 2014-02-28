@@ -179,11 +179,11 @@ sub install_gpgdir() {
         "gpgdir to $install_dir: $!";
 
     if ($non_root_user) {
-        open F, "< ${install_dir}/gpgdir" or die "[*] Could not open ",
+        open F, '<', "$install_dir/gpgdir" or die "[*] Could not open ",
             "${install_dir}/gpgdir: $!";
         my @lines = <F>;
         close F;
-        open P, "> ${install_dir}/gpgdir.tmp" or die "[*] Could not open ",
+        open P, '>', "$install_dir/gpgdir.tmp" or die "[*] Could not open ",
             "${install_dir}/gpgdir.tmp: $!";
         for my $line (@lines) {
             ### change the lib dir to new homedir path
@@ -230,7 +230,7 @@ sub install_perl_module() {
     my $mod_dir = $required_perl_modules{$mod_name}{'mod-dir'};
 
     if (-e "$mod_dir/VERSION") {
-        open F, "< $mod_dir/VERSION" or
+        open F, '<', "$mod_dir/VERSION" or
             die "[*] Could not open $mod_dir/VERSION: $!";
         $version = <F>;
         close F;
@@ -317,7 +317,7 @@ sub install_manpage() {
     if (-e '/etc/man.config') {
         ### prefer to install $manpage in /usr/local/man/man1 if
         ### this directory is configured in /etc/man.config
-        open M, '< /etc/man.config' or
+        open M, '<', '/etc/man.config' or
             die "[*] Could not open /etc/man.config: $!";
         my @lines = <M>;
         close M;
@@ -408,7 +408,7 @@ sub is_cygwin() {
     my $rv = 0;
 
     ### get OS output from uname
-    open UNAME, "uname -o |" or return $rv;
+    open UNAME, '-|', qw/uname -o/ or return $rv;
     while (<UNAME>) {
         $rv = 1 if /Cygwin/;
     }

@@ -51,7 +51,7 @@ foreach my $key (sort { $msd{$a} <=> $msd{$b} } keys %msd) {
 	last if $rank and $rank > $top;
 	$oldmsd = $msd{$key};
 	my $name = "";
-	open G, "gpg --list-key --fixed-list-mode --with-colon --trust-model always $keyring $key |" or die "gpg: $!";
+	open G, '-|', qw/gpg --list-key --fixed-list-mode --with-colon --trust-model always/, $keyring, $key or die "gpg: $!";
 	while(<G>) {
 		#uid:u::::1082202576::1DC0BEA2AC64671CC902D50B8121F6E4E6336E15::Christoph Berg <cb@df7cb.de>:
 		next unless /^uid:[-qmfue]::::\d*::[\dA-F]*::(.+):$/;

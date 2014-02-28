@@ -480,7 +480,7 @@ sub load_config() {
 		print "No configfile $config present, I will use this template:\n";
 		my $template = generate_config();
 		print "$template\nPlease edit $config and run caff again.\n";
-		open F, ">$config" or die "$config: $!";
+		open F, '>', $config or die "$config: $!";
 		print F $template;
 		close F;
 		exit(1);
@@ -1463,7 +1463,7 @@ for my $keyid (@keyids_ok) {
 			-d $keydir  || make_path($keydir , {mode => 0700}) or die ("Cannot create $keydir $!\n");
 
 			my $keyfile = "$keydir/$longkeyid.key.$uid_number.".sanitize_uid($this_uid_text).".asc";
-			open (KEY, ">$keyfile") or die ("Cannot open $keyfile: $!\n");
+			open (KEY, '>', $keyfile) or die ("Cannot open $keyfile: $!\n");
 			print KEY $asciikey;
 			close KEY;
 
@@ -1504,7 +1504,7 @@ for my $keyid (@keyids_ok) {
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
 					my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
-					open (MAILFILE, ">$mailfile") or die ("Cannot open $mailfile: $!\n");
+					open (MAILFILE, '>', $mailfile) or die ("Cannot open $mailfile: $!\n");
 					print MAILFILE $mail->stringify();
 					close MAILFILE;
 				} else {

@@ -251,7 +251,7 @@ unless ($decrypt_dir or $encrypt_dir or $test_and_exit) {
 push @exclude_patterns, $exclude_pat if $exclude_pat;
 
 if ($exclude_file) {
-    open P, "< $exclude_file" or die "[*] Could not open file: $exclude_file";
+    open P, '<', $exclude_file or die "[*] Could not open file: $exclude_file";
     my @lines = <P>;
     close P;
     for my $line (@lines) {
@@ -265,7 +265,7 @@ if ($exclude_file) {
 push @include_patterns, $include_pat if $include_pat;
 
 if ($include_file) {
-    open P, "< $include_file" or die "[*] Could not open file: $include_file";
+    open P, '<', $include_file or die "[*] Could not open file: $include_file";
     my @lines = <P>;
     close P;
     for my $line (@lines) {
@@ -843,7 +843,7 @@ sub handle_old_obfuscated_map_file() {
 
     my @existing_obfuscated_files = ();
 
-    open F, "< $obfuscate_map_filename" or die "[*] Could not open ",
+    open F, '<', $obfuscate_map_filename or die "[*] Could not open ",
         "$obfuscate_map_filename: $!";
     while (<F>) {
         if (/^\s*.*\s+(gpgdir_\d+_\d+.gpg)/) {
@@ -857,7 +857,7 @@ sub handle_old_obfuscated_map_file() {
     if (@existing_obfuscated_files) {
         ### there are some obfuscated files from a previous gpgdir
         ### execution
-        open G, "> $obfuscate_map_filename" or die "[*] Could not open ",
+        open G, '>', $obfuscate_map_filename or die "[*] Could not open ",
             "$obfuscate_map_filename: $!";
         print G for @existing_obfuscated_files;
         close G;
@@ -868,7 +868,7 @@ sub handle_old_obfuscated_map_file() {
 sub append_obfuscated_mapping() {
     my ($filename, $encrypt_filename) = @_;
 
-    open G, ">> $obfuscate_map_filename" or die "[*] Could not open ",
+    open G, '>>', $obfuscate_map_filename or die "[*] Could not open ",
         "$obfuscate_map_filename: $!";
     print G "$filename $encrypt_filename\n";
     close G;
@@ -885,7 +885,7 @@ sub import_obfuscated_file_map() {
     &decrypt_file("$obfuscate_map_filename.gpg",
             $obfuscate_map_filename, $NO_DEL_SOURCE_FILE);
 
-    open G, "< $obfuscate_map_filename" or die "[*] Could not open ",
+    open G, '<', $obfuscate_map_filename or die "[*] Could not open ",
         "$obfuscate_map_filename: $!";
     while (<G>) {
         if (/^\s*(.*)\s+(gpgdir_\d+_\d+.gpg)/) {
@@ -901,7 +901,7 @@ sub get_homedir() {
     my $uid = $<;
     my $homedir = '';
     if (-e '/etc/passwd') {
-        open P, '< /etc/passwd' or
+        open P, '<', '/etc/passwd' or
             die "[*] Could not open /etc/passwd. Exiting.\n";
         my @lines = <P>;
         close P;
@@ -923,7 +923,7 @@ sub get_homedir() {
 
 sub get_key() {
     if (-e "${homedir}/.gpgdirrc") {
-        open F, "< ${homedir}/.gpgdirrc" or die "[*] Could not open ",
+        open F, '<', "$homedir/.gpgdirrc" or die "[*] Could not open ",
             "${homedir}/.gpgdirrc.  Exiting.\n";
         my @lines = <F>;
         close F;
@@ -947,7 +947,7 @@ sub get_key() {
 "    default GnuPG key defined in ~/.gnupg/options";
     }
     print "[+] Creating gpgdir rc file: $homedir/.gpgdirrc\n";
-    open F, "> ${homedir}/.gpgdirrc" or die "[*] Could not open " .
+    open F, '>', "$homedir/.gpgdirrc" or die "[*] Could not open " .
         "${homedir}/.gpgdirrc.  Exiting.\n";
 
     print F <<_CONFIGRC_;
@@ -1019,7 +1019,7 @@ sub get_password() {
     return if $use_gpg_agent;
 
     if ($pw_file) {
-        open PW, "< $pw_file" or die "[*] Could not open $pw_file: $!";
+        open PW, '<', $pw_file or die "[*] Could not open $pw_file: $!";
         $pw = <PW>;
         close PW;
         chomp $pw;
@@ -1075,7 +1075,7 @@ sub test_mode() {
             die "[*] test_mode(): Could not remove $test_file.gpg: $!";
     }
 
-    open G, "> $test_file" or
+    open G, '>', $test_file or
         die "[*] test_mode(): Could not create $test_file: $!";
     print G "gpgdir test\n";
     close G;
@@ -1106,7 +1106,7 @@ sub test_mode() {
         die "[*] test_mode(): Could not decrypt $test_file.gpg ",
             "(try adding -v).\n";
     }
-    open F, "< $test_file" or
+    open F, '<', $test_file or
         die "[*] test_mode(): Could not open $test_file: $!";
     my $line = <F>;
     close F;

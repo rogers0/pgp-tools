@@ -192,7 +192,7 @@ sub md5_check() {
     my $file = shift;
     &download_file("$file.md5");
     ### check MD5 sum
-    open MD5, "md5sum -c $file.md5 |"
+    open MD5, '-|', qw/md5sum -c/, "$file.md5"
         or die $!;
     my $sum_line = <MD5>;
     close MD5;
@@ -226,7 +226,7 @@ sub get_latest_version() {
         $cmd .= ' > /dev/null 2>&1';
     }
     system $cmd;
-    open F, "< $project-latest" or
+    open F, '<', "$project-latest" or
             die "[*] Could not open $project-latest: $!";
     my $line = <F>;
     close F;

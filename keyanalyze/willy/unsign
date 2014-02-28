@@ -88,7 +88,7 @@ foreach $key (@ids) {
 	my @third = set_diff(\@nonsigned, \@first);
 	my @second = set_diff(\@nonsigners, \@nonsigned);
 
-	open(KEY, ">>$name") or die "Cannot open $name\n";
+	open(KEY, '>>', $name) or die "Cannot open $name\n";
 	my $oldfh = select(KEY);
 
 	print_keys("This key has been signed by, but has not signed", @first);

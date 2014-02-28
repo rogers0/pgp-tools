@@ -101,9 +101,8 @@ if ( `which paperconf` && $? == 0 ) {
 }
 
 # open a gpg process we'll be reading from below
-map { s/'/'\\''/g; } @ARGV; # quote single quotes
 # --list-key due to #382794
-open(GPG, "gpg --list-key --with-fingerprint --with-colons '". (join "' '", @ARGV) ."' |");
+open GPG, '-|', qw/gpg --list-key --with-fingerprint --with-colons/, @ARGV;
 
 sub start_postscript {
 # start the PostScript output

@@ -27,6 +27,7 @@ use warnings;
 use English;
 use IPC::Open3;
 use Getopt::Long;
+use File::Spec;
 
 
 sub version($)
@@ -137,7 +138,7 @@ foreach my $falsekey (grep { $_ !~ /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys
 
 # get list of keys in file (from fingerprints if available)
 my (@keys, @shortkeys);
-open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
+open (TXT, '<', $keytxt) or die ("Cannot open $keytxt\n");
 while (<TXT>) {
 	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2}/ ) {
 		push @shortkeys, $1;
@@ -152,11 +153,11 @@ close TXT;
 # get all known signatures
 if ($recv_keys) {
 	print STDERR "Requesting keys from keyserver\n";
-	system "gpg --recv-keys @keys";
+	system qw/gpg --recv-keys/, @keys;
 }
 
 print STDERR "Running --list-sigs, this will take a while ";
-open SIGS, "gpg --fixed-list-mode --with-colons --list-sigs @mykeys @keys 2>/dev/null |"
+open SIGS, '-|', qw/gpg --fixed-list-mode --with-colons --list-sigs/, @mykeys, @keys
 	or die "can't get gpg listing";
 
 my ($key, $uid, $sigs, $photocount);
@@ -185,8 +186,11 @@ while (<SIGS>) {
 		$uid = "[jpeg image of size $size]";
 		next if $uidstatus eq "r";
 		if ($latex and not $photocount) { # call once per key
-			system "rm -f $key.[1-9]*.eps";
-			system "gpg --photo-viewer 'gpgsigs-eps-helper $key' --list-options show-photos --list-key $key >/dev/null";
+			unlink glob "$key.[1-9]*.eps";
+			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
+			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
+			system 'gpg', '--photo-viewer', "gpgsigs-eps-helper $key", '--list-options', 'show-photos', '--list-key', $key;
+			open STDOUT, '>&=', $stdout or die "can't restore STDOUT: $!";
 			$photocount = 1;
 		}
 		push @{$uids{$key}}, $uid;
@@ -238,16 +242,16 @@ foreach my $k ( keys %uids ) {
 
 
 # read checksums
-open MD, "gpg --with-colons --print-md md5 $keytxt|" or warn "can't get gpg md5\n";
+open MD, '-|', qw/gpg --with-colons --print-md md5/, $keytxt or warn "can't get gpg md5\n";
 my $MD5 = <MD>;
 close MD;
-open MD, "gpg --with-colons --print-md sha1 $keytxt|" or warn "can't get gpg sha1\n";
+open MD, '-|', qw/gpg --with-colons --print-md sha1/, $keytxt or warn "can't get gpg sha1\n";
 my $SHA1 = <MD>;
 close MD;
-open MD, "gpg --with-colons --print-md sha256 $keytxt|" or warn "can't get gpg sha256\n";
+open MD, '-|', qw/gpg --with-colons --print-md sha256/, $keytxt or warn "can't get gpg sha256\n";
 my $SHA256 = <MD>;
 close MD;
-open MD, "gpg --with-colons --print-md ripemd160 $keytxt|" or warn "can't get gpg ripemd160\n";
+open MD, '-|', qw/gpg --with-colons --print-md ripemd160/, $keytxt or warn "can't get gpg ripemd160\n";
 my $RIPEMD160 = <MD>;
 close MD;
 
@@ -304,8 +308,9 @@ $uid = undef;
 my $line = 0;
 my $keys = 0;
 print STDERR "Annotating $keytxt, writing into $outfile\n";
-open (TXT, $keytxt) or die ("Cannot open $keytxt\n");
-open (WRITE, '>'.$outfile) or die ("Cannot open $outfile for writing\n");
+open (TXT, '<', $keytxt) or die ("Cannot open $keytxt\n");
+$outfile eq '-' ? *WRITE = *STDOUT :
+	open (WRITE, '>', $outfile) or die ("Cannot open $outfile for writing\n");
 
 if ($latex) {
 	print WRITE <<'EOF';
