@@ -180,6 +180,13 @@ Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
 
 Additional keyids to encrypt messages to. Default: none.
 
+=item B<gpg-sign-type> [string]
+
+The prefix to the "sign" command used to make the signature from gpg's
+shell.  Can be set to a mix of "l" (local), "nr" (non-revocable) or "t"
+(trust) to make a signature of the given type.  See B<gpg(1)> for
+details.  Default: "" (i.e., make a regular, exportable, signature).
+
 =item B<gpg-sign-args> [string]
 
 Additional commands to pass to gpg after the "sign" command.
@@ -270,6 +277,11 @@ The keyid of the key you signed.
 The UIDs for which signatures are included in the mail.
 
 =back
+
+Note that you should probably customize the template if you intend to
+send non-exportable signatures (i.e., if B<gpg-sign-type> contains "l"),
+as uploading such signatures doesn't make sense, and they require the
+import option "import-local-sigs" which isn't set by default.
 
 =item B<reply-to> [string]
 
@@ -532,6 +544,9 @@ sub load_config() {
 		$CONFIG{$_} = email_to_ascii($locale->decode($CONFIG{$_}))
 			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
 	}
+	$CONFIG{'gpg-sign-type'} //= '';
+	die "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.\n"
+		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
 };
 
 sub make_gpg_fds() {
@@ -717,19 +732,15 @@ sub usage($$) {
 sub export_key($$) {
 	my ($gnupghome, $keyid) = @_;
 
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ], 'armor' => 1 );
+	$h{'homedir'} = $gnupghome if defined $gnupghome;
+	push @{$h{'extra_args'}}, qw/--export-options export-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
+
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
-	if (defined $gnupghome) {
-		$gpg->options->hash_init(
-			'homedir' => $gnupghome,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
-			'armor' => 1 );
-	} else {
-		$gpg->options->hash_init(
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
-			'armor' => 1 );
-	};
+	$gpg->options->hash_init( %h );
 	$gpg->options->meta_interactive( 0 );
+
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	my $pid = $gpg->export_keys(handles => $handles, command_args => [ $keyid ]);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
@@ -764,12 +775,14 @@ sub import_key($$) {
 
 	create_trustdb($gnupghome);
 
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ], 'homedir' => $gnupghome );
+	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
+
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $gnupghome,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
+	$gpg->options->hash_init( %h );
 	$gpg->options->meta_interactive( 0 );
+
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	my $pid = $gpg->import_keys(handles => $handles);
 	my ($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
@@ -1264,7 +1277,7 @@ unless (@keyids_ok) {
 if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
-	
+
 unless ($CONFIG{'no-sign'}) {
 	my @local_user = get_local_user_keys();
 
@@ -1279,7 +1292,7 @@ unless ($CONFIG{'no-sign'}) {
 			push @command, '--no-auto-check-trustdb';
 			push @command, '--trust-model=always';
 			push @command, '--edit', $keyid;
-			push @command, 'sign';
+			push @command, $CONFIG{'gpg-sign-type'}.'sign';
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 			print join(' ', @command),"\n";
 			system (@command);

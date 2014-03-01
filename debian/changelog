@@ -14,6 +14,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Create the mail files in ~/.caff/keys when mail=no. (Closes: #652686)
     + Add an option 'mail-cant-encrypt' for special treatment of keys
       without encryption capability. (Closes: #622790)
+    + Adapt patch from oli and add an option 'gpg-sign-type' for custom
+      signature types. (Closes: 679951)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
