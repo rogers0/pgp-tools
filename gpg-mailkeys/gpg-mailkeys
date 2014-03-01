@@ -65,9 +65,6 @@ Here is your signed GPG key.
 Enjoy,
 $NAME"
 fi
-if [ -z "$SENDMAIL_ARGS" ]; then
-	SENDMAIL_ARGS=""
-fi
 
 get_local_charset
 
@@ -125,7 +122,7 @@ Content-Disposition: attachment; filename="$1.asc"
 --$BOUNDARY--
 EOM
 	printf " sending"
-	/usr/sbin/sendmail $SENDMAIL_ARGS -ti <$TEMPFILE
+	${SENDMAIL:-/usr/sbin/sendmail} $SENDMAIL_ARGS -ti <$TEMPFILE
 	rm $TEMPFILE
 	printf " done.\n"
 	shift 1

@@ -32,8 +32,11 @@ Set the subject of the messages you send
 .I TEXT
 Set the body text of the messages
 .TP 13
+.I SENDMAIL
+Set the path to sendmail. Default: /usr/sbin/sendmail
+.TP 13
 .I SENDMAIL_ARGS
-Set arguments to pass to /usr/sbin/sendmail. This can be useful to set
+Set arguments to pass to $SENDMAIL. This can be useful to set
 credentials in order to authenticate to an smtp server when using ssmtp
 for example.
 
