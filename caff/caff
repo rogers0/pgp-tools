@@ -243,6 +243,12 @@ each uid, with according defaults for the question. Default: B<ask-yes>.
 
 In any case, the messages are also written to $CONFIG{'caffhome'}/keys/
 
+=item B<mail-cant-encrypt> [yes|ask-yes|ask-no|no]
+
+The value of this option is considered instead of that of B<mail> for
+recipient keys without encryption capability.  Default to the value of
+B<mail>.
+
 =item B<mail-template> [string]
 
 Email template which is used as the body text for the email sent out
@@ -1152,6 +1158,7 @@ if ( defined $CONFIG{'no-mail'} ||
 } elsif ( !defined $CONFIG{'mail'} ) {
 	$CONFIG{'mail'} = 'ask-yes';
 }
+$CONFIG{'mail-cant-encrypt'} //= $CONFIG{'mail'};
 
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
@@ -1491,14 +1498,15 @@ for my $keyid (@keyids_ok) {
 		};
 
 		notice("Key has no encryption capabilities, mail will be sent unencrypted") unless $can_encrypt;
+		my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 		for my $uid (@UIDS) {
 			if (!$uid->{'is_uat'} && ($uid->{'text'} =~ /@/)) {
 				my $address = $uid->{'text'};
 				$address =~ s/.*<(.*)>.*/$1/;
 				my $mail = create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 				if (defined $mail) {
-					my $should_send_mail = ask("Mail signature for $uid->{'text'} to '$address'?",
-											   $CONFIG{'mail'} ne 'ask-no', $CONFIG{'mail'} eq 'yes', $CONFIG{'mail'} eq 'no');
+					my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $uid->{'text'} to '$address'?",
+											   $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
 					send_message($mail) if $should_send_mail;
 
 					my $keydir = "$KEYSBASE/$DATE_STRING";
