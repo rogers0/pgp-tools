@@ -22,6 +22,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       absolute path. (Closes: #693906)
     + Make --latex produce a {pdf,lua,Xe}LaTeX-compatible output.
       (Closes: #618781)
+    + Allow any checksum algorithm supported by gpg.
   * gpg-mailkeys:
     + Apply patch from Stefan Huber to check for empty FROM. (Closes: #727000)
   * gpgparticipants:
