@@ -192,6 +192,23 @@ details.  Default: "" (i.e., make a regular, exportable, signature).
 Additional commands to pass to gpg after the "sign" command.
 Default: none.
 
+=item B<also-lsign-in-gnupghome> [yes|ask|no]
+
+Whether to locally sign the UIDs in the user's GnuPGHOME, in addition to
+caff's signatures in its own GnuPGHOME.  Such signatures are not
+exportable.  This can be useful when the recipient forgets to upload the
+signatures caff sent (or if they non-exportable as well), as it gives a
+way to keep track of which UIDs were verified.  However, note that local
+signatures will not be deleted once the recipient does the upload and
+the signer refreshes her keyring.
+
+If the value is not I<no> and if B<gpg-sign-type> contains "l", each
+(local) signature is merely exported from caff's own GnuPGHOME to the
+user's.  Otherwise, if the value is I<yes>, each UID signed in caff's
+own GnuPGHOME gets automatically locally signed in the user's; this
+requires a working gpg-agent(1).  If I<ask>, the user is prompted for
+which UIDs to locally sign.  Default: B<no>.
+
 =back
 
 =head2 Keyserver settings
@@ -547,6 +564,16 @@ sub load_config() {
 	$CONFIG{'gpg-sign-type'} //= '';
 	die "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.\n"
 		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
+	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
+	die "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.\n"
+		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/yes ask no/;
+	if ($CONFIG{'also-lsign-in-gnupghome'} eq 'yes') {
+		my ($socket, $pid) = split /:/, $ENV{GPG_AGENT_INFO} // '';
+		unless (defined $socket and -S $socket and (defined $pid and $pid =~ /^[0-9]+$/ ? kill 0, $pid : 0)) {
+			mywarn "Couldn't detect gpg-agent; 'also-lsign-in-gnupghome' falls back to value 'ask'.";
+			$CONFIG{'also-lsign-in-gnupghome'} = 'ask';
+		}
+	}
 };
 
 sub make_gpg_fds() {
@@ -1522,6 +1549,82 @@ for my $keyid (@keyids_ok) {
 
 	# delete uids that haven't been signed
 	$KEYS{$keyid}->{uids} = [ grep {$_->{key}} @{$KEYS{$keyid}->{uids}} ];
+
+	if ($CONFIG{'also-lsign-in-gnupghome'} ne 'no') {
+		###############################
+		# add non-exportable signatures
+		###############################
+
+		import_key_from_gnupghome( $keyid, $GNUPGHOME, undef
+									# do not export our own exportable signatures
+								 , $CONFIG{'gpg-sign-type'} =~ /l/ ? () : 'export-minimal' );
+		# if $CONFIG{'gpg-sign-type'} is 'l', we've copied the (local)
+		# signature to our GnuPHOME and we're done
+		unless ( $CONFIG{'gpg-sign-type'} =~ /l/ ) {
+			if ( $CONFIG{'also-lsign-in-gnupghome'} ne 'yes' ) {
+				# manually lsign the key
+				########################
+				foreach my $local_user (@LOCAL_USER) {
+					my @command;
+					push @command, $CONFIG{'gpg-sign'};
+					push @command, '--local-user', $local_user if defined $local_user;
+					push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+					push @command, '--no-auto-check-trustdb';
+					push @command, '--trust-model=always';
+					push @command, '--edit', $keyid;
+					push @command, 'lsign';
+					push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+					print join(' ', @command),"\n";
+					system (@command);
+				};
+			}
+			else {
+				# auto lsign the key
+				####################
+				my @signers = map {@{$_->{signers}}} @{$KEYS{$keyid}->{uids}};
+				if (@LOCAL_USER && defined $LOCAL_USER[0]) {
+					# which of @LOCAL_USER has signed at least one UID in this key?
+					@signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
+				} else {
+					# no @LOCAL_USER was defined; remove duplicates to avoid double signing
+					@signers = keys %{{ map { $_ => 1 } @signers }}
+				};
+
+				foreach my $u (@signers) {
+					my @signeduids;
+					foreach my $uid (@{$KEYS{$keyid}->{uids}}) {
+						# we use UIDs hashes to discriminate and select UIDs; it's only reliable way to identify them
+						push @signeduids, $uid if grep { $u eq $_ } @{$uid->{signers}} and
+												 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
+					}
+					info("lsigning (by $u) the uid(s) ".(join ',', sort (map {$_->{serial}} @signeduids))." of $longkeyid.");
+
+					my $gpg = GnuPG::Interface->new();
+					$gpg->call( $CONFIG{'gpg'} );
+					$gpg->options->hash_init(
+						'extra_args' => [ '--local-user', $u
+										, '--secret-keyring', $CONFIG{'secret-keyring'}
+										# we know there is a working agent
+										, '--use-agent'
+										, qw{ --no-auto-check-trustdb --trust-model=always --command-fd=0 --no-tty } ] );
+					my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+					my $pid = $gpg->wrap_call(
+						commands     => [ '--edit' ],
+						command_args => [ $keyid ],
+						handles      => $handles );
+
+					debug("Starting edit session");
+					readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					# it's always safe to use hashes to select UIDs
+					readwrite_gpg(join ('', map {"uid $_->{hash}\n"} @signeduids), $inputfd, $stdoutfd, $stderrfd, $statusfd,
+								exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg("lsign\nyes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					waitpid $pid, 0;
+				}
+			}
+		}
+	}
 }
 
 #############

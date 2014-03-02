@@ -16,6 +16,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       without encryption capability. (Closes: #622790)
     + Adapt patch from oli and add an option 'gpg-sign-type' for custom
       signature types. (Closes: 679951)
+    + Add an option 'also-lsign-in-gnupghome' to add non-exportable signatures
+      on the user's GnuPGHOME. (Closes: #680136)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
