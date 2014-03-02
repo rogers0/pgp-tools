@@ -729,12 +729,14 @@ sub usage($$) {
 ######
 # export key $keyid from $gnupghome
 ######
-sub export_key($$) {
-	my ($gnupghome, $keyid) = @_;
+sub export_key($$@) {
+	my ($gnupghome, $keyid, @export_options) = @_;
 
 	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ], 'armor' => 1 );
 	$h{'homedir'} = $gnupghome if defined $gnupghome;
-	push @{$h{'extra_args'}}, qw/--export-options export-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
+
+	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
+	push @{$h{'extra_args'}}, '--export-options', join (',', @export_options) if @export_options;
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
@@ -768,15 +770,18 @@ sub create_trustdb($) {
 };
 
 ######
-# import a key from the scalar $asciikey into a gpg homedirectory in $tempdir
+# import a key from the scalar $asciikey into $gnupghome
 ######
-sub import_key($$) {
-	my ($gnupghome, $asciikey) = @_;
+sub import_key($$@) {
+	my ($gnupghome, $asciikey, @import_options) = @_;
 
 	create_trustdb($gnupghome);
 
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ], 'homedir' => $gnupghome );
-	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
+	$h{homedir} = $gnupghome if defined $gnupghome;
+
+	push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
+	push @{$h{'extra_args'}}, '--import-options', join (',', @import_options) if @import_options;
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
@@ -928,6 +933,7 @@ sub delete_signatures($$$$$$) {
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $keyids) =@_;
 
 	my $signed_by_me = 0;
+	my @signers;
 
 	my ($stdout, $stderr, $status) =
 		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
@@ -949,6 +955,7 @@ sub delete_signatures($$$$$$) {
 				debug("[sigremoval] signed by us ($signer).");
 				$answer = "no";
 				$signed_by_me = $signed_by_me > $created ? $signed_by_me : $created;
+				push @signers, $signer;
 			} else {
 				debug("[sigremoval] not interested in that sig ($signer).");
 				$answer = "yes";
@@ -960,7 +967,7 @@ sub delete_signatures($$$$$$) {
 			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
 	};
 
-	return $signed_by_me;
+	return ($signed_by_me, @signers);
 };
 
 ##
@@ -1023,25 +1030,27 @@ sub get_local_user_keys() {
 ##
 # Import a key from the user gnupghome into a specified gnupghome.
 #
-# @param asciikey      ascii format of the gpg key to import
-# @param dst_gnupghome gnupghome directory where to import the key
+# @param asciikey       ascii format of the gpg key to import
+# @param src_gnupghome  gnupghome directory where to export the key from
+# @param dst_gnupghome  gnupghome directory where to import the key into
+# @param export_options an array of export-options, see gpg(1)
 #
 # @return 0 if successful\n
 #         1 if the key could not be exported.\n
 #         2 if the key could not be imported.
 #
-sub import_key_from_user_gnupghome($$) {
+sub import_key_from_gnupghome($$$@) {
+	my ($asciikey, $src_gpghome, $dst_gpghome, @export_options) = @_;
 	my $err;
-	my ($asciikey, $dst_gpghome) = @_;
 
-	trace("Exporting key $asciikey from your normal GnuPGHOME.");
-	my $key = export_key(undef, $asciikey);
+	trace("Exporting key $asciikey from ".($src_gpghome // "your normal GnuPGHOME").".");
+	my $key = export_key($src_gpghome, $asciikey, @export_options);
 	if (defined $key && $key ne '') {
-		trace("Importing key $asciikey into $GNUPGHOME.");
-		if (import_key($GNUPGHOME, $key)) {
+		trace("Importing key $asciikey into ".($dst_gpghome // "your normal GnuPGHOME").".");
+		if (import_key($dst_gpghome, $key)) {
 			$err = 0;
 		} else {
-			warn("Could not import $asciikey into caff's gnupghome.");
+			warn("Could not import $asciikey into ".($dst_gpghome // "your normal GnuPGHOME").".");
 			$err = 2;
 		}
 	} else {
@@ -1099,7 +1108,7 @@ sub import_keys_to_sign() {
 	# try to import it into our working gnupghome directory
 	if ($CONFIG{'keys-from-gnupg'}) {
 		foreach my $keyid (@KEYIDS) {
-			if (!import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
+			if (!import_key_from_gnupghome($keyid, undef, $GNUPGHOME)) {
 				info("Key $keyid imported from your normal GnuPGHOME.");
 			}
 		}
@@ -1194,7 +1203,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 for my $keyid (@{$CONFIG{'keyid'}}) {
 	info("Importing key $keyid from your normal GnuPGHome.");
-	if (import_key_from_user_gnupghome($keyid, $GNUPGHOME)) {
+	if (import_key_from_gnupghome($keyid, undef, $GNUPGHOME)) {
 		mywarn("Key $keyid not found.");
 	}
 }
@@ -1271,39 +1280,14 @@ unless (@keyids_ok) {
 	exit 0;
 }
 
-###########
-# sign keys
-###########
 if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
 
-unless ($CONFIG{'no-sign'}) {
-	my @local_user = get_local_user_keys();
+my @LOCAL_USER;
+@LOCAL_USER = get_local_user_keys() unless $CONFIG{'no-sign'};
 
-	info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
-	for my $keyid (@keyids_ok) {
-		foreach my $local_user (@local_user) {
-			my @command;
-			push @command, $CONFIG{'gpg-sign'};
-			push @command, '--local-user', $local_user if (defined $local_user);
-			push @command, "--homedir=$GNUPGHOME";
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-			push @command, '--no-auto-check-trustdb';
-			push @command, '--trust-model=always';
-			push @command, '--edit', $keyid;
-			push @command, $CONFIG{'gpg-sign-type'}.'sign';
-			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
-			print join(' ', @command),"\n";
-			system (@command);
-		};
-	};
-};
-
-##################
-# export and prune
-##################
-KEYS:
+my %KEYS;
 for my $keyid (@keyids_ok) {
 	# get key listing
 	#################
@@ -1321,7 +1305,7 @@ for my $keyid (@keyids_ok) {
 		warn ("No data from gpg for list-key $keyid\n");
 		next;
 	};
-	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	my @publine = grep { /^pub:/ } (split /\n/, $stdout);
 	if (scalar @publine == 0) {
 		warn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).\n");
 		next;
@@ -1339,7 +1323,44 @@ for my $keyid (@keyids_ok) {
 		warn ("Didn't find flags in --list-key of key $keyid.\n");
 		next;
 	};
-	my $can_encrypt = $flags =~ /E/;
+
+	my @uids = grep { /^uid:/ } (split /\n/, $stdout);
+	# store the uids to keep track of their hash, which is the only reliable way to distinguish them
+	$KEYS{$keyid} = { longkeyid => $longkeyid
+					, flags => $flags
+					, uids => [ map {my @u = split /:/; { created => $u[5], hash => $u[7], text => $u[9] }} @uids ]
+					};
+}
+
+
+for my $keyid (@keyids_ok) {
+	my $longkeyid = $KEYS{$keyid}->{longkeyid};
+
+	###########
+	# sign keys
+	###########
+	unless ($CONFIG{'no-sign'}) {
+		info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
+		foreach my $local_user (@LOCAL_USER) {
+			my @command;
+			push @command, $CONFIG{'gpg-sign'};
+			push @command, '--local-user', $local_user if defined $local_user;
+			push @command, "--homedir=$GNUPGHOME";
+			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+			push @command, '--no-auto-check-trustdb';
+			push @command, '--trust-model=always';
+			push @command, '--edit', $keyid;
+			push @command, $CONFIG{'gpg-sign-type'}.'sign';
+			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+			print join(' ', @command),"\n";
+			system (@command);
+		};
+	};
+
+
+	##################
+	# export and prune
+	##################
 
 	# export the key
 	################
@@ -1349,7 +1370,6 @@ for my $keyid (@keyids_ok) {
 		next;
 	};
 
-	my @UIDS;
 	my $uid_number = 0;
 	while (1) {
 		my $this_uid_text = '';
@@ -1367,19 +1387,19 @@ for my $keyid (@keyids_ok) {
 
 		# prune it
 		##########
-		$gpg = GnuPG::Interface->new();
+		my $gpg = GnuPG::Interface->new();
 		$gpg->call( $CONFIG{'gpg-delsig'} );
 		$gpg->options->hash_init(
 			'homedir' => $tempdir,
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --command-fd=0 --no-tty } ] );
-		($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-		$pid = $gpg->wrap_call(
+		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		my $pid = $gpg->wrap_call(
 			commands     => [ '--edit' ],
 			command_args => [ $keyid ],
 			handles      => $handles );
 
 		debug("Starting edit session");
-		($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 
 		# delete other uids
 		###################
@@ -1456,7 +1476,7 @@ for my $keyid (@keyids_ok) {
 		# delete signatures
 		###################
 		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
-		my $signed_by_me = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $CONFIG{'keyid'});
+		my ($signed_by_me, @signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $CONFIG{'keyid'});
 		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark uid from delsig
 		if (defined $prune_all_sigs_on_uid) {
 			readwrite_gpg("$prune_all_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
@@ -1487,15 +1507,32 @@ for my $keyid (@keyids_ok) {
 			print KEY $asciikey;
 			close KEY;
 
-			push @UIDS, { text => $this_uid_text, key => $asciikey, serial => $uid_number, "is_uat" => $is_uat };
-
+			# it's a bit inefficient to store the $asciikey in memory,
+			# but it has been pruned so it's shouldn't be too big
+			my $uid = $KEYS{$keyid}->{uids}->[$uid_number-1];
+			$uid->{serial} = $uid_number;
+			$uid->{key} = $asciikey;
+			$uid->{is_uat} = $is_uat;
+			$uid->{signers} = \@signers;
 			info("$longkeyid $uid_number $this_uid_text done.");
 		} else {
 			info("$longkeyid $uid_number $this_uid_text is not signed by me, not writing.");
 		};
 	};
 
-	if (scalar @UIDS == 0) {
+	# delete uids that haven't been signed
+	$KEYS{$keyid}->{uids} = [ grep {$_->{key}} @{$KEYS{$keyid}->{uids}} ];
+}
+
+#############
+# send emails
+#############
+for my $keyid (@keyids_ok) {
+	my $longkeyid = $KEYS{$keyid}->{longkeyid};
+	my $can_encrypt = $KEYS{$keyid}->{flags} =~ /E/;
+	my @UIDS = @{$KEYS{$keyid}->{uids}};
+
+	if (!@UIDS) {
 		info("found no signed uids for $keyid");
 	} else {
 		my @attached;
