@@ -3,7 +3,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
   [ Guilhem Moulin ]
   * Avoid unnecessary forks and calls to the command shell.
   * caff:
-    + Properly MIME-Q encode e-mail headrs. (Closes: #659971)
+    + Properly MIME-Q encode e-mail headers. (Closes: #659971)
     + Convert internationalized addresses to ASCII in e-mail envelopes and
       headers. (Closes: #637222)
     + Adapt patch from Julius Seemayer to reopen STDIN as a TTY.
@@ -15,7 +15,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Add an option 'mail-cant-encrypt' for special treatment of keys
       without encryption capability. (Closes: #622790)
     + Adapt patch from oli and add an option 'gpg-sign-type' for custom
-      signature types. (Closes: 679951)
+      signature types. (Closes: #679951)
     + Add an option 'also-lsign-in-gnupghome' to add non-exportable signatures
       on the user's GnuPGHOME. (Closes: #680136)
   * gpgsigs:

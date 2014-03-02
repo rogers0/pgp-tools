@@ -184,7 +184,7 @@ Additional keyids to encrypt messages to. Default: none.
 
 The prefix to the "sign" command used to make the signature from gpg's
 shell.  Can be set to a mix of "l" (local), "nr" (non-revocable) or "t"
-(trust) to make a signature of the given type.  See B<gpg(1)> for
+(trust) to make a signature of the given type.  See gpg(1) for
 details.  Default: "" (i.e., make a regular, exportable, signature).
 
 =item B<gpg-sign-args> [string]
@@ -1187,8 +1187,7 @@ if ($params->{'version'}) {
 usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
 unless (-t \*STDIN) {
-    # reopen STDIN as a TTY if possible (don't close it first to avoid a
-    # warning)
+	# reopen STDIN as a TTY if possible (don't close it first to avoid a warning)
 	if (open my $TTY, '<', '/dev/tty') {
 		*STDIN = $TTY;
 	} else {
@@ -1229,7 +1228,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 # import own keys
 #################
 for my $keyid (@{$CONFIG{'keyid'}}) {
-	info("Importing key $keyid from your normal GnuPGHome.");
+	info("Importing key $keyid from your normal GnuPGHOME.");
 	if (import_key_from_gnupghome($keyid, undef, $GNUPGHOME)) {
 		mywarn("Key $keyid not found.");
 	}
