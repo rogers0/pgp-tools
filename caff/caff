@@ -42,6 +42,8 @@ caff -- CA - Fire and Forget
 
 =item B<caff> [-eERS] [-m I<yes|ask-yes|ask-no|no>] [-u I<yourkeyid>] I<keyid> [I<keyid> ..]
 
+=item B<caff> [-eERS] [-m I<yes|ask-yes|ask-no|no>] [-u I<yourkeyid>] [I<keyid> ..] <I</path/to/ksp-annotated.txt>
+
 =back
 
 =head1 DESCRIPTION
@@ -52,6 +54,10 @@ that you can sign it.  It then mails each key to all its email addresses - only
 including the one UID that we send to in each mail, pruned from all but self
 sigs and sigs done by you.  The mailed key is encrypted with itself as a means
 to verify that key belongs to the recipient.
+
+The list of keys to sign can also be provided through caff's standard
+input, as gpgparticipants(1) formatted content.  Only keys annotated
+with "Fingerprint OK" and "ID OK" are be considered for signing.
 
 =head1 OPTIONS
 
@@ -704,7 +710,7 @@ sub ask($$;$$) {
 			return 0;
 		};
 
-		$answer = <STDIN>;
+		$answer = <TTY>;
 		chomp $answer;
 		last if ((length $answer == 0) || ($answer =~ m/^[yYnN]$/) );
 		print "What about $yn is so hard to understand?\nAnswer with either 'n' or 'y' or just press enter for the default.\n";
@@ -1184,15 +1190,67 @@ if ($params->{'version'}) {
 	version(\*STDOUT);
 	exit(0);
 };
-usage(\*STDERR, 1) unless scalar @ARGV >= 1;
 
-unless (-t \*STDIN) {
-	# reopen STDIN as a TTY if possible (don't close it first to avoid a warning)
-	if (open my $TTY, '<', '/dev/tty') {
-		*STDIN = $TTY;
-	} else {
-		mywarn("No TTY.")
+if (-t \*STDIN) {
+	# we're already talking to a TTY
+	usage(\*STDERR, 1) unless @ARGV;
+	*TTY = *STDIN;
+} else {
+	my @checksums;
+	my $goodblock;
+	my $got_input; # detect xargs, /dev/null, ...
+	while (<STDIN>) {
+		unless ($got_input) {
+			info("Reading gpgparticipants formatted input on STDIN.");
+			$got_input = 1;
+		}
+
+		if (/^(\S+)\s+Checksum:\s+[_ 0-9A-F]+(?:\s+\[(.)\])?$/i) {
+			# ensure the checksum is (claimed to be) verified
+			my ($md, $r) = ($1, $2);
+			while (!defined $r) {
+				$_ = <STDIN>;
+				if (/^\s+[_ 0-9A-F]+\s+\[(.)\]$/i) {
+					$r = $1;
+				}
+				elsif (!/^(:?\s+[_ 0-9A-F]+)?$/i) {
+					die "Unexpected input line: " .$_. "\n";
+				}
+			}
+			die "$md checksum wasn't verified!\n" unless lc $r eq 'x';
+			info "Found verified $md checksum (assumed good).";
+			push @checksums, uc $md;
+		}
+		elsif (/^(?:-+|_+)$/) {
+			$goodblock = 0;
+		}
+		elsif (/^(#*)(?:\d+)\s+\[(.)\] Fingerprint(?:\(s\))? OK\s+\[(.)\] ID OK\s*$/) {
+			$goodblock = (!$1 and lc $2 eq 'x' and lc $3 eq 'x') ? 1 : 0;
+		}
+		elsif (/^\s+Key fingerprint = ([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/) {
+			info("Ignoring v3 fingerprint ".($1 =~ y/ //dr).".  v3 keys are obsolete.");
+		}
+		elsif (/^\s+Key fingerprint = ([A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
+			my $fpr = ($1 =~ y/ //dr);
+			if ($goodblock) {
+				info ("Adding fingerprint $fpr");
+				push @KEYIDS, $fpr;
+			} else {
+				info ("Ignoring fingerprint $fpr");
+			}
+		}
 	}
+
+	if ($got_input) {
+		if (!@checksums) {
+			mywarn "No checksum found!";
+		} elsif (!grep { my $x = $_; grep { $x eq $_ } qw/SHA256 SHA384 SHA512 SHA224/ } @checksums) {
+			mywarn "No checksum of the SHA-2 family found!";
+		}
+	}
+
+	close STDIN;
+	open TTY, '<', '/dev/tty' or die "No TTY."
 }
 
 for my $hashkey (qw{local-user no-download no-sign no-mail mail keys-from-gnupg}) {
@@ -1223,6 +1281,11 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 	};
 	push @KEYIDS, uc($keyid);
 };
+
+unless (@KEYIDS) {
+	print "No valid key found. Nothing to do.\n";
+	exit;
+}
 
 #################
 # import own keys
