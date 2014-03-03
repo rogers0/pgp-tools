@@ -4,8 +4,8 @@ gpgparticipants \- generate paper list for keysigning party
 .SH SYNOPSIS
 .B gpgparticipants
 .RB [\fIOPTIONS\fR]
-input
-output
+{input|-}
+{output|-}
 datestring
 organizer
 title
@@ -28,6 +28,13 @@ For each algorithm in \fIHASHES\fR, a comma-separated list of digest
 algorithms supported by \fBgpg\fR(1), add a placeholder for the digest
 value (to be filled by the participants) to the output file.  Default:
 SHA256,RIPEMD160.
+
+.SH EXAMPLES
+
+To create a KSP file with all keys present in the keyring:
+
+    gpg --with-colons --fingerprint | grep ^fpr: | cut -d: -f 10 | \\
+        gpgparticipants - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
 
 .SH SEE ALSO
 .BR gpg (1), gpgsigs (1)
