@@ -7,18 +7,53 @@
 # License: GPLv2 or later
 # Copyright Philippe Teuwen <phil a teuwen o org> 2008
 
-if [ $# -ne 5 ]; then
-    cat <<EOF
-Usage: $0 input output datestring organizer title
+usage() {
+    cat <<- EOF
+		Usage: $0 [-a HASHES|--algorithm HASHES] input output datestring organizer title
 
-Use a single hyphen-minus (-) in place of input to read from STDIN
-(resp. of output to write to STDOUT).
-Example:
-       echo 9AD7E3DB 54C12701 |\\
-       $0 - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
-EOF
-    exit 0
-fi
+		Use a single hyphen-minus (-) in place of input to read from STDIN
+		(resp. of output to write to STDOUT).
+		Example:
+		    echo 9AD7E3DB 54C12701 |\\
+		    $0 - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
+	EOF
+    exit ${1:-0}
+}
+
+
+# Handle options and arguments
+##############################
+
+# Use getopt to validate and normalize options and arguments,
+# then reinject them as main arguments
+OPTS=$(getopt -o a:h -l algorithm:,help -n $0 -- "$@") || usage 1
+eval set -- "$OPTS"
+
+# Default options
+algos="SHA256,RIPEMD160"
+
+# Parse options
+while [ "$1" != -- ]; do
+    case "$1" in
+        -a|--algorithm) algos="$2"; shift 2;;
+        -h|--help) usage 0; shift;;
+        *) usage 1;;
+    esac
+done
+
+# Get rid of the '--' left before the arguments
+shift
+
+# Five arguments should remain
+[ $# -eq 5 ] || usage 1
+algos=$(echo "$algos" | tr '[:lower:]' '[:upper:]')
+halgos="$algos"
+
+algos=$(echo "$algos" | tr ',' ' ')
+for algo in $algos; do
+	# Ensure this is a valid algo
+	gpg --print-md "$algo" /dev/null >/dev/null || exit $?
+done
 
 input="$1"
 [ "$input" = "-" ] && input="";
@@ -41,20 +76,72 @@ cat <<EOF
 
 
 Here's what you have to do with this file:
+
 (1) Print this file to paper.
-(2) Compute this file's SHA256 checksum.
-      gpg --print-md sha256 $output       (or use sha256sum)
+
+(2) Compute this file's $(echo "$halgos" | sed -re 's/,([^,]+)$/ and \1/; s/,/& /g') checksum$([ "${algos#* }" = "$algos" ] || echo s).
+
+EOF
+for algo in $algos; do
+	printf "      gpg --print-md %s %s\n" "$algo" "$output"
+done
+cat <<EOF
+
 (3) Fill in the hash values on the printout.
+
 (4) Bring the printout, a pen, and proof of identity to the key signing party
     (and be on time!).
 
-
-SHA256 Checksum: ____ ____   ____ ____   ____ ____   ____ ____           [ ]
-
-                 ____ ____   ____ ____   ____ ____   ____ ____
-
-
 EOF
+for algo in $algos; do
+	echo
+	case "$algo" in
+		MD5) cat <<- EOF
+			MD5 Checksum:  __ __ __ __ __ __ __ __    __ __ __ __ __ __ __ __           [ ]
+		EOF
+		;;
+		SHA1) cat <<- EOF
+			SHA1 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____         [ ]
+		EOF
+		;;
+		RIPEMD160) cat <<- EOF
+			RIPEMD160 Checksum: ____ ____ ____ ____ ____    ____ ____ ____ ____ ____    [ ]
+		EOF
+		;;
+		SHA256) cat <<- EOF
+			SHA256 Checksum: ________   ________   ________   ________
+
+			                 ________   ________   ________   ________                  [ ]
+		EOF
+		;;
+		SHA384) cat <<- EOF
+			SHA384 Checksum: ________   ________   ________   ________
+
+			                 ________   ________   ________   ________
+
+			                 ________   ________   ________   ________                  [ ]
+		EOF
+		;;
+		SHA512) cat <<- EOF
+			SHA512 Checksum: ________   ________   ________   ________
+
+			                 ________   ________   ________   ________
+
+			                 ________   ________   ________   ________
+
+			                 ________   ________   ________   ________                  [ ]
+		EOF
+		;;
+		SHA224) cat <<- EOF
+			SHA224 Checksum: ________   ________   ________   ________
+
+			                 ________   ________   ________                             [ ]
+		EOF
+		;;
+	esac
+done
+printf '\n\n'
+
 
 k=0;
 for i in $(cat $input); do

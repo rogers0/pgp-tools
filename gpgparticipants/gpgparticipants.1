@@ -3,7 +3,8 @@
 gpgparticipants \- generate paper list for keysigning party
 .SH SYNOPSIS
 .B gpgparticipants
-.RI input
+.RB [\fIOPTIONS\fR]
+input
 output
 datestring
 organizer
@@ -17,6 +18,16 @@ It creates a file with all the keys from a list of participators in your
 keysigning party. You give it a list with key ID's and some general variables,
 and it will generate a file you can publish. You publish this list;
 participants will download and print this file to take with them to the party.
+
+.SH OPTIONS
+
+.TP
+.BI -a \fIHASHES\fR,\ \fB--algorithm=\fIHASHES\fR
+
+For each algorithm in \fIHASHES\fR, a comma-separated list of digest
+algorithms supported by \fBgpg\fR(1), add a placeholder for the digest
+value (to be filled by the participants) to the output file.  Default:
+SHA256,RIPEMD160.
 
 .SH SEE ALSO
 .BR gpg (1), gpgsigs (1)
