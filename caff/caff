@@ -1271,8 +1271,9 @@ push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'ke
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
 	if ($keyid =~ /^([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/i) {
 		info("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
+		next;
 	}
-	elsif ($keyid !~ /^((?:0x)[A-F0-9]{8}|(?:0x)[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/i) {
+	elsif ($keyid !~ /^((?:0x)?[A-F0-9]{8}|(?:0x)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/i) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
@@ -1281,11 +1282,6 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 	$keyid =~ y/ //d; # gpg --fingerprint includes spaces
 	push @KEYIDS, uc($keyid);
 };
-
-unless (@KEYIDS) {
-	print "No valid key found. Nothing to do.\n";
-	exit;
-}
 
 #################
 # import own keys
@@ -1364,11 +1360,6 @@ if ($CONFIG{'no-download'}) {
 	}
 };
 
-unless (@keyids_ok) {
-	notice ("No keys to sign found");
-	exit 0;
-}
-
 if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
@@ -1384,17 +1375,18 @@ for my $keyid (@keyids_ok) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ] );
+		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ] );
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
 	waitpid $pid, 0;
-	if ($stdout eq '') {
+	my @stdout = split /\n/, $stdout;
+	my @publine = grep { /^pub:/ } @stdout;
+	unless (@stdout) {
 		warn ("No data from gpg for list-key $keyid\n");
 		next;
 	};
-	my @publine = grep { /^pub:/ } (split /\n/, $stdout);
 	if (scalar @publine == 0) {
 		warn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).\n");
 		next;
@@ -1412,17 +1404,28 @@ for my $keyid (@keyids_ok) {
 		warn ("Didn't find flags in --list-key of key $keyid.\n");
 		next;
 	};
+	my $fpr = (split /:/, (grep { /^fpr:/ } @stdout)[0])[9];
+	if ($fpr =~ /^[0-9A-F]{32}$/i) {
+		info("Ignoring v3 key ".$keyid.".  v3 keys are obsolete.");
+		next;
+	}
 
-	my @uids = grep { /^uid:/ } (split /\n/, $stdout);
 	# store the uids to keep track of their hash, which is the only reliable way to distinguish them
 	$KEYS{$keyid} = { longkeyid => $longkeyid
 					, flags => $flags
-					, uids => [ map {my @u = split /:/; { created => $u[5], hash => $u[7], text => $u[9] }} @uids ]
+					, uids => [ map {my @u = split /:/; { created => $u[5], hash => $u[7], text => $u[9] }}
+									(grep { /^uid:/ } @stdout) ]
 					};
+}
+
+unless (keys %KEYS) {
+	notice ("No keys to sign found");
+	exit 0;
 }
 
 
 for my $keyid (@keyids_ok) {
+	next unless exists $KEYS{$keyid};
 	my $longkeyid = $KEYS{$keyid}->{longkeyid};
 
 	###########
@@ -1693,6 +1696,7 @@ for my $keyid (@keyids_ok) {
 # send emails
 #############
 for my $keyid (@keyids_ok) {
+	next unless exists $KEYS{$keyid};
 	my $longkeyid = $KEYS{$keyid}->{longkeyid};
 	my $can_encrypt = $KEYS{$keyid}->{flags} =~ /E/;
 	my @UIDS = @{$KEYS{$keyid}->{uids}};
