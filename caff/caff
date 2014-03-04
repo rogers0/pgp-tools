@@ -955,8 +955,11 @@ sub sanitize_uid($) {
 	return $good_uid;
 };
 
-sub delete_signatures($$$$$$) {
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $keyids) =@_;
+sub delete_signatures($$$$$$$) {
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid, $keyids) = @_;
+
+	readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark all uids from delsig
+	readwrite_gpg("uid $uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark $uid for delsig
 
 	my $last_signed_on = 0;
 	my @signers;
@@ -1406,8 +1409,14 @@ for my $keyid (@keyids_ok) {
 	# store the uids to keep track of their hash, which is the only reliable way to distinguish them
 	$KEYS{$keyid} = { longkeyid => $longkeyid
 					, flags => $flags
-					, uids => [ map {my @u = split /:/; { created => $u[5], hash => $u[7], text => $u[9] }}
-									(grep { /^uid:/ } @stdout) ]
+					, uids => [ map { my ($type,$created,$hash,$text) = (split /:/)[0,5,7,9];
+									  { type => $type,
+										created => $created,
+										hash => $hash,
+										text => $type eq 'uid' ? $text : '[attribute]'
+									}}
+									(grep { /^(?:uid|uat):/ } @stdout) ]
+					, subkeys => [ map { (split /:/)[4] } (grep { /^sub:/ } @stdout) ]
 					};
 }
 
@@ -1455,17 +1464,21 @@ for my $keyid (@keyids_ok) {
 		next;
 	};
 
-	my $uid_number = 0;
-	while (1) {
-		my $this_uid_text = '';
-		$uid_number++;
+	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
+	my $first_uid = (grep {$_->{type} eq 'uid'} @{$KEYS{$keyid}->{uids}})[0];
+
+	for (my $uid_number = 1; $uid_number <= $#{$KEYS{$keyid}->{uids}}+1; $uid_number++) {
 		debug("Doing key $keyid, uid $uid_number");
 		my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
+		my $uid = $KEYS{$keyid}->{uids}->[$uid_number-1];
+
+		# /!\ this serial is valid in caff's GnuPGHOME only, and can't
+		# be relied upon if the keyring is modified in the meantime.
+		$uid->{serial} = $uid_number;
 
 		# import into temporary gpghome
 		###############################
-		my $result = import_key($tempdir, $asciikey);
-		unless ($result) {
+		unless (import_key($tempdir, $asciikey)) {
 			warn ("Could not import $keyid into temporary gnupg.\n");
 			next;
 		};
@@ -1488,70 +1501,28 @@ for my $keyid (@keyids_ok) {
 
 		# delete other uids
 		###################
-		my $number_of_subkeys = 0;
-		my $i = 1;
-		my $have_one = 0;
-		my $is_uat = 0;
 		my $delete_some = 0;
-		debug("Parsing stdout output.");
-		for my $line (split /\n/, $stdout) {
-			debug("Checking line $line");
-			my ($type, undef, undef, undef, undef, undef, undef, undef, undef, $uidtext) = split /:/, $line;
-			if ($type eq 'sub') {
-				$number_of_subkeys++;
-			};
-			next unless ($type eq 'uid' || $type eq 'uat');
-			debug("line is interesting.");
-			if ($uid_number != $i) {
-				debug("mark for deletion.");
-				readwrite_gpg("$i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-				$delete_some++;
-			} else {
-				debug("keep it.");
-				$have_one = 1;
-				$this_uid_text = ($type eq 'uid') ? $uidtext : '[attribute]';
-				$is_uat = $type eq 'uat';
-			};
-			$i++;
-		};
-		debug("Parsing stdout output done.");
-		unless ($have_one) {
-			debug("Uid ".($uid_number-1)." was the last, there is no $uid_number.");
-			info("key $keyid done.");
-			last;
-		};
+		for (my $i = 1; $i <= $#{$KEYS{$keyid}->{uids}}+1; $i++) {
+			# it's quicker with gpg2: 'uid *' then 'uid $i'
+			next if $i == $uid_number;
+			next if $uid->{type} ne 'uid' and $KEYS{$keyid}->{uids}->[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
 
-		my $prune_some_sigs_on_uid;
-		my $prune_all_sigs_on_uid;
-		if ($is_uat) {
-			debug("handling attribute userid of key $keyid.");
-			if ($uid_number == 1) {
-				debug(" attribute userid is #1, unmarking #2 for deletion.");
-				readwrite_gpg("2\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-				$delete_some--;
-				$prune_some_sigs_on_uid = 1;
-				$prune_all_sigs_on_uid = 2;
-			} else {
-				debug("attribute userid is not #1, unmarking #1 for deletion.");
-				readwrite_gpg("1\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-				$delete_some--;
-				$prune_some_sigs_on_uid = 2;
-				$prune_all_sigs_on_uid = 1;
-			};
-		} else {
-			$prune_some_sigs_on_uid = 1;
-		};
+			debug("Marking UID $i ($KEYS{$keyid}->{uids}->[$i-1]->{hash}) for deletion.");
+			readwrite_gpg("uid $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			$delete_some++;
+		}
 
 		if ($delete_some) {
-			debug("need to delete $delete_some uids.");
+			debug("Need to delete $delete_some uids.");
 			readwrite_gpg("deluid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
 			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 		};
 
-		# delete subkeys
-		################
-		if ($number_of_subkeys > 0) {
-			for (my $i=1; $i<=$number_of_subkeys; $i++) {
+		# delete all subkeys
+		####################
+		if (@{$KEYS{$keyid}->{subkeys}}) {
+			for (my $i = 1; $i <= $#{$KEYS{$keyid}->{subkeys}} + 1; $i++) {
+				debug("Marking subkey $i ($KEYS{$keyid}->{subkeys}->[$i-1]) for deletion.");
 				readwrite_gpg("key $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 			};
 			readwrite_gpg("delkey\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
@@ -1560,25 +1531,16 @@ for my $keyid (@keyids_ok) {
 
 		# delete signatures
 		###################
-		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
-		my ($last_signed_on, @signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $CONFIG{'keyid'});
-		readwrite_gpg("$prune_some_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark uid from delsig
-		if (defined $prune_all_sigs_on_uid) {
-			readwrite_gpg("$prune_all_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark uid for delsig
-			delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, []);
-			readwrite_gpg("$prune_all_sigs_on_uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark uid from delsig
-		};
+		my ($last_signed_on, @signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
+
+		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $first_uid->{hash}, [])
+			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
 
 		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 
-		my $uid = $KEYS{$keyid}->{uids}->[$uid_number-1];
-		# /!\ this serial is valid in caff's GnuPGHOME only, and can't
-		# be relied upon if the keyring is modified in the meantime.
-		$uid->{serial} = $uid_number;
-
 		my $asciikey = export_key($tempdir, $keyid);
-		remove_tree ($tempdir);
+		remove_tree ($tempdir); # CLEANUP => 1 doesn't always work
 
 		unless ($asciikey) {
 			warn ("No data from gpg for export $keyid\n");
@@ -1589,7 +1551,6 @@ for my $keyid (@keyids_ok) {
 			# it's a bit inefficient to store the $asciikey in memory,
 			# but it has been pruned so it's shouldn't be too big
 			$uid->{key} = $asciikey;
-			$uid->{is_uat} = $is_uat;
 			$uid->{signers} = \@signers;
 			$uid->{last_signed_on} = $last_signed_on;
 		};
@@ -1671,6 +1632,7 @@ for my $keyid (@keyids_ok) {
 			}
 		}
 	}
+	info("key $longkeyid done.");
 }
 
 #############
@@ -1710,7 +1672,7 @@ for my $keyid (@keyids_ok) {
 		print $KEY $uid->{key};
 		close $KEY;
 
-		if ($uid->{'is_uat'}) {
+		if ($uid->{type} eq 'uat') {
 			my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email?", 1);
 			push @attached, $uid if $attach;
 		} elsif ($uid->{'text'} !~ /@/) {
@@ -1725,7 +1687,7 @@ for my $keyid (@keyids_ok) {
 	my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 	for my $uid (@UIDS) {
 		next unless $uid->{last_signed_on}; # wasn't signed by me
-		next unless !$uid->{'is_uat'} and $uid->{'text'} =~ /@/;
+		next unless $uid->{type} eq 'uid' and $uid->{'text'} =~ /\@/;
 
 		my $address = $uid->{'text'};
 		$address =~ s/.*<(.*)>$/$1/;
