@@ -571,9 +571,10 @@ sub load_config() {
 	die "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.\n"
 		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
 	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
+	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
 	die "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.\n"
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/yes ask no/;
-	if ($CONFIG{'also-lsign-in-gnupghome'} eq 'yes') {
+	if ($CONFIG{'also-lsign-in-gnupghome'} eq 'yes' and $CONFIG{'gpg-sign-type'} !~ /l/) {
 		my ($socket, $pid) = split /:/, $ENV{GPG_AGENT_INFO} // '';
 		unless (defined $socket and -S $socket and (defined $pid and $pid =~ /^[0-9]+$/ ? kill 0, $pid : 0)) {
 			mywarn "Couldn't detect gpg-agent; 'also-lsign-in-gnupghome' falls back to value 'ask'.";
