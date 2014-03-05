@@ -223,7 +223,8 @@ which UIDs to locally sign.  Default: B<no>.
 
 =item B<keyserver> [string]
 
-Keyserver to download keys from.  Default: B<pool.sks-keyservers.net>.
+Keyserver to download keys from.  Default: the keyserver defined in
+~/.gnupg/gpg.conf if found, otherwise B<pool.sks-keyservers.net>.
 
 =item B<no-download> [boolean]
 
@@ -541,7 +542,6 @@ sub load_config() {
 	};
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
-	$CONFIG{'keyserver'} = 'pool.sks-keyservers.net' unless defined $CONFIG{'keyserver'};
 	$CONFIG{'gpg'} = 'gpg' unless defined $CONFIG{'gpg'};
 	$CONFIG{'gpg-sign'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-sign'};
 	$CONFIG{'gpg-delsig'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-delsig'};
@@ -1298,7 +1298,17 @@ my @keyids_ok;
 if ($CONFIG{'no-download'}) {
 	@keyids_ok = @KEYIDS;
 } else {
-	info ("fetching keys, this will take a while...");
+	unless (defined $CONFIG{'keyserver'}) {
+		my $gpgconf = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/gpg.conf';
+		if (-e $gpgconf and open my $fh, $gpgconf) {
+			my @keyservers = map { chomp; s/^\s*keyserver\s+//r } (grep {/^\s*keyserver\s/} <$fh>);
+			$CONFIG{'keyserver'} = $keyservers[$#keyservers] if @keyservers;
+			close $fh;
+		}
+	}
+	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
+
+	info ("fetching keys from $CONFIG{keyserver}, this may take a while...");
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
