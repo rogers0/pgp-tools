@@ -782,31 +782,12 @@ sub export_key($$@) {
 	return $stdout;
 };
 
-######
-# create trustdb in $gnupghome
-######
-sub create_trustdb($) {
-	my ($gnupghome) = @_;
-
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $gnupghome,
-		'extra_args' => [ qw{ --import-ownertrust } ] );
-	$gpg->options->meta_interactive( 0 );
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->wrap_call(handles => $handles);
-	my ($stdout, $stderr, $status) = readwrite_gpg('#\n', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
-};
 
 ######
 # import a key from the scalar $asciikey into $gnupghome
 ######
 sub import_key($$@) {
 	my ($gnupghome, $asciikey, @import_options) = @_;
-
-	create_trustdb($gnupghome);
 
 	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
 	$h{homedir} = $gnupghome if defined $gnupghome;
