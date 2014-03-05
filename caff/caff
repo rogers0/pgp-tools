@@ -1480,7 +1480,7 @@ for my $keyid (@keyids_ok) {
 
 	for (my $uid_number = 1; $uid_number <= $#{$KEYS{$keyid}->{uids}}+1; $uid_number++) {
 		debug("Doing key $keyid, uid $uid_number");
-		my $tempdir = tempdir( "caff-$keyid-XXXXX", DIR => '/tmp/', CLEANUP => 1);
+		my $tempdir = tempdir( "caff-$keyid-XXXXX", TMPDIR => 1, CLEANUP => 1 );
 		my $uid = $KEYS{$keyid}->{uids}->[$uid_number-1];
 
 		# /!\ this serial is valid in caff's GnuPGHOME only, and can't

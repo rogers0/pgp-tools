@@ -22,6 +22,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Prefer the keyserver defined in ~/.gnupg/gpg.conf if found.
       (Closes: #720413)
     + Abort upon gpg failure.
+    + Create temporary directories in $TMPDIR. (Closes: #735384)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
