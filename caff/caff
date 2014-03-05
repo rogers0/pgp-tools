@@ -621,17 +621,15 @@ sub readwrite_gpg($$$$$%) {
 	my $do_not_wait_on_select = 0;
 	my ($readyr, $readyw, $written);
 	while ($sout->count() > 0 || (defined($sin) && ($sin->count() > 0))) {
-		if (defined $exitwhenstatusmatches) {
-			if ($status =~ /$exitwhenstatusmatches/m) {
-				trace("readwrite_gpg found match on $exitwhenstatusmatches");
-				if ($readwrote_stuff_this_time) {
-					trace("read/write some more\n");
-					$do_not_wait_on_select = 1;
-				} else {
-					trace("that's it in our while loop.\n");
-					last;
-				}
-			};
+		if (defined $exitwhenstatusmatches and $status =~ /^\[GNUPG:\] $exitwhenstatusmatches$/m) {
+			trace("readwrite_gpg found match on $exitwhenstatusmatches");
+			if ($readwrote_stuff_this_time) {
+				trace("read/write some more\n");
+				$do_not_wait_on_select = 1;
+			} else {
+				trace("that's it in our while loop.\n");
+				last;
+			}
 		};
 
 		$readwrote_stuff_this_time = 0;
@@ -723,11 +721,11 @@ sub ask($$;$$) {
 
 
 
-my $KEYEDIT_PROMPT = '^\[GNUPG:\] GET_LINE keyedit.prompt';
-my $KEYEDIT_DELUID_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.uid.okay';
-my $KEYEDIT_DELSIG_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.delsig';
-my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = '^\[GNUPG:\] (GET_BOOL keyedit.delsig|GET_LINE keyedit.prompt)';
-my $KEYEDIT_DELSUBKEY_PROMPT = '^\[GNUPG:\] GET_BOOL keyedit.remove.subkey';
+my $KEYEDIT_PROMPT = qr/GET_LINE keyedit\.prompt/;
+my $KEYEDIT_DELUID_PROMPT = qr/GET_BOOL keyedit\.remove\.uid\.okay/;
+my $KEYEDIT_DELSIG_PROMPT = qr/GET_BOOL keyedit\.delsig\.(?:unknown|invalid|valid)/; # we won't delete selfsigs
+my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = qr/$KEYEDIT_PROMPT|$KEYEDIT_DELSIG_PROMPT/;
+my $KEYEDIT_DELSUBKEY_PROMPT = qr/GET_BOOL keyedit\.remove\.subkey\.okay/;
 
 load_config;
 my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
