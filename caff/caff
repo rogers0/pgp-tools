@@ -211,9 +211,10 @@ the signer refreshes her keyring.
 If the value is not I<no> and if B<gpg-sign-type> contains "l", each
 (local) signature is merely exported from caff's own GnuPGHOME to the
 user's.  Otherwise, if the value is I<yes>, each UID signed in caff's
-own GnuPGHOME gets automatically locally signed in the user's; this
-requires a working gpg-agent(1).  If I<ask>, the user is prompted for
-which UIDs to locally sign.  Default: B<no>.
+own GnuPGHOME gets automatically locally signed in the user's, using the
+same certification level; this requires a working gpg-agent(1).  If
+I<ask>, the user is prompted for which UIDs to locally sign.  Default:
+B<no>.
 
 =back
 
@@ -726,6 +727,8 @@ my $KEYEDIT_DELUID_PROMPT = qr/GET_BOOL keyedit\.remove\.uid\.okay/;
 my $KEYEDIT_DELSIG_PROMPT = qr/GET_BOOL keyedit\.delsig\.(?:unknown|invalid|valid)/; # we won't delete selfsigs
 my $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT = qr/$KEYEDIT_PROMPT|$KEYEDIT_DELSIG_PROMPT/;
 my $KEYEDIT_DELSUBKEY_PROMPT = qr/GET_BOOL keyedit\.remove\.subkey\.okay/;
+my $KEYEDIT_SIGNUID_CLASS_PROMPT = qr/GET_LINE sign_uid\.class/;
+my $KEYEDIT_SIGNUID_PROMPT = qr/GET_BOOL sign_uid\.okay/;
 
 load_config;
 my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
@@ -960,7 +963,7 @@ sub delete_signatures($$$$$$$) {
 	readwrite_gpg("uid $uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark $uid for delsig
 
 	my $last_signed_on = 0;
-	my @signers;
+	my %signers;
 
 	my ($stdout, $stderr, $status) =
 		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
@@ -974,7 +977,7 @@ sub delete_signatures($$$$$$$) {
 		my $answer = "no";
 		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
 			debug("[sigremoval] doing line $line.");
-			my (undef, undef, undef, undef, $signer, $created, undef, undef, undef) = split /:/, $line;
+			my ($signer, $created, $level) = (split /:/, $line)[4,5,10];
 			if ($signer eq $longkeyid) {
 				debug("[sigremoval] selfsig ($signer).");
 				$answer = "no";
@@ -982,7 +985,8 @@ sub delete_signatures($$$$$$$) {
 				debug("[sigremoval] signed by us ($signer).");
 				$answer = "no";
 				$last_signed_on = $created if $last_signed_on < $created;
-				push @signers, $signer;
+				$level =~ s/^1([0-3])[lx]$/$1/;
+				$signers{$signer} = $level;
 			} else {
 				debug("[sigremoval] not interested in that sig ($signer).");
 				$answer = "yes";
@@ -994,7 +998,7 @@ sub delete_signatures($$$$$$$) {
 			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
 	};
 
-	return ($last_signed_on, @signers);
+	return ($last_signed_on, \%signers);
 };
 
 ##
@@ -1540,7 +1544,7 @@ for my $keyid (@keyids_ok) {
 
 		# delete signatures
 		###################
-		my ($last_signed_on, @signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
+		my ($last_signed_on, $signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
 
 		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $first_uid->{hash}, [])
 			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
@@ -1560,7 +1564,7 @@ for my $keyid (@keyids_ok) {
 			# it's a bit inefficient to store the $asciikey in memory,
 			# but it has been pruned so it's shouldn't be too big
 			$uid->{key} = $asciikey;
-			$uid->{signers} = \@signers;
+			$uid->{signers} = $signers;
 			$uid->{last_signed_on} = $last_signed_on;
 		};
 	};
@@ -1571,7 +1575,7 @@ for my $keyid (@keyids_ok) {
 		###############################
 
 		import_key_from_gnupghome( $keyid, $GNUPGHOME, undef
-									# do not export our own exportable signatures
+									# do not export our own exportable signatures, but ensure we've got the same UID list
 								 , $CONFIG{'gpg-sign-type'} =~ /l/ ? () : 'export-minimal' );
 		# if $CONFIG{'gpg-sign-type'} is 'l', we've copied the (local)
 		# signature to our GnuPHOME and we're done
@@ -1598,7 +1602,7 @@ for my $keyid (@keyids_ok) {
 				# auto lsign the relevant uids
 				##############################
 				my @uids = grep {$_->{last_signed_on}} @{$KEYS{$keyid}->{uids}};
-				my @signers = map {@{$_->{signers}}} @uids;
+				my @signers = map {keys %{$_->{signers}}} @uids;
 				if (@LOCAL_USER && defined $LOCAL_USER[0]) {
 					# which of @LOCAL_USER has signed at least one UID in this key?
 					@signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
@@ -1610,17 +1614,17 @@ for my $keyid (@keyids_ok) {
 				foreach my $u (@signers) {
 					my @signeduids; # uids signed by $u
 					foreach my $uid (@uids) {
-						# we use UIDs hashes to discriminate and select UIDs; it's only reliable way to identify them
-						push @signeduids, $uid if grep { $u eq $_ } @{$uid->{signers}} and
+						# we use UIDs hashes to distinguish and select UIDs; it's only reliable way to identify them accross keyrings
+						push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{signers}}) and
 												 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
 					}
-					info("lsigning (by $u) uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids))." of $longkeyid.");
 
 					my $gpg = GnuPG::Interface->new();
 					$gpg->call( $CONFIG{'gpg'} );
 					$gpg->options->hash_init(
 						'extra_args' => [ '--local-user', $u
 										, '--secret-keyring', $CONFIG{'secret-keyring'}
+										, '--ask-cert-level'
 										# we know there is a working agent
 										, '--use-agent'
 										, qw{ --no-auto-check-trustdb --trust-model=always --command-fd=0 --no-tty } ] );
@@ -1630,13 +1634,23 @@ for my $keyid (@keyids_ok) {
 						command_args => [ $keyid ],
 						handles      => $handles );
 
-					debug("Starting edit session");
+					debug("Starting edit session on $keyid, signer $u");
 					readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					# it's always safe to use hashes to select UIDs
-					readwrite_gpg(join ('', map {"uid $_->{hash}\n"} @signeduids), $inputfd, $stdoutfd, $stderrfd, $statusfd,
-								exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					readwrite_gpg("lsign\nyes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+
+					foreach my $level (0..3) {
+						my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
+						next unless @signeduids_with_level;
+
+						info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid.");
+						readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+						readwrite_gpg("uid $_->{hash}\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
+							for @signeduids_with_level;
+						readwrite_gpg("lsign\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
+						readwrite_gpg("$level\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
+						readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					}
+
+					readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
 					waitpid $pid, 0;
 				}
 			}
