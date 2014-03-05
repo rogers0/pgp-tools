@@ -21,6 +21,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Accept gpgparticipants formatted content on STDIN. (Closes: #622560)
     + Prefer the keyserver defined in ~/.gnupg/gpg.conf if found.
       (Closes: #720413)
+    + Abort upon gpg failure.
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.

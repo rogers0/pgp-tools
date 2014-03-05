@@ -1457,7 +1457,8 @@ for my $keyid (@keyids_ok) {
 			push @command, $CONFIG{'gpg-sign-type'}.'sign';
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 			print join(' ', @command),"\n";
-			system (@command);
+			system @command;
+			die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
 		};
 	};
 
@@ -1591,7 +1592,8 @@ for my $keyid (@keyids_ok) {
 					push @command, 'lsign';
 					push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 					print join(' ', @command),"\n";
-					system (@command);
+					system @command;
+					die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
 				};
 			}
 			else {
