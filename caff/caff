@@ -1089,28 +1089,30 @@ sub import_keys_from_gnupghome($$$@) {
 #         1 if an error occured.
 #
 sub import_key_files($$) {
-	my $err;
 	my ($keyfile, $dst_gpghome) = @_;
+
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
+			, 'quiet' => 1
+			, 'meta_interactive' => 0 );
+	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
+	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $dst_gpghome,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
-		'meta_interactive' => 0 );
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->import_keys(handles => $handles, command_args => $keyfile);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	info("Importing keys from file $keyfile");
-	waitpid $pid, 0;
+	$gpg->options->hash_init( %h );
 
-	if ($status !~ /^\[GNUPG:\] IMPORT_OK /m) {
-		warn $stderr;
-		$err = 1;
-	} else {
-		$err = 0;
+	my $status = IO::Handle->new();
+	my $handles = GnuPG::Handles->new( status => $status ); # don't redirect STDERR
+	my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
+
+	my $err = 1;
+	while (<$status>) {
+		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+			info("Key $1 imported from $keyfile.");
+			$err = 0;
+		}
 	}
-
+	waitpid $pid, 0;
 	return $err;
 }
 
