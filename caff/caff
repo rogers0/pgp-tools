@@ -359,6 +359,7 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 use strict;
 use IO::Handle;
 use English;
+use File::Copy;
 use File::Path qw{make_path remove_tree};
 use File::Temp qw{tempdir};
 use Text::Template;
@@ -758,12 +759,20 @@ sub usage($$) {
 };
 
 ######
-# export key $keyid from $gnupghome
+# export keys @$keyids from $gnupghome.  In list context, fork and
+# return the pid and the file descriptor of its standard output;
+# otherwise, wait until the export is done and return the ASCII key.
+#
+# /!\ Failure to export a key will not be detected, unless *all* keys
+# 	  couldn't be exported.  Therefore for safe export/import, you need
+# 	  to inspect '$asciikey' or the status FD on the import side.
 ######
-sub export_key($$@) {
-	my ($gnupghome, $keyid, @export_options) = @_;
+sub export_keys($$@) {
+	my ($gnupghome, $keyids, @export_options) = @_;
 
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ], 'armor' => 1 );
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
+			, 'armor' => wantarray ? 0 : 1 # don't armor when piping since it's faster
+			, 'meta_interactive' => 0 );
 	$h{'homedir'} = $gnupghome if defined $gnupghome;
 
 	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
@@ -772,43 +781,18 @@ sub export_key($$@) {
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init( %h );
-	$gpg->options->meta_interactive( 0 );
 
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->export_keys(handles => $handles, command_args => [ $keyid ]);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
+	my $stdout = IO::File->new();
+	my $handles = GnuPG::Handles->new( stdout => $stdout );
+	my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
 
-	return $stdout;
-};
-
-
-######
-# import a key from the scalar $asciikey into $gnupghome
-######
-sub import_key($$@) {
-	my ($gnupghome, $asciikey, @import_options) = @_;
-
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
-	$h{homedir} = $gnupghome if defined $gnupghome;
-
-	push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
-	push @{$h{'extra_args'}}, '--import-options', join (',', @import_options) if @import_options;
-
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init( %h );
-	$gpg->options->meta_interactive( 0 );
-
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->import_keys(handles => $handles);
-	my ($stdout, $stderr, $status) = readwrite_gpg($asciikey, $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
-
-	if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
-		return undef;
-	};
-	return 1;
+	if (wantarray) {
+		return ($pid, $stdout);
+	} else {
+		my $asciikey = do { local $/; <$stdout> };
+		waitpid $pid, 0;
+		return $asciikey;
+	}
 };
 
 
@@ -1040,36 +1024,62 @@ sub get_local_user_keys() {
 }
 
 ##
-# Import a key from the user gnupghome into a specified gnupghome.
+# Import keys from a gnupghome to another.
 #
-# @param asciikey       ascii format of the gpg key to import
+# @param keyids         keyids of the OpenPGP keys to import
 # @param src_gnupghome  gnupghome directory where to export the key from
 # @param dst_gnupghome  gnupghome directory where to import the key into
 # @param export_options an array of export-options, see gpg(1)
 #
-# @return 0 if successful\n
-#         1 if the key could not be exported.\n
-#         2 if the key could not be imported.
+# @ In list context, return the list of keyids that couldn't be
+# imported. In scalar context, return 0 if all keys were imported, and 1
+# otherwise.
 #
-sub import_key_from_gnupghome($$$@) {
-	my ($asciikey, $src_gpghome, $dst_gpghome, @export_options) = @_;
-	my $err;
+sub import_keys_from_gnupghome($$$@) {
+	my ($keyids, $src_gpghome, $dst_gpghome, @export_options) = @_;
+	my %keyids = map { $_ => 1} @$keyids;
 
-	trace("Exporting key $asciikey from ".($src_gpghome // "your normal GnuPGHOME").".");
-	my $key = export_key($src_gpghome, $asciikey, @export_options);
-	if (defined $key && $key ne '') {
-		trace("Importing key $asciikey into ".($dst_gpghome // "your normal GnuPGHOME").".");
-		if (import_key($dst_gpghome, $key)) {
-			$err = 0;
-		} else {
-			warn("Could not import $asciikey into ".($dst_gpghome // "your normal GnuPGHOME").".");
-			$err = 2;
+	# export the (non-armored) keys to $pipe
+	trace("Exporting key(s) ".(join ',', @$keyids)." from ".
+			($src_gpghome // "your normal GnuPGHOME")." to ".($dst_gpghome // "your normal GnuPGHOME").".");
+	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
+
+	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
+			, quiet => 1
+			, meta_interactive => 0 );
+	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
+	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
+
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init( %h );
+
+	# import keys from $pipe
+	my $status = IO::Handle->new();
+	my $handles = GnuPG::Handles->new( stdin => $pipe, status => $status );
+	$handles->options('stdin')->{direct} = 1;
+	my $iPid = $gpg->import_keys( handles => $handles );
+
+	# inspect the $status FD as data gets out.
+	while (<$status>) {
+		if (defined wantarray and /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+			my $fpr = $1;
+			my @keys = grep { $fpr =~ /$_$/ } @$keyids;
+			mywarn ("Multiple (".($#keys+1).") keys matched $fpr in ".($src_gpghome // "your normal GnuPGHOME").".")
+				if $#keys > 0;
+			delete @keyids{@keys};
 		}
-	} else {
-		$err = 1;
 	}
+	waitpid $iPid, 0; # import done
+	waitpid $ePid, 0; # export done
 
-	return $err;
+	if (wantarray) {
+		return (keys %keyids); # failed to import
+	} elsif (defined wantarray) {
+		# scalar context
+		return %keyids ? 1 : 0;
+	}
+	# void context
 }
 
 ##
@@ -1119,10 +1129,10 @@ sub import_keys_to_sign() {
 	# Check if we can find the gpg key from our normal gnupghome, and then
 	# try to import it into our working gnupghome directory
 	if ($CONFIG{'keys-from-gnupg'}) {
+		my @failed = import_keys_from_gnupghome(\@KEYIDS, undef, $GNUPGHOME);
 		foreach my $keyid (@KEYIDS) {
-			if (!import_key_from_gnupghome($keyid, undef, $GNUPGHOME)) {
-				info("Key $keyid imported from your normal GnuPGHOME.");
-			}
+			info("Key $keyid imported from your normal GnuPGHOME.")
+				unless grep { $keyid eq $_ } @failed;
 		}
 	};
 
@@ -1265,12 +1275,8 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 # import own keys
 #################
-for my $keyid (@{$CONFIG{'keyid'}}) {
-	info("Importing key $keyid from your normal GnuPGHOME.");
-	if (import_key_from_gnupghome($keyid, undef, $GNUPGHOME)) {
-		mywarn("Key $keyid not found.");
-	}
-}
+import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
+	die "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.\n";
 
 &import_keys_to_sign();
 
@@ -1452,37 +1458,35 @@ for my $keyid (@keyids_ok) {
 
 	# export the key
 	################
-	my $asciikey = export_key($GNUPGHOME, $keyid);
-	unless ($asciikey) {
-		warn ("No data from gpg for export $keyid\n");
-		next;
-	};
+	my $keydir = tempdir( "caff-$keyid-XXXXX", TMPDIR => 1, CLEANUP => 1 );
+	import_keys_from_gnupghome (\@{$CONFIG{'keyid'}}, $GNUPGHOME, $keydir, 'export-minimal') and
+		die "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'export-minimal').\n";
+	import_keys_from_gnupghome ([$keyid], $GNUPGHOME, $keydir, 'export-clean') and
+		die "$keyid couldn't be imported from caff's GnuPGHOME (with 'export-clean').\n";
 
 	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
-	my $first_uid = (grep {$_->{type} eq 'uid'} @{$KEYS{$keyid}->{uids}})[0];
+	my @uids = @{$KEYS{$keyid}->{uids}};
+	my $first_uid = (grep {$_->{type} eq 'uid'} @uids)[0];
 
-	for (my $uid_number = 1; $uid_number <= $#{$KEYS{$keyid}->{uids}}+1; $uid_number++) {
+	for (my $uid_number = 1; $uid_number <= $#uids+1; $uid_number++) {
 		debug("Doing key $keyid, uid $uid_number");
-		my $tempdir = tempdir( "caff-$keyid-XXXXX", TMPDIR => 1, CLEANUP => 1 );
-		my $uid = $KEYS{$keyid}->{uids}->[$uid_number-1];
+		my $uiddir = tempdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1, CLEANUP => 1 );
+		my $uid = $uids[$uid_number-1];
 
 		# /!\ this serial is valid in caff's GnuPGHOME only, and can't
 		# be relied upon if the keyring is modified in the meantime.
 		$uid->{serial} = $uid_number;
 
-		# import into temporary gpghome
-		###############################
-		unless (import_key($tempdir, $asciikey)) {
-			warn ("Could not import $keyid into temporary gnupg.\n");
-			next;
-		};
+		# copy pubring to temporary gpghome
+		###################################
+		copy("$keydir/pubring.gpg", "$uiddir/pubring.gpg");
 
 		# prune it
 		##########
 		my $gpg = GnuPG::Interface->new();
 		$gpg->call( $CONFIG{'gpg-delsig'} );
 		$gpg->options->hash_init(
-			'homedir' => $tempdir,
+			'homedir' => $uiddir,
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --command-fd=0 --no-tty } ] );
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		my $pid = $gpg->wrap_call(
@@ -1496,12 +1500,12 @@ for my $keyid (@keyids_ok) {
 		# delete other uids
 		###################
 		my $delete_some = 0;
-		for (my $i = 1; $i <= $#{$KEYS{$keyid}->{uids}}+1; $i++) {
+		for (my $i = 1; $i <= $#uids+1; $i++) {
 			# it's quicker with gpg2: 'uid *' then 'uid $i'
 			next if $i == $uid_number;
-			next if $uid->{type} ne 'uid' and $KEYS{$keyid}->{uids}->[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
+			next if $uid->{type} ne 'uid' and $uids[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
 
-			debug("Marking UID $i ($KEYS{$keyid}->{uids}->[$i-1]->{hash}) for deletion.");
+			debug("Marking UID $i ($uids[$i-1]->{hash}) for deletion.");
 			readwrite_gpg("uid $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 			$delete_some++;
 		}
@@ -1525,16 +1529,18 @@ for my $keyid (@keyids_ok) {
 
 		# delete signatures
 		###################
+		# this shouldn't delete anything as $longkeyid is already clean, but maybe we didn't sign that uid with all keys in @{$CONFIG{'keyid'}}
 		my ($last_signed_on, $signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
 
 		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $first_uid->{hash}, [])
 			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
 
+
 		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 
-		my $asciikey = export_key($tempdir, $keyid);
-		remove_tree ($tempdir); # CLEANUP => 1 doesn't always work
+		my $asciikey = export_keys($uiddir, $keyid);
+		remove_tree ($uiddir); # CLEANUP => 1 doesn't always work
 
 		unless ($asciikey) {
 			warn ("No data from gpg for export $keyid\n");
@@ -1549,13 +1555,14 @@ for my $keyid (@keyids_ok) {
 			$uid->{last_signed_on} = $last_signed_on;
 		};
 	};
+	remove_tree ($keydir);
 
 	if ($CONFIG{'also-lsign-in-gnupghome'} ne 'no') {
 		###############################
 		# add non-exportable signatures
 		###############################
 
-		import_key_from_gnupghome( $keyid, $GNUPGHOME, undef
+		import_keys_from_gnupghome( [ $keyid ], $GNUPGHOME, undef,
 									# do not export our own exportable signatures, but ensure we've got the same UID list
 								 , $CONFIG{'gpg-sign-type'} =~ /l/ ? () : 'export-minimal' );
 		# if $CONFIG{'gpg-sign-type'} is 'l', we've copied the (local)
