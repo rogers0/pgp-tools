@@ -437,8 +437,8 @@ sub generate_config() {
 		my $gpg = GnuPG::Interface->new();
 		$gpg->call( 'gpg' );
 		$gpg->options->hash_init(
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ] );
-		$gpg->options->meta_interactive( 0 );
+			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ],
+			'meta_interactive' => 0 );
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
 		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
@@ -582,11 +582,8 @@ sub load_config() {
 };
 
 sub make_gpg_fds() {
-	my %fds = (
-		stdin => IO::Handle->new(),
-		stdout => IO::Handle->new(),
-		stderr => IO::Handle->new(),
-		status => IO::Handle->new() );
+	my %fds;
+	$fds{$_} = IO::Handle->new() for qw/stdin stdout stderr status/;
 	my $handles = GnuPG::Handles->new( %fds );
 	return ($fds{'stdin'}, $fds{'stdout'}, $fds{'stderr'}, $fds{'status'}, $handles);
 };
@@ -604,7 +601,7 @@ sub readwrite_gpg($$$$$%) {
 	my $sin = IO::Select->new();
 	my $offset = 0;
 
-	trace("input is $inputfd; output is $stdoutfd; err is $stderrfd; status is ".(defined $statusfd ? $statusfd : 'undef').".");
+	trace("input is $inputfd; output is $stdoutfd; err is $stderrfd; status is ".($statusfd // 'undef').".");
 
 	$inputfd->blocking(0);
 	$stdoutfd->blocking(0);
@@ -783,7 +780,7 @@ sub export_keys($$@) {
 	$gpg->options->hash_init( %h );
 
 	my $stdout = IO::File->new();
-	my $handles = GnuPG::Handles->new( stdout => $stdout );
+	my $handles = GnuPG::Handles->new( stdout => $stdout ); # don't redirect STDERR
 	my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
 
 	if (wantarray) {
@@ -838,8 +835,8 @@ sub create_mail($$$@) {
 		$gpg->call( $CONFIG{'gpg'} );
 		$gpg->options->hash_init( 'homedir' => $GNUPGHOME,
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
-			'armor' => 1 );
-		$gpg->options->meta_interactive( 0 );
+			'armor' => 1,
+			'meta_interactive' => 0 );
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		$gpg->options->push_recipients( $key_id );
 		if (defined $CONFIG{'also-encrypt-to'}) {
@@ -849,7 +846,7 @@ sub create_mail($$$@) {
 		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
 		waitpid $pid, 0;
 		if ($stdout eq '') {
-			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)/m) and
+			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m) and
 			    (defined $CONFIG{'also-encrypt-to'})) {
 				my $reason = $1;
 				my $keyid = $2;
@@ -1045,8 +1042,8 @@ sub import_keys_from_gnupghome($$$@) {
 	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
 	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
-			, quiet => 1
-			, meta_interactive => 0 );
+			, 'quiet' => 1
+			, 'meta_interactive' => 0 );
 	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
 	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
 
@@ -1056,7 +1053,7 @@ sub import_keys_from_gnupghome($$$@) {
 
 	# import keys from $pipe
 	my $status = IO::Handle->new();
-	my $handles = GnuPG::Handles->new( stdin => $pipe, status => $status );
+	my $handles = GnuPG::Handles->new( stdin => $pipe, status => $status ); # don't redirect STDERR
 	$handles->options('stdin')->{direct} = 1;
 	my $iPid = $gpg->import_keys( handles => $handles );
 
@@ -1099,15 +1096,15 @@ sub import_key_files($$) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $dst_gpghome,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ] );
-	$gpg->options->meta_interactive( 0 );
+		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
+		'meta_interactive' => 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	my $pid = $gpg->import_keys(handles => $handles, command_args => $keyfile);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
 	info("Importing keys from file $keyfile");
 	waitpid $pid, 0;
 
-	if ($status !~ /^\[GNUPG:\] IMPORT_OK/m) {
+	if ($status !~ /^\[GNUPG:\] IMPORT_OK /m) {
 		warn $stderr;
 		$err = 1;
 	} else {
@@ -1278,7 +1275,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
 	die "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.\n";
 
-&import_keys_to_sign();
+import_keys_to_sign();
 
 #############################
 # receive keys from keyserver
@@ -1297,16 +1294,16 @@ if ($CONFIG{'no-download'}) {
 	}
 	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
 
-	info ("fetching keys from $CONFIG{keyserver}, this may take a while...");
+	info ("Fetching keys from $CONFIG{keyserver}, this may take a while...");
 
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always }, '--keyserver='.$CONFIG{'keyserver'} ] );
-	$gpg->options->meta_interactive( 0 );
+		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always }, '--keyserver='.$CONFIG{'keyserver'} ],
+		'meta_interactive' => 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->recv_keys(handles => $handles, command_args => [ @KEYIDS ]);
+	my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
 	waitpid $pid, 0;
 
@@ -1318,7 +1315,7 @@ if ($CONFIG{'no-download'}) {
 	my $had_v3_keys = 0;
 	print STDERR $stderr if $stderr;
 	for my $line (split /\n/, $status) {
-		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})/) {
+		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $imported_key = $1;
 			my $whole_fpr = $imported_key;
 			my $long_keyid = substr($imported_key, -16);
@@ -1334,8 +1331,8 @@ if ($CONFIG{'no-download'}) {
 			debug ("Imported $imported_key for $speced_key");
 			delete $local_keyids{$speced_key};
 			unshift @keyids_ok, $imported_key;
-		} elsif ($line =~ /^\[GNUPG:\] (NODATA|IMPORT_RES|IMPORTED) /) {
-		} elsif ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})/) {
+		} elsif ($line =~ /^\[GNUPG:\] (?:NODATA|IMPORT_RES|IMPORTED) /) {
+		} elsif ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
 			my $imported_key = $1;
 			notice ("Imported key $1 is a version 3 key.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
 			$had_v3_keys = 1;
@@ -1370,8 +1367,8 @@ for my $keyid (@keyids_ok) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ] );
-	$gpg->options->meta_interactive( 0 );
+		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ],
+		'meta_interactive' => 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
 	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
@@ -1487,7 +1484,8 @@ for my $keyid (@keyids_ok) {
 		$gpg->call( $CONFIG{'gpg-delsig'} );
 		$gpg->options->hash_init(
 			'homedir' => $uiddir,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --command-fd=0 --no-tty } ] );
+			'command_fd' => 0,
+			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --no-tty } ] );
 		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 		my $pid = $gpg->wrap_call(
 			commands     => [ '--edit' ],
@@ -1564,83 +1562,83 @@ for my $keyid (@keyids_ok) {
 
 		import_keys_from_gnupghome( [ $keyid ], $GNUPGHOME, undef,
 									# do not export our own exportable signatures, but ensure we've got the same UID list
-								 , $CONFIG{'gpg-sign-type'} =~ /l/ ? () : 'export-minimal' );
-		# if $CONFIG{'gpg-sign-type'} is 'l', we've copied the (local)
-		# signature to our GnuPHOME and we're done
-		unless ( $CONFIG{'gpg-sign-type'} =~ /l/ ) {
-			if ( $CONFIG{'also-lsign-in-gnupghome'} ne 'yes' ) {
-				# manually lsign the key
-				########################
-				foreach my $local_user (@LOCAL_USER) {
-					my @command;
-					push @command, $CONFIG{'gpg-sign'};
-					push @command, '--local-user', $local_user if defined $local_user;
-					push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-					push @command, '--no-auto-check-trustdb';
-					push @command, '--trust-model=always';
-					push @command, '--edit', $keyid;
-					push @command, 'lsign';
-					push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
-					print join(' ', @command),"\n";
-					system @command;
-					die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
-				};
-			}
-			else {
-				# auto lsign the relevant uids
-				##############################
-				my @uids = grep {$_->{last_signed_on}} @{$KEYS{$keyid}->{uids}};
-				my @signers = map {keys %{$_->{signers}}} @uids;
-				if (@LOCAL_USER && defined $LOCAL_USER[0]) {
-					# which of @LOCAL_USER has signed at least one UID in this key?
-					@signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
-				} else {
-					# no @LOCAL_USER was defined; remove duplicates to avoid double signing
-					@signers = keys %{{ map { $_ => 1 } @signers }}
-				};
+									$CONFIG{'gpg-sign-type'} =~ /l/ ? () : 'export-minimal' );
+		if ( $CONFIG{'gpg-sign-type'} =~ /l/ ) {
+			# we've copied the (local) signature to our GnuPHOME and we're done
+		}
+		elsif ( $CONFIG{'also-lsign-in-gnupghome'} ne 'yes' ) {
+			# manually lsign the key
+			########################
+			foreach my $local_user (@LOCAL_USER) {
+				my @command;
+				push @command, $CONFIG{'gpg-sign'};
+				push @command, '--local-user', $local_user if defined $local_user;
+				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+				push @command, '--no-auto-check-trustdb';
+				push @command, '--trust-model=always';
+				push @command, '--edit', $keyid;
+				push @command, 'lsign';
+				push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+				print join(' ', @command),"\n";
+				system @command;
+				die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
+			};
+		}
+		else {
+			# auto lsign the relevant uids
+			##############################
+			my @uids = grep {$_->{last_signed_on}} @{$KEYS{$keyid}->{uids}};
+			my @signers = map {keys %{$_->{signers}}} @uids;
+			if (@LOCAL_USER && defined $LOCAL_USER[0]) {
+				# which of @LOCAL_USER has signed at least one UID in this key?
+				@signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
+			} else {
+				# no @LOCAL_USER was defined; remove duplicates to avoid double signing
+				@signers = keys %{{ map { $_ => 1 } @signers }}
+			};
 
-				foreach my $u (@signers) {
-					my @signeduids; # uids signed by $u
-					foreach my $uid (@uids) {
-						# we use UIDs hashes to distinguish and select UIDs; it's only reliable way to identify them accross keyrings
-						push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{signers}}) and
-												 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
-					}
-
-					my $gpg = GnuPG::Interface->new();
-					$gpg->call( $CONFIG{'gpg'} );
-					$gpg->options->hash_init(
-						'extra_args' => [ '--local-user', $u
-										, '--secret-keyring', $CONFIG{'secret-keyring'}
-										, '--ask-cert-level'
-										# we know there is a working agent
-										, '--use-agent'
-										, qw{ --no-auto-check-trustdb --trust-model=always --command-fd=0 --no-tty } ] );
-					my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-					my $pid = $gpg->wrap_call(
-						commands     => [ '--edit' ],
-						command_args => [ $keyid ],
-						handles      => $handles );
-
-					debug("Starting edit session on $keyid, signer $u");
-					readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-
-					foreach my $level (0..3) {
-						my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
-						next unless @signeduids_with_level;
-
-						info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid.");
-						readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-						readwrite_gpg("uid $_->{hash}\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
-							for @signeduids_with_level;
-						readwrite_gpg("lsign\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
-						readwrite_gpg("$level\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
-						readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					}
-
-					readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
-					waitpid $pid, 0;
+			foreach my $u (@signers) {
+				my @signeduids; # uids signed by $u
+				foreach my $uid (@uids) {
+					# we use UIDs hashes to distinguish and select UIDs; it's only reliable way to identify them accross keyrings
+					push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{signers}}) and
+											 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
 				}
+
+				my $gpg = GnuPG::Interface->new();
+				$gpg->call( $CONFIG{'gpg'} );
+				$gpg->options->hash_init(
+					'command_fd' => 0,
+					'extra_args' => [ '--local-user', $u
+									, '--secret-keyring', $CONFIG{'secret-keyring'}
+									, '--ask-cert-level'
+									# we know there is a working agent
+									, '--use-agent'
+									, qw{ --no-auto-check-trustdb --trust-model=always --no-tty } ] );
+				my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+				my $pid = $gpg->wrap_call(
+					commands     => [ '--edit' ],
+					command_args => [ $keyid ],
+					handles      => $handles );
+
+				debug("Starting edit session on $keyid, signer $u");
+				readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+
+				foreach my $level (0..3) {
+					my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
+					next unless @signeduids_with_level;
+
+					info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid.");
+					readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg("uid $_->{hash}\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
+						for @signeduids_with_level;
+					readwrite_gpg("lsign\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
+					readwrite_gpg("$level\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
+					readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				}
+
+				readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
+				waitpid $pid, 0;
 			}
 		}
 	}
@@ -1695,7 +1693,7 @@ for my $keyid (@keyids_ok) {
 		info("$longkeyid $uid->{serial} $uid->{text} done.");
 	};
 
-	notice("Key has no encryption capabilities, mail(s) will be sent unencrypted") unless $can_encrypt;
+	notice("Key has no encryption capabilities, mail(s) will be sent/stored unencrypted") unless $can_encrypt;
 	my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 	for my $uid (@UIDS) {
 		next unless $uid->{last_signed_on}; # wasn't signed by me
