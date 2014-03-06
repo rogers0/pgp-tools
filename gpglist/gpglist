@@ -90,15 +90,16 @@ open SIGS, '-|', qw/gpg --list-options show-sig-subpackets --fixed-list-mode --w
 	or die "can't get gpg listing";
 
 my ($uid, $id) = ('', '');
-my @uids;
+my (%uids, @uids);
 my %sigs;
 my %revs;
 my %ids;
 my $longkey;
 while (<SIGS>) {
-	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]+):/ ) {
+	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:([^:]+):/ ) {
 		$uid = $1;
-		push @uids, $uid;
+		push @uids, $uid; # preserve the order
+		$uids{$uid} = $2;
 	}
 	elsif ( /^sig:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):([0-9]*):[^:]*:[^:]*:([^:]*):/ ) {
 		$id = $1;
@@ -115,9 +116,10 @@ while (<SIGS>) {
 	elsif ( /^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):/ ) {
 		$revs{$1}->{$uid} = $2;
 	}
-	if ( m/^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
-		$uid = "Photo ID";
-		push @uids, $uid;
+	elsif ( /^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:/ ) {
+		$uid = $1;
+		push @uids, $uid; # preserve the order
+		$uids{$uid} = "Photo ID"; # XXX [jpeg image of size ...]
 	}
 	elsif ( /^pub:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
 		$longkey = $1;
@@ -133,15 +135,14 @@ while (<SIGS>) {
 close SIGS;
 
 # XXX: Add an option for this (requires --list-options show-unusable-uids)
-my $c = 0;
-@uids = grep { !defined $revs{$longkey}->{$uids[$c++]} } @uids;
+@uids = grep { !defined $revs{$longkey}->{$_} } @uids;
 
 for ( my $a=0; $a <= $#uids; $a++ ) {
-	printf "|  " x ($a)
+	printf "|  " x $a
 	     . "+--"
 	     . "---" x ($#uids-$a)
 	     . (defined $revs{$longkey}->{$uids[$a]} ? "R" : " ") # revuid
-	     . "%2i $uids[$a]\n", $a+1;
+	     . "%2i $uids{$uids[$a]}\n", $a+1;
 }
 
 for ( my $a=0; $a <= $#uids; $a++ ) {

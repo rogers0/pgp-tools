@@ -46,6 +46,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Don't mark a signature as revoked if another signature was created after
       the revocation certificate (cf. RFC 4880 section 5.2.1, signature type
       0x30), or if the signature was non-revokable.
+    + Don't identify two UIDs or UATs that have the same name (use the packet
+      hash to distinguish them).
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 
