@@ -96,7 +96,7 @@ my %revs;
 my %ids;
 my $longkey;
 while (<SIGS>) {
-	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:([^:]+):/ ) {
+	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([0-9A-F]{40}):[^:]*:([^:]+):/ ) {
 		$uid = $1;
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = $2;
@@ -116,7 +116,7 @@ while (<SIGS>) {
 	elsif ( /^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):/ ) {
 		$revs{$1}->{$uid} = $2;
 	}
-	elsif ( /^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):[^:]*:[^:]*:/ ) {
+	elsif ( /^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([0-9A-F]{40}):[^:]*:[^:]*:/ ) {
 		$uid = $1;
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = "Photo ID"; # XXX [jpeg image of size ...]
