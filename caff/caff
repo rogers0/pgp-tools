@@ -1295,7 +1295,6 @@ if ($CONFIG{'no-download'}) {
 		}
 	}
 	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
-
 	info ("Fetching keys from $CONFIG{keyserver}, this may take a while...");
 
 	my $gpg = GnuPG::Interface->new();
@@ -1304,10 +1303,13 @@ if ($CONFIG{'no-download'}) {
 		'homedir' => $GNUPGHOME,
 		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always }, '--keyserver='.$CONFIG{'keyserver'} ],
 		'meta_interactive' => 0 );
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+
+	my $status = IO::Handle->new();
+	open my $logger, '>', '/dev/null';	# requesting key ... from hkp
+	open my $stdout, '>&=', $logger;	# gpgkeys: key ... not found on keyserver
+	my $handles = GnuPG::Handles->new( status => $status, logger => $logger, stdout => $stdout ); # don't redirect STDERR
+	$handles->options($_)->{direct} = 1 for qw/logger stdout/;
 	my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
-	waitpid $pid, 0;
 
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
 # [GNUPG:] NODATA 1
@@ -1315,9 +1317,8 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	my $had_v3_keys = 0;
-	print STDERR $stderr if $stderr;
-	for my $line (split /\n/, $status) {
-		if ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+	while (<$status>) {
+		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $imported_key = $1;
 			my $whole_fpr = $imported_key;
 			my $long_keyid = substr($imported_key, -16);
@@ -1333,15 +1334,17 @@ if ($CONFIG{'no-download'}) {
 			debug ("Imported $imported_key for $speced_key");
 			delete $local_keyids{$speced_key};
 			unshift @keyids_ok, $imported_key;
-		} elsif ($line =~ /^\[GNUPG:\] (?:NODATA|IMPORT_RES|IMPORTED) /) {
-		} elsif ($line =~ /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
+		} elsif (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
 			my $imported_key = $1;
-			notice ("Imported key $1 is a version 3 key.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
+			notice ("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
 			$had_v3_keys = 1;
-		} else {
-			notice ("got unknown reply from gpg: $line");
+		} elsif (!/^\[GNUPG:\] (?:NODATA|IMPORT_RES|IMPORTED) /) {
+			notice ("Got unknown reply from gpg: ".$_);
 		}
 	};
+	waitpid $pid, 0;
+	close $_ for ($stdout, $logger);
+
 	if (scalar %local_keyids) {
 		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
 		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);

@@ -10,7 +10,7 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       (Closes: #723024)
     + Allow local and owner keyids to be specified as fingerprints.
       (Closes: #635359)
-    + Dump gpg's STDERR after importing the keys. (Closes: #612178)
+    + Don't redirect gpg's STDERR when importing the keys. (Closes: #612178)
     + Create the mail files in ~/.caff/keys when mail=no. (Closes: #652686)
     + Add an option 'mail-cant-encrypt' for special treatment of keys
       without encryption capability. (Closes: #622790)
