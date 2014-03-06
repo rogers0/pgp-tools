@@ -41,6 +41,11 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Adapt patch from Tanguy Ortolo to output to STDOUT. (Closes: #694465)
     + Adapt patch from Tanguy Ortolo to output to accept any digest algorithm
       supported by gpg (default: SHA256,RIPEMD160). (Closes: #659990)
+  * gpglist:
+    + Handle time-limited signatures (don't list them).
+    + Don't mark a signature as revoked if another signature was created after
+      the revocation certificate (cf. RFC 4880 section 5.2.1, signature type
+      0x30), or if the signature was non-revokable.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 

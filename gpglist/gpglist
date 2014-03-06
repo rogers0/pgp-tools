@@ -80,71 +80,85 @@ use strict;
 use warnings;
 use English;
 
+my $now = time;
 my $key=shift @ARGV;
 unless (defined $key) {
 	die "Usage: $PROGRAM_NAME <keyid>\n";
 }
 
-open SIGS, '-|', qw/gpg --fixed-list-mode --with-colons --list-sigs/, $key
+open SIGS, '-|', qw/gpg --list-options show-sig-subpackets --fixed-list-mode --with-colons --list-sigs/, $key
 	or die "can't get gpg listing";
 
-my $uid = "";
+my ($uid, $id) = ('', '');
 my @uids;
 my %sigs;
-my %rev;
+my %revs;
 my %ids;
 my $longkey;
 while (<SIGS>) {
-	if ( m/^uid:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
+	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]+):/ ) {
 		$uid = $1;
-		push @uids, $1;
-		next;
+		push @uids, $uid;
 	}
-	if ( m/^sig:[^:]*:[^:]*:[^:]*:([0-9A-F]*):[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
-		$ids{$1} = $2;
-		$sigs{$1}->{$uid} = "x" unless defined $sigs{$1}->{$uid};
-		next;
+	elsif ( /^sig:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):([0-9]*):[^:]*:[^:]*:([^:]*):/ ) {
+		$id = $1;
+		next if $3 ne '' and $3 < $now; # expired
+		$ids{$id} = $4;
+		# keep only the most recent sig (a more recent sig might appear anywhere in the list)
+		$sigs{$id}->{$uid} = $2 unless defined $sigs{$id}->{$uid} and
+									  $sigs{$id}->{$uid} > 0 and # < 0 means non-revocable
+									  $sigs{$id}->{$uid} > $2;
 	}
-	if ( m/^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]*):/ ) {
-		$rev{$uid} = "x" if ($longkey eq $1);
-		$sigs{$1}->{$uid} = "R";
-		next;
+	elsif ( /^spk:7:1:1:/ ) { # non-revocable signature
+		$sigs{$id}->{$uid} = -1;
+	}
+	elsif ( /^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):/ ) {
+		$revs{$1}->{$uid} = $2;
 	}
 	if ( m/^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
 		$uid = "Photo ID";
 		push @uids, $uid;
-		next;
 	}
-	if ( m/^pub:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
+	elsif ( /^pub:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
 		$longkey = $1;
-		next;
 	}
-	last if ( m/^(sub):/ );
-	next if ( m/^(fpr|tru|rvk):/ );
-	print STDERR "hi, i'm a bug. please report me to my owner\n";
-	die "input: $_, key: $key";
+	elsif ( /^sub:/ ) {
+		last;
+	}
+	elsif ( !/^(?:fpr|tru|rvk|spk):/ ) {
+		print STDERR "hi, i'm a bug. please report me to my owner\n";
+		die "input: $_, key: $key";
+	}
 }
 close SIGS;
 
-# XXX: Add an option for this
+# XXX: Add an option for this (requires --list-options show-unusable-uids)
 my $c = 0;
-@uids = grep { ! defined $rev{$uids[$c++]} } @uids;
+@uids = grep { !defined $revs{$longkey}->{$uids[$c++]} } @uids;
 
-my $n = scalar @uids -1;
-for ( my $a=0; $a <= $n; $a++ ) {
+for ( my $a=0; $a <= $#uids; $a++ ) {
 	printf "|  " x ($a)
 	     . "+--"
-	     . "---" x ($n-$a)
-	     . (defined $rev{$uids[$a]} ? "R" : " ")
+	     . "---" x ($#uids-$a)
+	     . (defined $revs{$longkey}->{$uids[$a]} ? "R" : " ") # revuid
 	     . "%2i $uids[$a]\n", $a+1;
 }
 
-for ( my $a=0; $a <= $n; $a++ ) {
+for ( my $a=0; $a <= $#uids; $a++ ) {
 	printf "%-2i ", $a+1;
 }
 print "\n";
 
 for my $id (sort {$ids{$a} cmp $ids{$b}} keys %ids) {
-	print((defined $sigs{$id}->{$_} ? $sigs{$id}->{$_} : " ") . "  ") for (@uids);
-	print $id." $ids{$id}\n";
+	foreach my $uid (@uids) {
+		if (defined $revs{$id}->{$uid} and defined $sigs{$id}->{$uid} and
+				$sigs{$id}->{$uid} > 0 and # < 0 means non-revocable
+				$revs{$id}->{$uid} > $sigs{$id}->{$uid}) {
+			print 'R';
+		} else {
+			print (defined $sigs{$id}->{$uid} ? 'x' : ' ');
+		}
+		print '  ';
+	}
+	print "$id $ids{$id}\n";
 }
