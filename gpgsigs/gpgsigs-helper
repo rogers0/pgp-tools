@@ -3,8 +3,8 @@
 ID="$1"
 NUM=1
 
-while test -e $ID.$NUM.jpg ; do
+while test -e ${ID}_${NUM}.jpg; do
     NUM=$(( $NUM + 1 ))
 done
 
-cat >$ID.$NUM.jpg
+cat >${ID}_${NUM}.jpg

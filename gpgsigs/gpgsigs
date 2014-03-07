@@ -189,7 +189,7 @@ while (<SIGS>) {
 		my $size = $2 - 19; # FIXME: find a nicer way to find out picture size
 		$uid = "[jpeg image of size $size]";
 		if ($latex and not $photocount) { # call once per key
-			unlink glob "$key.[1-9]*.jpg";
+			unlink glob "${key}_[1-9]*.jpg";
 			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
 			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
 			system 'gpg', '--photo-viewer', "/usr/share/signing-party/gpgsigs-helper $key",
@@ -294,7 +294,7 @@ if ($latex) {
 \documentclass{article}
 \usepackage[margin=2cm]{geometry}
 \usepackage{alltt}
-\usepackage{graphicx,grffile}
+\usepackage{graphicx}
 \usepackage{ifluatex,ifxetex}
 \ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0
   \usepackage[utf8x]{inputenc}
@@ -379,7 +379,7 @@ while (<TXT>) {
 				if ($latex and ($uid =~ /^\[jpeg image/)) {
 					$photocount++;
 					print WRITE "\\begin{flushright}\n";
-					print WRITE "\\includegraphics[height=3cm]{$key.$photocount}\n";
+					print WRITE "\\includegraphics[height=3cm]{${key}_${photocount}}\n";
 					print WRITE "\\end{flushright}\n";
 				}
 			}
@@ -398,7 +398,7 @@ while (<TXT>) {
 		print WRITE print_tag($key, $uid) . " $_";
 		next;
 	}
-	if ( /^[_-]{50,}$/ and $latex ) {
+	if ( /^(?:-+|_+)$/ and $latex ) {
 		$_ = "\n\\hrule\n";
 	}
 	print WRITE;
