@@ -155,35 +155,39 @@ if ($recv_keys) {
 	system qw/gpg --recv-keys/, @keys;
 }
 
-print STDERR "Running --list-sigs, this will take a while ";
+print STDERR "Running --list-sigs, this may take a while ";
 open SIGS, '-|', qw/gpg --fixed-list-mode --with-colons --list-sigs/, @mykeys, @keys
 	or die "can't get gpg listing";
 
 my ($key, $uid, $sigs, $photocount);
 while (<SIGS>) {
-	if ( m/^pub:(?:.*?:){3,3}([0-9A-F]{16,16}):/ ) {
-		$key = $1;
-		print STDERR ".";
+	if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
+		undef $key;
 		undef $photocount;
+		if ($1 =~ /[eir]/ or $3 =~ /D/ ) {
+			warn "Ignoring unusable key $2.\n";
+			last;
+		}
+		$key = $2;
+		print STDERR ".";
 		next;
 	}
-	if ( m/^uid:(.):(?:.*?:){7,7}(.*):/s ) {
-		my $uidstatus = $1;
+	next unless $key; # we're on a revoked key
+	if (/^uid:(.):.*:[0-9A-F]{40}::([^:]+):$/) {
+		undef $uid;
+		next if $1 =~ /[er]/;
+
 		$uid = $2;
 		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-		$uid = myrecode($uid, "UTF-8", $charset);
-
-		# Remember non-revoked uids
-		next if $uidstatus eq "r";
-		push @{$uids{$key}}, $uid;
+		push @{$uids{$key}}, myrecode($uid, "UTF-8", $charset);
 		next;
 	}
-	if ( m/^uat:(.)::::[^:]+::([0-9A-F]+)::\d+ (\d+)/ ) { # uat:-::::2006-08-03::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
-		my $uidstatus = $1;
-		# $2 is hash of attribute data
-		my $size = $3 - 19; # FIXME: find a nicer way to find out picture size
+	if (/^uat:(.):.*:[0-9A-F]{40}::\d+ (\d+):$/) { # uat:-::::1394127796::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
+		undef $uid;
+		next if $1 =~ /[er]/;
+
+		my $size = $2 - 19; # FIXME: find a nicer way to find out picture size
 		$uid = "[jpeg image of size $size]";
-		next if $uidstatus eq "r";
 		if ($latex and not $photocount) { # call once per key
 			unlink glob "$key.[1-9]*.jpg";
 			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
@@ -193,10 +197,12 @@ while (<SIGS>) {
 			open STDOUT, '>&=', $stdout or die "can't restore STDOUT: $!";
 			$photocount = 1;
 		}
+
 		push @{$uids{$key}}, $uid;
 		next;
 	}
-	if ( m/^sig:(?:.*?:){3,3}([0-9A-F]{8})([0-9A-F]{8}):(?:.*?:){5,5}(.*?):/ ) {
+	next unless $uid; # we're on a revoked uid
+	if (/^sig:::\d+:([0-9A-F]{8})([0-9A-F]{8}):.*:(1[0-3][lx]):$/) {
 		my $class = $3;
 		if ($class eq '10x') {
 			$class = 'S';
@@ -226,8 +232,13 @@ while (<SIGS>) {
 		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2};
 		next;
 	}
-	next if ( m/^(rev|rvk|sub|tru):/ ); # revoke/revoker/subkey/trust
-	warn "unknown value: '$_', key: ".(defined $key ? $key :'none')."\n";
+	if (/^sub:/) {
+		undef $uid;
+		next;
+	}
+	if (!/^(?:rev|rvk|tru|fpr):/) { # revoke/revoker/trust/fpr
+		warn "unknown value: '$_', key: ".($key // 'none')."\n";
+	}
 }
 close SIGS;
 print STDERR "\n";
@@ -350,7 +361,7 @@ while (<TXT>) {
 		my $inc = "";
 		foreach my $mykey (@mykeys) {
 			foreach my $myuid (@{$uids{$mykey}}) {
-				$inc .= defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
+				$inc .= $sigs->{$mykey}->{$myuid}->{$key} // ' ';
 			}
 		}
 		print WRITE "[$inc] incoming signatures\n" if $inc =~ /\S/;

@@ -96,12 +96,12 @@ my %revs;
 my %ids;
 my $longkey;
 while (<SIGS>) {
-	if ( /^uid:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([0-9A-F]{40}):[^:]*:([^:]+):/ ) {
+	if (/^uid:.:.*:([0-9A-F]{40})::([^:]+):$/) {
 		$uid = $1;
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = $2;
 	}
-	elsif ( /^sig:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):([0-9]*):[^:]*:[^:]*:([^:]*):/ ) {
+	elsif (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:([^:]+):1[0-3][lx]:$/) {
 		$id = $1;
 		next if $3 ne '' and $3 < $now; # expired
 		$ids{$id} = $4;
@@ -110,24 +110,24 @@ while (<SIGS>) {
 									  $sigs{$id}->{$uid} > 0 and # < 0 means non-revocable
 									  $sigs{$id}->{$uid} > $2;
 	}
-	elsif ( /^spk:7:1:1:/ ) { # non-revocable signature
+	elsif (/^spk:7:1:1:%00$/) { # non-revocable signature
 		$sigs{$id}->{$uid} = -1;
 	}
-	elsif ( /^rev:[^:]*:[^:]*:[^:]*:([0-9A-F]{16}):([0-9]+):/ ) {
+	elsif (/^rev:::\d+:([0-9A-F]{16}):(\d+):/) {
 		$revs{$1}->{$uid} = $2;
 	}
-	elsif ( /^uat:.:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:([0-9A-F]{40}):[^:]*:[^:]*:/ ) {
+	elsif (/^uat:.:.*:([0-9A-F]{40})::\d+ \d+:$/) {
 		$uid = $1;
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = "Photo ID"; # XXX [jpeg image of size ...]
 	}
-	elsif ( /^pub:[^:]*:[^:]*:[^:]*:([^:]*):/ ) {
+	elsif (/^pub:.:\d+:\d+:([0-9A-F]{16}):/) {
 		$longkey = $1;
 	}
-	elsif ( /^sub:/ ) {
+	elsif (/^sub:/) {
 		last;
 	}
-	elsif ( !/^(?:fpr|tru|rvk|spk):/ ) {
+	elsif (!/^(?:fpr|tru|rvk|spk):/) {
 		print STDERR "hi, i'm a bug. please report me to my owner\n";
 		die "input: $_, key: $key";
 	}

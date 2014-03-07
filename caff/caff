@@ -476,7 +476,7 @@ $Cemail\$CONFIG{'email'} = '$email';
 #\$CONFIG{'reply-to'} = 'foo\@bla.org';
 
 # You can get your long keyid from
-#   gpg --with-colons --list-key <yourkeyid|name|emailaddress..>
+#   gpg --keyid-format long --list-key <yourkeyid|name|emailaddress..>
 #
 # If you have a v4 key, it will simply be the last 16 digits of
 # your fingerprint.
@@ -931,31 +931,31 @@ sub delete_signatures($$$$$$$) {
 		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
 
 	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
-		# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
+		# sig:?::17:EA2199412477CAF8:1058095214:::::13x
 		my @sigline = grep { /^sig:/ } (split /\n/, $stdout);
-		$stdout =~ s/\n/\\n/g;
-		notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
-		my $line = pop @sigline;
 		my $answer = "no";
-		if (defined $line) { # only if we found a sig here - we never remove revocation packets for instance
-			debug("[sigremoval] doing line $line.");
-			my ($signer, $created, $level) = (split /:/, $line)[4,5,10];
-			if ($signer eq $longkeyid) {
-				debug("[sigremoval] selfsig ($signer).");
+		if (!@sigline) {
+			debug("[sigremoval] no sig line here, only got:\n".$stdout);
+		}
+		else { # only if we found a sig here - we never remove revocation packets for instance
+			my $sig = pop @sigline;
+			$sig =~ /^sig:.::\d+:([0-9A-F]{16}):(\d+):.*:(1[0-3]|30)[lx]$/ or
+				mywarn("I hit a bug, please report. Couldn't parse sigline $sig.");
+			debug("[sigremoval] doing sigline $sig.");
+			if ($1 eq $longkeyid) {
+				debug("[sigremoval] selfsig ($1).");
 				$answer = "no";
-			} elsif (grep { $signer eq $_ } @{$keyids}) {
-				debug("[sigremoval] signed by us ($signer).");
+			} elsif (grep { $1 eq $_ } @$keyids and $3 != 30) {
+				debug("[sigremoval] signed by us ($1).");
 				$answer = "no";
-				$last_signed_on = $created if $last_signed_on < $created;
-				$level =~ s/^1([0-3])[lx]$/$1/;
-				$signers{$signer} = $level;
+				$last_signed_on = $2 if $last_signed_on < $2;
+				$signers{$1} = $3-10;
 			} else {
-				debug("[sigremoval] not interested in that sig ($signer).");
+				debug("[sigremoval] not interested in that sig ($1).");
 				$answer = "yes";
 			};
-		} else {
-			debug("[sigremoval] no sig line here, only got: ".$stdout);
-		};
+			mywarn("I hit a bug, please report. Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$stdout) if @sigline;
+		}
 		($stdout, $stderr, $status) =
 			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
 	};
@@ -1069,6 +1069,7 @@ sub import_keys_from_gnupghome($$$@) {
 	}
 	waitpid $iPid, 0; # import done
 	waitpid $ePid, 0; # export done
+	close $_ for ($status, $pipe);
 
 	if (wantarray) {
 		return (keys %keyids); # failed to import
@@ -1113,6 +1114,7 @@ sub import_key_files($$) {
 		}
 	}
 	waitpid $pid, 0;
+	close $status;
 	return $err;
 }
 
@@ -1343,7 +1345,7 @@ if ($CONFIG{'no-download'}) {
 		}
 	};
 	waitpid $pid, 0;
-	close $_ for ($stdout, $logger);
+	close $_ for ($stdout, $logger, $status);
 
 	if (scalar %local_keyids) {
 		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
@@ -1366,59 +1368,63 @@ my @LOCAL_USER;
 
 my %KEYS;
 for my $keyid (@keyids_ok) {
-	# get key listing
-	#################
+	# get key listing (and ensure there is no collision)
+	####################################################
 	my $gpg = GnuPG::Interface->new();
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
 		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ],
 		'meta_interactive' => 0 );
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
-	my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $keyid ]);
-	my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+
+	open my $stderr, '>', '/dev/null';
+	my $stdout = IO::Handle->new();
+	my $handles = GnuPG::Handles->new( stdout => $stdout, stderr => $stderr );
+	$handles->options('stderr')->{direct} = 1;
+	# process the keys one by one so we can detect collisions
+	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
+
+	while (<$stdout>) {
+		if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
+			if (exists $KEYS{$keyid}) {
+				mywarn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint.");
+				last;
+			} elsif ($1 =~ /[eir]/ or $3 =~ /D/ ) {
+				mywarn ("Ignoring unusable key $keyid.");
+				last;
+			}
+			$KEYS{$keyid} = { longkeyid => $2, flags => $3 };
+		}
+		elsif (/^fpr:.*:([0-9A-F]{40}):$/) {
+			$KEYS{$keyid}->{fpr} = $1;
+		}
+		elsif (/^fpr:.*:([0-9A-F]{32}):$/) {
+			info("Ignoring v3 key $keyid.  v3 keys are obsolete.");
+			delete $KEYS{$keyid};
+			last;
+		}
+		elsif (/^sub:.:\d+:\d+:([0-9A-F]{16}):/) {
+			push @{$KEYS{$keyid}->{subkeys}}, $1;
+		}
+		elsif (/^(uid|uat):.*:([0-9A-F]{40})::([^:]+):$/) {
+			push @{$KEYS{$keyid}->{uids}}, {
+				type => $1,
+				hash => $2,
+				text => $1 eq 'uid' ? $3 : '[attribute]'
+			};
+		}
+		elsif (!/^tru:/) {
+			chomp;
+			notice ("Got unknown reply from gpg: ".$_);
+		}
+	}
 	waitpid $pid, 0;
-	my @stdout = split /\n/, $stdout;
-	my @publine = grep { /^pub:/ } @stdout;
-	unless (@stdout) {
-		warn ("No data from gpg for list-key $keyid\n");
-		next;
-	};
-	if (scalar @publine == 0) {
-		warn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).\n");
-		next;
-	};
-	my (undef, undef, undef, undef, $longkeyid, undef, undef, undef, undef, undef, undef, $flags) = split /:/, pop @publine;
-	if (scalar @publine > 0) {
-		warn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint\n");
-		next;
-	};
-	unless (defined $longkeyid) {
-		warn ("Didn't find public keyid in --list-key of key $keyid.\n");
-		next;
-	};
-	unless (defined $flags) {
-		warn ("Didn't find flags in --list-key of key $keyid.\n");
-		next;
-	};
-	my $fpr = (split /:/, (grep { /^fpr:/ } @stdout)[0])[9];
-	if ($fpr =~ /^[0-9A-F]{32}$/i) {
-		info("Ignoring v3 key ".$keyid.".  v3 keys are obsolete.");
+	close $_ for ($stdout, $stderr);
+
+	unless (defined $KEYS{$keyid}) {
+		mywarn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).");
 		next;
 	}
-
-	# store the uids to keep track of their hash, which is the only reliable way to distinguish them
-	$KEYS{$keyid} = { longkeyid => $longkeyid
-					, flags => $flags
-					, uids => [ map { my ($type,$created,$hash,$text) = (split /:/)[0,5,7,9];
-									  { type => $type,
-										created => $created,
-										hash => $hash,
-										text => $type eq 'uid' ? $text : '[attribute]'
-									}}
-									(grep { /^(?:uid|uat):/ } @stdout) ]
-					, subkeys => [ map { (split /:/)[4] } (grep { /^sub:/ } @stdout) ]
-					};
 }
 
 unless (keys %KEYS) {
