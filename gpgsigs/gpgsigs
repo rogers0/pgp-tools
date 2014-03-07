@@ -98,7 +98,7 @@ sub myrecode($$$) {
 
 		my $result = $it->convert($text);
 		warn ("Could not convert '$text'\n") unless defined $result;
-		return (defined $result) ? $result : $text
+		return ($result // $text);
 	} else {
 		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "utf8..$charset");
 		print WTRFH $text;
@@ -109,7 +109,7 @@ sub myrecode($$$) {
 		close ERRFH;
 		waitpid $pid, 0;
 		warn ("'recode' failed, is it installed?\n") unless defined $result;
-		return (defined $result) ? $result : $text
+		return ($result // $text);
 	}
 }
 
@@ -122,7 +122,6 @@ my $outfile = (shift @ARGV) || '-';
 map { y/ //d if /^(?:[0-9A-F]{4} ){5}(?: [0-9A-F]{4}){5}$/; # remove spaces in fprs
 	  /^[0-9A-F]{40}$/ ? s/.{24}// : s/^0x//i;
 	} @mykeys;
-my %uids = map { $_ => [] } @mykeys;
 
 if (!@mykeys || scalar @ARGV) {
 	usage(*STDERR, 1);
@@ -155,12 +154,15 @@ if ($recv_keys) {
 	system qw/gpg --recv-keys/, @keys;
 }
 
+my $now = time;
 print STDERR "Running --list-sigs, this may take a while ";
-open SIGS, '-|', qw/gpg --fixed-list-mode --with-colons --list-sigs/, @mykeys, @keys
+open SIGS, '-|', qw/gpg --list-options show-sig-subpackets --fixed-list-mode --with-colons --list-sigs/, @mykeys, @keys
 	or die "can't get gpg listing";
 
-my ($key, $uid, $sigs, $photocount);
+my (%keys, %uids, %sigs, %revs);
+my ($key, $uid, $sig, $photocount); # current context
 while (<SIGS>) {
+	undef $sig unless /^spk:/;
 	if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
 		undef $key;
 		undef $photocount;
@@ -169,26 +171,28 @@ while (<SIGS>) {
 			last;
 		}
 		$key = $2;
+		$keys{$key} = [];
 		print STDERR ".";
 		next;
 	}
-	next unless $key; # we're on a revoked key
-	if (/^uid:(.):.*:[0-9A-F]{40}::([^:]+):$/) {
+	next unless $key; # nothing to do on revoked keys
+	if (/^uid:(.):.*:([0-9A-F]{40})::([^:]+):$/) {
 		undef $uid;
 		next if $1 =~ /[er]/;
 
-		$uid = $2;
-		$uid =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-		push @{$uids{$key}}, myrecode($uid, "UTF-8", $charset);
+		$uid = $2; # use the SHA1 to have proper distinction between UIDs/UATs
+		my $text = $3;
+		$text =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
+		$uids{$key}->{$uid} = { type => 'uid', text => myrecode($text, "UTF-8", $charset) };
+		push $keys{$key}, $uid; # preserve order
 		next;
 	}
-	if (/^uat:(.):.*:[0-9A-F]{40}::\d+ (\d+):$/) { # uat:-::::1394127796::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
+	if (/^uat:(.):.*:([0-9A-F]{40})::\d+ (\d+):$/) { # uat:-::::1394127796::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
 		undef $uid;
 		next if $1 =~ /[er]/;
 
-		my $size = $2 - 19; # FIXME: find a nicer way to find out picture size
-		$uid = "[jpeg image of size $size]";
-		if ($latex and not $photocount) { # call once per key
+		$uid = $2; # use the SHA1 to have proper distinction between UIDs/UATs
+		if ($latex and !$photocount) { # call once per key
 			unlink glob "${key}_[1-9]*.jpg";
 			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
 			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
@@ -198,59 +202,78 @@ while (<SIGS>) {
 			$photocount = 1;
 		}
 
-		push @{$uids{$key}}, $uid;
+		my $size = $3 - 19; # FIXME: find a nicer way to find out picture size
+		$uids{$key}->{$uid} = { type => 'uat', text => "[jpeg image of size $size]" };
+		push $keys{$key}, $uid; # preserve order
 		next;
 	}
-	next unless $uid; # we're on a revoked uid
-	if (/^sig:::\d+:([0-9A-F]{8})([0-9A-F]{8}):.*:(1[0-3][lx]):$/) {
-		my $class = $3;
-		if ($class eq '10x') {
-			$class = 'S';
-		} elsif ($class eq '11x') {
-			$class = '1';
-		} elsif ($class eq '12x') {
-			$class = '2';
-		} elsif ($class eq '13x') {
-			$class = '3';
+	next unless $uid; # nothing to do on revoked uids
+	if (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:(1[0-3][lx]):$/) {
+		if (!grep { /(?:$1|$key)$/ } @mykeys) {
+			$sig = []; # $key is not ours, and the signer isn't us: don't waste ressourses
 		} else {
-			$class = 's';
-		};
-		# Handle the case where one UID was signed multiple times
-		# with different signature classes.
-		my $before = $sigs->{$key}->{$uid}->{$1.$2};
-		if (defined $before) {
-			if ($before eq 'S' || $before eq 's') {
-				$sigs->{$key}->{$uid}->{$1.$2} = $class;
-			} elsif ($class eq 'S' || $class eq 's') {
-				# intentionally left blank
-			} elsif ($before < $class) {
-				$sigs->{$key}->{$uid}->{$1.$2} = $class;
-			};
-		} else {
-			$sigs->{$key}->{$uid}->{$1.$2} .= $class;
-		};
-		$sigs->{$key}->{$uid}->{$2} = $sigs->{$key}->{$uid}->{$1.$2};
+			$sigs{$key}->{$uid}->{$1} //= [];
+			$sig = $sigs{$key}->{$uid}->{$1};
+			push $sig, { created => $2, expiring => $3, class => $4, revocable => 1 };
+		}
+		next;
+	}
+	if (/^spk:7:1:1:%0([01])$/ and @$sig) {
+		# mark the last sig as revocable (1) or not (0)
+		$sig->[$#$sig]->{revocable} = $1;
+		next;
+	}
+	if (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
+		$revs{$key}->{$uid}->{$1} = $2 # keep only the most recent revocation cert
+			unless defined $revs{$key}->{$uid}->{$1} and $revs{$key}->{$uid}->{$1} > $2;
 		next;
 	}
 	if (/^sub:/) {
 		undef $uid;
 		next;
 	}
-	if (!/^(?:rev|rvk|tru|fpr):/) { # revoke/revoker/trust/fpr
+	if (!/^(?:rvk|tru|fpr|spk):/) { # revoke/revoker/trust/fpr
 		warn "unknown value: '$_', key: ".($key // 'none')."\n";
 	}
 }
 close SIGS;
 print STDERR "\n";
 
-foreach my $k ( keys %uids ) {
-	# if @mykeys were given as short keyids, copy sigs and uids for these keyids
-	if ( $k =~ m/^[0-9A-F]{8}([0-9A-F]{8})$/ and grep { $1 eq $_ } @mykeys ) {
-		$sigs->{$1} = $sigs->{$k};
-		$uids{$1} = $uids{$k};
+# collapse sigs following RFC 4880
+while (my ($key, $uids) = each %sigs) {
+	while (my ($uid, $signers) = each %$uids) {
+		while (my ($signer, $sigs) = each %$signers) {
+			my $lastrev = $revs{$key}->{$uid}->{$signer};
+			my $class;
+			my @sigs;
+
+			# remove expired signatures
+			@sigs = grep {!$_->{expiring} or $now < $_->{expiring}} @$sigs;
+			$class = 'X' if !$class and !@sigs; # eXpired
+
+			# remove revoked signatures (but keep signatures issued after the last revocation cert)
+			@sigs = grep {!$_->{revocable} or $lastrev < $_->{created}} @sigs if $lastrev;
+			$class = 'R' if !$class and !@sigs; # Revoked
+
+			unless ($class) {
+				# only non-expired, non-revoked sigs are left in @sigs.
+				@sigs = grep { $_->{class} =~ /x$/ } @sigs; # grep for exportable sigs
+				if (@sigs) {
+					# we take the one with the best level
+					@sigs = sort { $a->{class} cmp $b->{class} } @sigs;
+					$class = (pop @sigs)->{class};
+					$class =~ s/1([0-3])./$1/;
+					$class ||= 'S';
+				} else {
+					# XXX add an option to mark local sigs as exportable ones
+					$class = 's';
+				}
+			}
+			undef $sigs;
+			$signers->{$signer} = $class;
+		}
 	}
 }
-
 
 sub getChecksum ($$) {
 	my ($algo, $infile) = @_;
@@ -262,20 +285,10 @@ sub getChecksum ($$) {
 
 
 # write out result
-sub print_tag
-{
+sub print_tag {
 	my ($key, $uid) = @_;
-	if (! defined $sigs->{$key}->{$uid}) {
-		warn "uid '$uid' not found on key $key\n";
-		#for (keys %{ $sigs->{$key} }) {
-		#	print STDERR "only have $_\n";
-		#};
-		return '(' . (' ' x @mykeys) . ')';
-	}
 	my $r = '(';
-	foreach my $mykey (@mykeys) {
-		$r .= defined $sigs->{$key}->{$uid}->{$mykey} ? $sigs->{$key}->{$uid}->{$mykey} : ' ';
-	}
+	$r .= $sigs{$key}->{$uid}->{$_} // ' ' for @mykeys;
 	$r .= ')';
 	return $r;
 }
@@ -342,13 +355,8 @@ while (<TXT>) {
 		next;
 	}
 
-	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2} *(.*)/ ) {
+	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2}/ ) {
 		$key = $1;
-		$uid = $2;
-		#if ($uid) { # in gpg 1.2, the first uid is here
-		#	print WRITE print_tag($key, $uid) . " $_";
-		#	next;
-		#}
 		print WRITE;
 		undef $photocount;
 		next;
@@ -360,23 +368,23 @@ while (<TXT>) {
 		print WRITE;
 		my $inc = "";
 		foreach my $mykey (@mykeys) {
-			foreach my $myuid (@{$uids{$mykey}}) {
-				$inc .= $sigs->{$mykey}->{$myuid}->{$key} // ' ';
+			foreach my $myuid (@{$keys{$mykey}}) {
+				$inc .= $sigs{$mykey}->{$myuid}->{$key} // ' ';
 			}
 		}
 		print WRITE "[$inc] incoming signatures\n" if $inc =~ /\S/;
 		if ($refresh or $latex) {
-			foreach $uid (@{$uids{$key}}) {
+			foreach my $uid (@{$keys{$key}}) {
 				my $tag = print_tag($key, $uid);
 				if (!$latex) {
-					print WRITE $tag .' '. $uid,"\n";
+					print WRITE $tag .' '. $uids{$key}->{$uid}->{text},"\n";
 				} else {
-					for (my $i = 0; $i < length $uid; $i+=78) {
+					for (my $i = 0; $i < length $uids{$key}->{$uid}->{text}; $i+=78) {
 						print WRITE ($i ? ' ' x length $tag : $tag ), ' ',
-									substr ($uid, $i, 78), "\n";
+									substr ($uids{$key}->{$uid}->{text}, $i, 78), "\n";
 					}
 				}
-				if ($latex and ($uid =~ /^\[jpeg image/)) {
+				if ($latex and $uids{$key}->{$uid}->{type} eq 'uat') {
 					$photocount++;
 					print WRITE "\\begin{flushright}\n";
 					print WRITE "\\includegraphics[height=3cm]{${key}_${photocount}}\n";
@@ -388,14 +396,20 @@ while (<TXT>) {
 
 	}
 	if ( m/^uid +(.*)$/ ) {
-		$uid = $1;
 		next if $refresh or $latex;
+		my $uid = $1;
 		unless (defined $key) {
 			warn "key is undefined - input text is possibly malformed near line $line\n";
 			next;
 		};
-		die "bad tag from $key | $uid" unless defined (print_tag($key, $uid));
-		print WRITE print_tag($key, $uid) . " $_";
+		my @h = grep { $uids{$key}->{$_}->{text} eq $uid } @{$keys{$key}};
+		if (@h) {
+			# if there are multiple matches we can't distinguish them
+			print WRITE print_tag($key, pop @h)." $uid\n";
+		} else {
+			warn "uid '$uid' not found on key $key\n";
+			return '(' . (' ' x @mykeys) . ')';
+		}
 		next;
 	}
 	if ( /^(?:-+|_+)$/ and $latex ) {
@@ -404,21 +418,20 @@ while (<TXT>) {
 	print WRITE;
 }
 
-if ($latex && ($keys > 0)) {
+if ($latex and $keys > 0) {
 	print WRITE "\\end{samepage}\n";
 }
 
 print WRITE "Legend:\n";
 my $num_myuids = 0;
-foreach my $i (0 .. @mykeys - 1) {
-	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $uids{$mykeys[$i]}->[0]\n";
-	$num_myuids += @{$uids{$mykeys[$i]}};
+foreach my $i (0 .. $#mykeys) {
+	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $uids{$mykeys[$i]}->{$keys{$mykeys[$i]}->[0]}->{text}\n";
+	$num_myuids += @{$keys{$mykeys[$i]}};
 }
 my $i = 0;
 foreach my $mykey (@mykeys) {
-	foreach my $myuid (@{$uids{$mykey}}) {
-		my $inc = defined $sigs->{$mykey}->{$myuid}->{$key} ? $sigs->{$mykey}->{$myuid}->{$key} : ' ';
-		print WRITE "[" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $myuid\n";
+	foreach my $myuid (@{$keys{$mykey}}) {
+		print WRITE "[" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $uids{$mykey}->{$myuid}->{text}\n";
 		$i++;
 	}
 }

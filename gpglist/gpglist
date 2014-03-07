@@ -97,7 +97,7 @@ my %ids;
 my $longkey;
 while (<SIGS>) {
 	if (/^uid:.:.*:([0-9A-F]{40})::([^:]+):$/) {
-		$uid = $1;
+		$uid = $1; # use the SHA1 to have proper distinction between UIDs/UATs
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = $2;
 	}
@@ -113,7 +113,7 @@ while (<SIGS>) {
 	elsif (/^spk:7:1:1:%00$/) { # non-revocable signature
 		$sigs{$id}->{$uid} = -1;
 	}
-	elsif (/^rev:::\d+:([0-9A-F]{16}):(\d+):/) {
+	elsif (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
 		$revs{$1}->{$uid} = $2;
 	}
 	elsif (/^uat:.:.*:([0-9A-F]{40})::\d+ \d+:$/) {
@@ -134,7 +134,7 @@ while (<SIGS>) {
 }
 close SIGS;
 
-# XXX: Add an option for this (requires --list-options show-unusable-uids)
+# XXX: Add an option for this
 @uids = grep { !defined $revs{$longkey}->{$_} } @uids;
 
 for ( my $a=0; $a <= $#uids; $a++ ) {

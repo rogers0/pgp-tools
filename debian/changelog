@@ -33,6 +33,9 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Make --latex produce a {pdf,lua,Xe}LaTeX-compatible output.
       (Closes: #618781)
     + Allow any checksum algorithm supported by gpg.
+    + Don't identify two UATs that have the same size (use the packet hash to
+      distinguish them).
+    + Mark expired or revoked signatures as such.
   * gpg-mailkeys:
     + Apply patch from Stefan Huber to check for empty FROM. (Closes: #727000)
     + Adapt patch from Stefan Huber to make sendmail's path configurable.
@@ -46,8 +49,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Don't mark a signature as revoked if another signature was created after
       the revocation certificate (cf. RFC 4880 section 5.2.1, signature type
       0x30), or if the signature was non-revokable.
-    + Don't identify two UIDs or UATs that have the same name (use the packet
-      hash to distinguish them).
+    + Don't identify two UATs that have the same size (use the packet hash to
+      distinguish them).
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 
