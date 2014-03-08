@@ -5,6 +5,7 @@
 #
 # Copyright (c) 2004, 2005, 2006 Peter Palfrader <peter@palfrader.org>
 # Copyright (c) 2005, 2006 Christoph Berg <cb@df7cb.de>
+# Copyright (c) 2014 Guilhem Moulin <guilhem@guilhem.org>
 #
 # All rights reserved.
 #
@@ -198,24 +199,6 @@ details.  Default: "" (i.e., make a regular, exportable, signature).
 Additional commands to pass to gpg after the "sign" command.
 Default: none.
 
-=item B<also-lsign-in-gnupghome> [yes|ask|no]
-
-Whether to locally sign the UIDs in the user's GnuPGHOME, in addition to
-caff's signatures in its own GnuPGHOME.  Such signatures are not
-exportable.  This can be useful when the recipient forgets to upload the
-signatures caff sent (or if they non-exportable as well), as it gives a
-way to keep track of which UIDs were verified.  However, note that local
-signatures will not be deleted once the recipient does the upload and
-the signer refreshes her keyring.
-
-If the value is not I<no> and if B<gpg-sign-type> contains "l", each
-(local) signature is merely exported from caff's own GnuPGHOME to the
-user's.  Otherwise, if the value is I<yes>, each UID signed in caff's
-own GnuPGHOME gets automatically locally signed in the user's, using the
-same certification level; this requires a working gpg-agent(1).  If
-I<ask>, the user is prompted for which UIDs to locally sign.  Default:
-B<no>.
-
 =back
 
 =head2 Keyserver settings
@@ -260,6 +243,24 @@ than this age.  Default: B<24*60*60> (i.e. one day).
 
 Select the key that is used for signing, in case you have more than one key.
 With multiple keyids, sign with each key in turn.
+
+=item B<also-lsign-in-gnupghome> [auto|ask|no]
+
+Whether to locally sign the UIDs in the user's GnuPGHOME, in addition to
+caff's signatures in its own GnuPGHOME.  Such signatures are not
+exportable.  This can be useful when the recipient forgets to upload the
+signatures caff sent (or if they non-exportable as well), as it gives a
+way to keep track of which UIDs were verified.  However, note that local
+signatures will not be deleted once the recipient does the upload and
+the signer refreshes her keyring.
+
+If the value is not I<no> and if B<gpg-sign-type> contains "l", each
+(local) signature is merely exported from caff's own GnuPGHOME to the
+user's.  Otherwise, if the value is I<auto>, each UID signed in caff's
+own GnuPGHOME gets automatically locally signed in the user's, using the
+same certification level; this requires a working gpg-agent(1).  If
+I<ask>, the user is prompted for which UIDs to locally sign.  Default:
+B<no>.
 
 =back
 
@@ -343,6 +344,8 @@ Default: none.
 =item Peter Palfrader <peter@palfrader.org>
 
 =item Christoph Berg <cb@df7cb.de>
+
+=item Guilhem Moulin <guilhem@guilhem.org>
 
 =back
 
@@ -575,10 +578,10 @@ sub load_config() {
 	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
 	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
 	die "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.\n"
-		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/yes ask no/;
-	# ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'yes'
+		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
+	# ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
 	$CONFIG{'also-lsign-in-gnupghome'} = 'ask'
-		if $CONFIG{'also-lsign-in-gnupghome'} eq 'yes' and $CONFIG{'gpg-sign-type'} !~ /l/ and system qw/gpg-agent -q/;
+		if $CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'} !~ /l/ and system qw/gpg-agent -q/;
 };
 
 sub make_gpg_fds() {
@@ -1577,7 +1580,7 @@ for my $keyid (@keyids_ok) {
 		if ( $CONFIG{'gpg-sign-type'} =~ /l/ ) {
 			# we've copied the (local) signature to our GnuPHOME and we're done
 		}
-		elsif ( $CONFIG{'also-lsign-in-gnupghome'} ne 'yes' ) {
+		elsif ( $CONFIG{'also-lsign-in-gnupghome'} ne 'auto' ) {
 			# manually lsign the key
 			########################
 			foreach my $local_user (@LOCAL_USER) {
