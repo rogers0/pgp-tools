@@ -378,7 +378,7 @@ use GnuPG::Interface;
 my %CONFIG;
 my $REVISION = '$Rev$';
 my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
-$REVISION_NUMER = 'unknown' unless defined $REVISION_NUMER;
+$REVISION_NUMER //= 'unknown';
 my $VERSION = "0.0.0.$REVISION_NUMER";
 
 # Global variables
@@ -536,7 +536,7 @@ sub load_config() {
 		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
 	};
 
-	$CONFIG{'caffhome'}=$ENV{'HOME'}.'/.caff' unless defined $CONFIG{'caffhome'};
+	$CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
 	die ("$PROGRAM_NAME: owner is not defined in $config.\n") unless defined $CONFIG{'owner'};
 	die ("$PROGRAM_NAME: email is not defined in $config.\n") unless defined $CONFIG{'email'};
 	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
@@ -546,26 +546,22 @@ sub load_config() {
 		  or die ("$PROGRAM_NAME: key $keyid is not specified as a long (16 digit) keyid or fingerprint in $config.\n");
 	};
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
-	$CONFIG{'export-sig-age'}= 24*60*60 unless defined $CONFIG{'export-sig-age'};
-	$CONFIG{'gpg'} = 'gpg' unless defined $CONFIG{'gpg'};
-	$CONFIG{'gpg-sign'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-sign'};
-	$CONFIG{'gpg-delsig'} = $CONFIG{'gpg'} unless defined $CONFIG{'gpg-delsig'};
-	check_executable("gpg", $CONFIG{'gpg'});
-	check_executable("gpg-sign", $CONFIG{'gpg-sign'});
-	check_executable("gpg-delsig", $CONFIG{'gpg-delsig'});
-	$CONFIG{'secret-keyring'} = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg'
-		unless defined $CONFIG{'secret-keyring'};
-	$CONFIG{'no-download'} = 0 unless defined $CONFIG{'no-download'};
-	$CONFIG{'no-sign'} = 0 unless defined $CONFIG{'no-sign'};
-	$CONFIG{'key-files'} = () unless defined $CONFIG{'key-files'};
-	$CONFIG{'mailer-send'} = [] unless defined $CONFIG{'mailer-send'};
+	$CONFIG{'export-sig-age'} //= 24*60*60;
+	$CONFIG{'gpg'} //= 'gpg';
+	$CONFIG{'gpg-sign'} //= $CONFIG{'gpg'};
+	$CONFIG{'gpg-delsig'} //= $CONFIG{'gpg'};
+	check_executable($_, $CONFIG{$_}) for qw/gpg gpg-sign gpg-delsig/;
+	$CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
+	$CONFIG{'no-download'} //= 0;
+	$CONFIG{'no-sign'} //= 0;
+	$CONFIG{'key-files'} //= [];
+	$CONFIG{'mailer-send'} //= [];
 	die ("$PROGRAM_NAME: mailer-send is not an array ref in $config.\n") unless (ref $CONFIG{'mailer-send'} eq 'ARRAY');
 	unless (defined $CONFIG{'mail-template'}) {
 		$CONFIG{'mail-template'} .= $_ foreach <DATA>;
 	}
-	if ((defined $CONFIG{'also-encrypt-to'}) && ! (ref($CONFIG{'also-encrypt-to'}) eq 'ARRAY')) {
-		$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ];
-	};
+	$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ]
+		if defined $CONFIG{'also-encrypt-to'} and !ref $CONFIG{'also-encrypt-to'};
 	my $locale = Encode::find_encoding(langinfo(I18N::Langinfo::CODESET()));
 	if (defined $locale) {
 		$CONFIG{$_} = $locale->decode($CONFIG{$_}) for qw/owner mail-template/;
@@ -977,27 +973,19 @@ sub delete_signatures($$$$$$$) {
 #         (undef) if no valid key has been found
 #
 sub get_local_user_keys() {
-	my @local_user = ();
-	my @key_list;
+	my @local_user;
 	
 	# No user-defined key id has been specified by the user, no need for
 	# further checks
-	if (!$CONFIG{'local-user'}) {
-		return (undef);
-	}	
+	return undef unless $CONFIG{'local-user'};
 	
 	# Parse the list of keys
-	if (ref($CONFIG{'local-user'})) {
-		@key_list = @{$CONFIG{'local-user'}};
-	}
-	else {
-		@key_list = split /\s*,\s*/, $CONFIG{'local-user'};
-	}
+	my @key_list = ref $CONFIG{'local-user'} ?  @{$CONFIG{'local-user'}} : split /\s*,\s*/, $CONFIG{'local-user'};
 
 	# Check every key defined by the user...
 	for my $user_key (@key_list) {
 		
-		$user_key = uc($user_key);
+		$user_key = uc $user_key;
 
 		unless ($user_key =~ m/^((?:0X)?[A-F0-9]{8}|(?:0X)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
 			mywarn "Local-user $user_key is not a valid keyid.";
@@ -1007,19 +995,16 @@ sub get_local_user_keys() {
 		$user_key =~ s/^0x//i;
 		$user_key =~ y/ //d;
 
-		unless (grep (/$user_key$/, @{$CONFIG{'keyid'}})) {
+		unless (grep {$user_key =~ /$_$/} @{$CONFIG{'keyid'}}) {
 			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used).";
 			next;
 		}
 		
-		push (@local_user, $user_key);
+		push @local_user, $user_key;
 	}
 
 	# If no local-user key are valid, there is no need to go further
-	unless (defined $local_user[0]) {
-		myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc.");
-	}
-
+	myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc.") unless defined $local_user[0];
 	return @local_user;
 }
 
