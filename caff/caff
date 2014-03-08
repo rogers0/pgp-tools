@@ -262,6 +262,12 @@ same certification level; this requires a working gpg-agent(1).  If
 I<ask>, the user is prompted for which UIDs to locally sign.  Default:
 B<no>.
 
+=item B<show-photos> [boolean]
+
+If true, then before signing a key gpg will display the photos attached
+to it, if any.  (The photo viewer can be specified with a "photo-viewer"
+option in caff's GnuPGHOME.)  Default: B<0>.
+
 =back
 
 =head2 Mail settings
@@ -578,6 +584,7 @@ sub load_config() {
 	# ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
 	$CONFIG{'also-lsign-in-gnupghome'} = 'ask'
 		if $CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'} !~ /l/ and system qw/gpg-agent -q/;
+	$CONFIG{'show-photos'} //= 0;
 };
 
 sub make_gpg_fds() {
@@ -1439,6 +1446,7 @@ for my $keyid (@keyids_ok) {
 			push @command, '--no-auto-check-trustdb';
 			push @command, '--trust-model=always';
 			push @command, '--edit', $keyid;
+			push @command, 'showphoto' if $CONFIG{'show-photos'};
 			push @command, $CONFIG{'gpg-sign-type'}.'sign';
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 			print join(' ', @command),"\n";
@@ -1576,6 +1584,7 @@ for my $keyid (@keyids_ok) {
 				push @command, '--no-auto-check-trustdb';
 				push @command, '--trust-model=always';
 				push @command, '--edit', $keyid;
+				push @command, 'showphoto' if $CONFIG{'show-photos'};
 				push @command, 'lsign';
 				push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 				print join(' ', @command),"\n";

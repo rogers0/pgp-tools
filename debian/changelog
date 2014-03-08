@@ -24,6 +24,8 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Abort upon gpg failure.
     + Create temporary directories in $TMPDIR. (Closes: #735384)
     + Significant performance boost when importing and pruning.
+    + Adapt patch from Gaudenz Steinlin and add an option 'show-photos' to
+      view photos before signing. (Closes: #594252)
   * gpgsigs:
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
