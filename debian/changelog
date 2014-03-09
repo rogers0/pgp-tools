@@ -30,14 +30,17 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
     + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
       (Closes: #738718)
-    + Apply patch from Tanguy Ortolo to specify the photo-viewer with its
-      absolute path. (Closes: #693906)
     + Make --latex produce a {pdf,lua,Xe}LaTeX-compatible output.
       (Closes: #618781)
     + Allow any checksum algorithm supported by gpg.
     + Don't identify two UATs that have the same size (use the packet hash to
       distinguish them).
     + Mark expired or revoked signatures as such.
+    + Display the correct size of UATs.
+    + Don't use a helper --photo-viewer to store the UATs; instead use
+      --attribute-file and split the output. (Closes: #693906)
+    + Add a dependency to GnuPG::Interface to separate the status output from
+      STDOUT.
   * gpg-mailkeys:
     + Apply patch from Stefan Huber to check for empty FROM. (Closes: #727000)
     + Adapt patch from Stefan Huber to make sendmail's path configurable.

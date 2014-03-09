@@ -26,7 +26,10 @@ use warnings;
 use English;
 use IPC::Open3;
 use Getopt::Long;
-use File::Spec;
+use File::Temp;
+use IO::Handle;
+use IO::Select;
+use GnuPG::Interface;
 
 
 sub version($)
@@ -38,6 +41,7 @@ gpgsigs $VERSION- http://pgp-tools.alioth.debian.org/
   (c) 2004 Uli Martens <uli\@youam.net>
   (c) 2004, 2005 Peter Palfrader <peter\@palfrader.org>
   (c) 2004, 2005, 2006, 2007 Christoph Berg <cb\@df7cb.de>
+  (c) 2014 Guilhem Moulin <guilhem\@guilhem.org>
 EOF
 }
 
@@ -82,7 +86,7 @@ $charset ||= $ENV{LC_ALL} || $ENV{LC_CTYPE} || $ENV{LANG} || "ISO-8859-1";
 $charset = "ISO-8859-1" unless $charset =~ /[\.-]/;
 $charset =~ s/.*\.//;
 $charset =~ s/@.*//;
- 
+
 
 sub myrecode($$$) {
 	my ($text, $from, $to) = @_;
@@ -156,88 +160,171 @@ if ($recv_keys) {
 
 my $now = time;
 print STDERR "Running --list-sigs, this may take a while ";
-open SIGS, '-|', qw/gpg --list-options show-sig-subpackets --fixed-list-mode --with-colons --list-sigs/, @mykeys, @keys
-	or die "can't get gpg listing";
 
-my (%keys, %uids, %sigs, %revs);
-my ($key, $uid, $sig, $photocount); # current context
-while (<SIGS>) {
-	undef $sig unless /^spk:/;
-	if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
-		undef $key;
-		undef $photocount;
-		if ($1 =~ /[eir]/ or $3 =~ /D/ ) {
-			warn "Ignoring unusable key $2.\n";
-			last;
+my $photos = $latex ? File::Temp::->new(TMPDIR => 1) : '/dev/null';
+my $gpg = GnuPG::Interface::->new();
+$gpg->call( 'gpg' );
+# we need --attribute-{fd,file} and --status-{fd,file} to get the
+# correct attribute size
+$gpg->options->hash_init( 'extra_args' => [ '--attribute-file', $photos,
+											qw/ --list-options show-sig-subpackets
+												--fixed-list-mode --with-colons --no-tty/ ]
+						, 'meta_interactive' => 0 );
+
+my $stdout = IO::Handle::->new();
+my $status = IO::Handle::->new();
+my $handles = GnuPG::Handles::->new( stdout => $stdout, status => $status );
+my $pid = $gpg->wrap_call( commands => [ '--list-sigs' ], command_args => [ @mykeys, @keys ]
+						 , handles => $handles );
+
+$_->blocking(0) for ($stdout, $status);
+my $output = IO::Select::->new();
+$output->add($stdout, $status);
+
+my (%keys, %uids, @photos, %sigs, %revs);
+my ($key, $uid, $sig); # current context
+
+my ($oldstdout, $oldstatus) = ('', '');
+while ($output->count() > 0) {
+	foreach my $fd (@{(IO::Select::select($output))[0]}) { # reader
+		if ($fd->eof) {
+			$output->remove($fd);
+			close $fd;
+			next;
 		}
-		$key = $2;
-		$keys{$key} = [];
-		print STDERR ".";
-		next;
-	}
-	next unless $key; # nothing to do on revoked keys
-	if (/^uid:(.):.*:([0-9A-F]{40})::([^:]+):$/) {
-		undef $uid;
-		next if $1 =~ /[er]/;
+		if ($fd == $stdout) {
+			while (<$fd>) {
+				if ($oldstdout) { # prepend unfinished output
+					$_ = $oldstdout . $_;
+					$oldstdout = '';
+				}
+				if (!/\n\z/) { # there is more coming
+					$oldstdout = $_;
+					next;
+				}
+				chomp;
+				undef $sig unless /^spk:/;
+				if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
+					undef $key;
+					if ($1 =~ /[eir]/ or $3 =~ /D/ ) {
+						warn "Ignoring unusable key $2.\n";
+						last;
+					}
+					$key = $2;
+					$keys{$key} = [];
+					print STDERR '.';
+					next;
+				}
+				next unless $key; # nothing to do on revoked keys
+				if (/^(uid|uat):(.):.*:([0-9A-F]{40})::([^:]+):$/) {
+					undef $uid;
+					next if $2 =~ /[er]/;
 
-		$uid = $2; # use the SHA1 to have proper distinction between UIDs/UATs
-		my $text = $3;
-		$text =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-		$uids{$key}->{$uid} = { type => 'uid', text => myrecode($text, "UTF-8", $charset) };
-		push $keys{$key}, $uid; # preserve order
-		next;
-	}
-	if (/^uat:(.):.*:([0-9A-F]{40})::\d+ (\d+):$/) { # uat:-::::1394127796::27BAEAF742BD253C2F3F03B043DC1536880193C4::1 7993:
-		undef $uid;
-		next if $1 =~ /[er]/;
-
-		$uid = $2; # use the SHA1 to have proper distinction between UIDs/UATs
-		if ($latex and !$photocount) { # call once per key
-			unlink glob "${key}_[1-9]*.jpg";
-			open my $stdout, '>&STDOUT' or die "can't dup STDOUT: $!";
-			open STDOUT, '>', File::Spec->devnull() or die "can't open ".File::Spec->devnull();
-			system 'gpg', '--photo-viewer', "/usr/share/signing-party/gpgsigs-helper $key",
-						  '--list-options', 'show-photos', '--list-key', $key;
-			open STDOUT, '>&=', $stdout or die "can't restore STDOUT: $!";
-			$photocount = 1;
+					$uid = $3; # use the SHA1 to have proper distinction between UIDs/UATs
+					if ($1 eq 'uid') {
+						my $text = $4;
+						$text =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
+						$uids{$key}->{$uid} = { type => 'uid', text => myrecode($text, "UTF-8", $charset) };
+					}
+					else {
+						# we can't rely on $4 for the size: get it from
+						# the status fd instead
+						$uids{$key}->{$uid} = { type => 'uat' };
+					}
+					push $keys{$key}, $uid; # preserve order
+					next;
+				}
+				next unless $uid; # nothing to do on revoked uids
+				if (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:(1[0-3][lx]):$/) {
+					if (!grep { /(?:$1|$key)$/ } @mykeys) {
+						$sig = []; # $key is not ours, and the signer isn't us: don't waste resources
+					} else {
+						$sigs{$key}->{$uid}->{$1} //= [];
+						$sig = $sigs{$key}->{$uid}->{$1};
+						push $sig, { created => $2, expiring => $3, class => $4, revocable => 1 };
+					}
+					next;
+				}
+				if (/^spk:7:1:1:%0([01])$/ and @$sig) {
+					# mark the last sig as revocable (1) or not (0)
+					$sig->[$#$sig]->{revocable} = $1;
+					next;
+				}
+				if (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
+					$revs{$key}->{$uid}->{$1} = $2 # keep only the most recent revocation cert
+						unless defined $revs{$key}->{$uid}->{$1} and $revs{$key}->{$uid}->{$1} > $2;
+					next;
+				}
+				if (/^sub:/) {
+					undef $uid;
+					next;
+				}
+				if (!/^(?:rvk|tru|fpr|spk):/) { # revoke/revoker/trust/fpr
+					warn "Unknown value: '$_', key: ".($key // 'none')."\n";
+				}
+			}
 		}
-
-		my $size = $3 - 19; # FIXME: find a nicer way to find out picture size
-		$uids{$key}->{$uid} = { type => 'uat', text => "[jpeg image of size $size]" };
-		push $keys{$key}, $uid; # preserve order
-		next;
-	}
-	next unless $uid; # nothing to do on revoked uids
-	if (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:(1[0-3][lx]):$/) {
-		if (!grep { /(?:$1|$key)$/ } @mykeys) {
-			$sig = []; # $key is not ours, and the signer isn't us: don't waste ressourses
-		} else {
-			$sigs{$key}->{$uid}->{$1} //= [];
-			$sig = $sigs{$key}->{$uid}->{$1};
-			push $sig, { created => $2, expiring => $3, class => $4, revocable => 1 };
+		elsif ($fd == $status) {
+			while (<$fd>) {
+				if ($oldstatus) { # prepend unfinished output
+					$_ = $oldstatus . $_;
+					$oldstatus = '';
+				}
+				if (!/\n\z/) { # there is more coming
+					$oldstatus = $_;
+					next;
+				}
+				chomp;
+				# see /usr/share/doc/gnupg2/DETAILS.gz
+				if (/^\[GNUPG:\] ATTRIBUTE [0-9A-F]{24}([0-9A-F]{16}) (\d+) 1 1 1 \d+ \d+ (\d+)$/) {
+					push @photos, {key => $1, size => $2, revoked => $3 & 0x02};
+					next;
+				}
+				if (!/^\[GNUPG:\] (?:KEYEXPIRED \d+|SIGEXPIRED deprecated-use-keyexpired-instead)$/) {
+					warn "Unknown value: '$_'";
+				}
+			}
 		}
-		next;
-	}
-	if (/^spk:7:1:1:%0([01])$/ and @$sig) {
-		# mark the last sig as revocable (1) or not (0)
-		$sig->[$#$sig]->{revocable} = $1;
-		next;
-	}
-	if (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
-		$revs{$key}->{$uid}->{$1} = $2 # keep only the most recent revocation cert
-			unless defined $revs{$key}->{$uid}->{$1} and $revs{$key}->{$uid}->{$1} > $2;
-		next;
-	}
-	if (/^sub:/) {
-		undef $uid;
-		next;
-	}
-	if (!/^(?:rvk|tru|fpr|spk):/) { # revoke/revoker/trust/fpr
-		warn "unknown value: '$_', key: ".($key // 'none')."\n";
 	}
 }
-close SIGS;
-print STDERR "\n";
+warn "Parsing gpg's output went wrong.\n" if $oldstdout or $oldstatus;
+waitpid $pid, 0;
+close $_ for ($stdout, $status);
+
+my $photosfd;
+if ($latex) {
+	open $photosfd, '<:raw', $photos or die "Couldn't open: $!";
+}
+
+# get photo sizes and split $photos if $latex
+foreach my $photo (@photos) {
+	my $chunk;
+	if ($latex) {
+		my $got = read $photosfd, $chunk, $photo->{size} or die "Couldn't read: $!";
+		warn "Read $photo->{size} bytes but got $got bytes.\n" if $got != $photo->{size};
+	}
+
+	next if $photo->{revoked}; # ignore revoked attributes
+
+	my $key = $photo->{key};
+	my @uats = grep { $uids{$key}->{$_}->{type} eq 'uat' } @{$keys{$key}};
+	my @found = grep { !defined $uids{$key}->{$_}->{text} } @uats;
+	my $size = $photo->{size} - 16; # remove the header part
+	unless (@found) {
+		warn "No more UAT was found on $key, but there is an image of size $size that belongs to that key.\n";
+		next;
+	}
+	my $uat = $uids{$key}->{shift @found};
+	$uat->{text} = "[jpeg image of size $size]";
+
+	if ($latex) {
+		$uat->{file} = "${key}_".($#uats - $#found).".jpg";
+		open my $pic, '>:raw', $uat->{file} or die "Couldn't open: $!";
+		print $pic (substr $chunk, 16);
+		close $pic;
+	}
+}
+close $photosfd if $latex;
 
 # collapse sigs following RFC 4880
 while (my ($key, $uids) = each %sigs) {
@@ -297,7 +384,7 @@ $key = undef;
 $uid = undef;
 my $line = 0;
 my $keys = 0;
-print STDERR "Annotating $keytxt, writing into $outfile\n";
+print STDERR "\nAnnotating $keytxt, writing into $outfile\n";
 open (TXT, '<', $keytxt) or die ("Cannot open $keytxt\n");
 $outfile eq '-' ? *WRITE = *STDOUT :
 	open (WRITE, '>', $outfile) or die ("Cannot open $outfile for writing\n");
@@ -358,7 +445,6 @@ while (<TXT>) {
 	if ( m/^pub  +(?:\d+)[DR]\/(?:0x)?([0-9A-F]{8}|[0-9A-F]{16}) [0-9]{4}-[0-9]{2}-[0-9]{2}/ ) {
 		$key = $1;
 		print WRITE;
-		undef $photocount;
 		next;
 	}
 
@@ -385,9 +471,8 @@ while (<TXT>) {
 					}
 				}
 				if ($latex and $uids{$key}->{$uid}->{type} eq 'uat') {
-					$photocount++;
 					print WRITE "\\begin{flushright}\n";
-					print WRITE "\\includegraphics[height=3cm]{${key}_${photocount}}\n";
+					print WRITE "\\includegraphics[height=3cm]{$uids{$key}->{$uid}->{file}}\n";
 					print WRITE "\\end{flushright}\n";
 				}
 			}
@@ -408,7 +493,7 @@ while (<TXT>) {
 			print WRITE print_tag($key, pop @h)." $uid\n";
 		} else {
 			warn "uid '$uid' not found on key $key\n";
-			return '(' . (' ' x @mykeys) . ')';
+			print WRITE "(" . (' ' x @mykeys) . ") $uid\n";
 		}
 		next;
 	}
@@ -533,6 +618,8 @@ http://pgp-tools.alioth.debian.org/
 (c) 2004, 2005 Peter Palfrader <peter@palfrader.org>
 
 (c) 2004, 2005, 2006, 2007 Christoph Berg <cb@df7cb.de>
+
+(c) 2014 Guilhem Moulin <guilhem@guilhem.org>
 
 =head1 LICENSE
 
