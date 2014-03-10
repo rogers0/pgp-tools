@@ -59,6 +59,10 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
   * pgpring:
     + Apply patch from Fabrizio Tarizzo to display the correct key length for
       DSA and Elgamal keys. (Closes: #602284)
+    + Apply patch from Fabrizio Tarizzo to show creation date on signatures
+      and, when present, expiration date on keys and signatures.  Also, add
+      options -E and -e to respectively exclude expired keys and signatures
+      from the listing. (Closes: #603257)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 

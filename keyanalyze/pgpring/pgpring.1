@@ -12,7 +12,9 @@ pgpring \- key ring dumper
 
 .SH SYNTAX
 \fBpgpring\fP [ \fB\-k\fP \fIkeyring\fP | \fB\-2\fP | \fB\-5\fP ]
-[ \fB\-s\fP ] [ \fB\-S\fP ]
+[ \fB\-s\fP ] [ \fB\-S\fP ] [ \fB\-e\fP ] [ \fB\-E\fP ]
+
+
 
 .SH DESCRIPTION
 
@@ -40,6 +42,12 @@ Dump the secret keyring.
 .TP
 .B \-S
 Include signatures.
+.TP
+.B \-e
+Exclude expired signatures.
+.TP
+.B \-E
+Exclude expired keys.
 
 .SH AUTHORS
 Thomas Roessler <roessler@does\-not\-exist.org>

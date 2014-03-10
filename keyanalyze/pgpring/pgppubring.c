@@ -64,8 +64,9 @@ extern int optind;
 #endif
 
 
-static short dump_signatures = 0;
-
+static short dump_signatures  = 0;
+static short exclude_exp_sigs = 0;
+static short exclude_exp_keys = 0;
 
 static void pgpring_find_candidates (char *ringfile, const char *hints[], int nhints);
 static void pgpring_dump_keyblock (pgp_key_t *p);
@@ -83,7 +84,7 @@ int main (int argc, char * const argv[])
   char pgppath[_POSIX_PATH_MAX];
   char kring[_POSIX_PATH_MAX];
 
-  while ((c = getopt (argc, argv, "25sk:S")) != EOF)
+  while ((c = getopt (argc, argv, "eE25sk:S")) != EOF)
   {
     switch (c)
     {
@@ -92,7 +93,16 @@ int main (int argc, char * const argv[])
 	dump_signatures = 1;
 	break;
       }
-
+      case 'e':
+      {
+        exclude_exp_sigs = 1;
+        break;
+      }
+      case 'E':
+      {
+        exclude_exp_keys = 1;
+        break;
+      }
       case 'k':
       {
 	_kring = optarg;
@@ -173,8 +183,12 @@ static pgp_key_t *pgp_parse_pgp2_key (unsigned char *buff, size_t l)
   for (i = 0; i < 2; i++)
     exp_days = (exp_days << 8) + buff[j++];
 
-  if (exp_days && time (NULL) > gen_time + exp_days * 24 * 3600)
-    p->flags |= KEYFLAG_EXPIRED;
+  if (exp_days)
+  {
+    p->exp_time = gen_time + exp_days * 24 * 3600;
+    if (time (NULL) > p->exp_time)
+      p->flags |= KEYFLAG_EXPIRED;
+  }
 
   alg = buff[j++];
 
@@ -356,9 +370,10 @@ static int pgp_parse_pgp2_sig (unsigned char *buff, size_t l, pgp_key_t * p, pgp
 
   if (s)
   {
-    s->sigtype = sigtype;
-    s->sid1    = signerid1;
-    s->sid2    = signerid2;
+    s->sigtype  = sigtype;
+    s->sid1     = signerid1;
+    s->sid2     = signerid2;
+    s->gen_time = sig_gen_time;
   }
   
   return 0;
@@ -451,6 +466,9 @@ static int pgp_parse_pgp3_sig (unsigned char *buff, size_t l, pgp_key_t * p, pgp
 	  key_validity = 0;
 	  for (i = 0; i < 4; i++)
 	    key_validity = (key_validity << 8) + buff[j++];
+       if (key_validity > 0)
+         p->exp_time = p->gen_time + key_validity;
+
 	  break;
 	}
 	case 16:			/* issuer key ID */
@@ -500,11 +518,19 @@ static int pgp_parse_pgp3_sig (unsigned char *buff, size_t l, pgp_key_t * p, pgp
     s->sigtype = sigtype;
     s->sid1    = signerid1;
     s->sid2    = signerid2;
+    if (sig_gen_time > 0)
+    {
+      s->gen_time = sig_gen_time;
+      if (validity > 0)
+      {
+        s->exp_time = sig_gen_time + validity;
+        if (time (NULL) > s->exp_time)
+          s->flags |= SIGFLAG_EXPIRED;
+      }
+    }
   }
-
   
   return 0;
-
 }
 
 
@@ -771,12 +797,31 @@ static void print_userid (const char *id)
 
 static void pgpring_dump_signatures (pgp_sig_t *sig)
 {
+  struct tm *tp;
+  time_t t;
+
   for (; sig; sig = sig->next)
   {
+    if (exclude_exp_sigs && (sig->flags & SIGFLAG_EXPIRED))
+      continue;
+
     if (sig->sigtype == 0x10 || sig->sigtype == 0x11 ||
 	sig->sigtype == 0x12 || sig->sigtype == 0x13)
-      printf ("sig::::%08lX%08lX::::::%X:\n",
-	      sig->sid1, sig->sid2, sig->sigtype);
+    {
+      printf ("sig::::%08lX%08lX:", sig->sid1, sig->sid2);
+      t = sig->gen_time;
+      tp = gmtime (&t);
+      printf ("%04d-%02d-%02d:", 1900 + tp->tm_year, tp->tm_mon + 1,
+          tp->tm_mday);
+      if (sig->exp_time)
+      {
+        t = sig->exp_time;
+        tp = gmtime (&t);
+        printf ("%04d-%02d-%02d", 1900 + tp->tm_year, tp->tm_mon + 1,
+            tp->tm_mday);
+      }
+      printf ("::::%X:\n", sig->sigtype);
+    }
     else if (sig->sigtype == 0x20)
       printf ("rev::::%08lX%08lX::::::%X:\n",
 	      sig->sid1, sig->sid2, sig->sigtype);
@@ -804,6 +849,10 @@ static void pgpring_dump_keyblock (pgp_key_t *p)
   
   for (; p; p = p->next)
   {
+    if (exclude_exp_keys &&                                             \
+        (p->flags & KEYFLAG_EXPIRED || p->flags & KEYFLAG_REVOKED))
+      continue;
+
     first = 1;
 
     if (p->flags & KEYFLAG_SECRET)
@@ -846,8 +895,17 @@ static void pgpring_dump_keyblock (pgp_key_t *p)
 	t = p->gen_time;
 	tp = gmtime (&t);
 
-	printf (":%d:%d:%s:%04d-%02d-%02d::::", p->keylen, p->numalg, p->keyid,
+	printf (":%d:%d:%s:%04d-%02d-%02d:", p->keylen, p->numalg, p->keyid,
 		1900 + tp->tm_year, tp->tm_mon + 1, tp->tm_mday);
+        if (p->exp_time)
+        {
+          t = p->exp_time;
+          tp = gmtime (&t);
+          printf ("%04d-%02d-%02d", 1900 + tp->tm_year, tp->tm_mon + 1,
+                  tp->tm_mday);
+        }
+
+        printf (":::");
 	
 	print_userid (uid->addr);
 	printf (":\n");

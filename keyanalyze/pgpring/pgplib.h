@@ -40,12 +40,17 @@
 
 #define KEYFLAG_ABILITIES (KEYFLAG_CANSIGN|KEYFLAG_CANENCRYPT|KEYFLAG_PREFER_ENCRYPTION|KEYFLAG_PREFER_SIGNING)
 
+#define SIGFLAG_EXPIRED 		(1 <<  8)
+
 typedef struct pgp_signature
 {
   struct pgp_signature *next;
   unsigned char sigtype;
   unsigned long sid1;
   unsigned long sid2;
+  int flags;
+  time_t gen_time;
+  time_t exp_time;
 }
 pgp_sig_t;
 
@@ -56,6 +61,7 @@ typedef struct pgp_keyinfo
   int flags;
   short keylen;
   time_t gen_time;
+  time_t exp_time;
   int numalg;
   const char *algorithm;
   struct pgp_keyinfo *parent;
