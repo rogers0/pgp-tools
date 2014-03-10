@@ -56,6 +56,9 @@ signing-party (1.1.6-1) UNRELEASED; urgency=low
       0x30), or if the signature was non-revokable.
     + Don't identify two UATs that have the same size (use the packet hash to
       distinguish them).
+  * pgpring:
+    + Apply patch from Fabrizio Tarizzo to display the correct key length for
+      DSA and Elgamal keys. (Closes: #602284)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 24 Feb 2014 22:16:53 +0100
 
