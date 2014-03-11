@@ -1388,7 +1388,7 @@ for my $keyid (@keyids_ok) {
 				mywarn ("Ignoring unusable key $keyid.");
 				last;
 			}
-			$KEYS{$keyid} = { longkeyid => $2, flags => $3 };
+			$KEYS{$keyid} = { longkeyid => $2, flags => $3, uids => [], subkeys => [] };
 		}
 		elsif (/^fpr:.*:([0-9A-F]{40}):$/) {
 			$KEYS{$keyid}->{fpr} = $1;
@@ -1399,16 +1399,16 @@ for my $keyid (@keyids_ok) {
 			last;
 		}
 		elsif (/^sub:.:\d+:\d+:([0-9A-F]{16}):/) {
-			push @{$KEYS{$keyid}->{subkeys}}, $1;
+			push $KEYS{$keyid}->{subkeys}, $1;
 		}
 		elsif (/^(uid|uat):.*:([0-9A-F]{40})::([^:]+):$/) {
-			push @{$KEYS{$keyid}->{uids}}, {
+			push $KEYS{$keyid}->{uids}, {
 				type => $1,
 				hash => $2,
 				text => $1 eq 'uid' ? $3 : '[attribute]'
 			};
 		}
-		elsif (!/^tru:/) {
+		elsif (!/^(?:rvk|tru):/) {
 			chomp;
 			notice ("Got unknown reply from gpg: ".$_);
 		}
