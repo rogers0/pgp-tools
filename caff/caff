@@ -429,6 +429,7 @@ sub trace2($) {
 };
 
 
+open my $NULL, '+<', '/dev/null';
 sub generate_config() {
 	notice("Error: \$LOGNAME is not set.") unless defined $ENV{'LOGNAME'};
 	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
@@ -448,9 +449,9 @@ sub generate_config() {
 		$gpg->options->hash_init(
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ],
 			'meta_interactive' => 0 );
-		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
-		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles);
 		waitpid $pid, 0;
 
 		if ($stdout eq '') {
@@ -587,16 +588,26 @@ sub load_config() {
 	$CONFIG{'show-photos'} //= 0;
 };
 
-sub make_gpg_fds() {
-	my %fds;
-	$fds{$_} = IO::Handle->new() for qw/stdin stdout stderr status/;
-	my $handles = GnuPG::Handles->new( %fds );
-	return ($fds{'stdin'}, $fds{'stdout'}, $fds{'stderr'}, $fds{'status'}, $handles);
+# Create a GnuPG::Handles object.  This function takes a hash where keys
+# are handle names, and values are either IO::Handle objects, in which
+# case the existing handle is used, or undefined, in which case a new
+# IO::Handle is created.
+sub make_gpg_fds(%) {
+	my %fds = @_;
+
+	my @notnewfds = grep {defined $fds{$_}} keys %fds;
+	$fds{$_} = IO::Handle::->new() foreach grep {!defined $fds{$_}} keys %fds;
+
+	my $handles = GnuPG::Handles::->new( %fds );
+	$handles->options($_)->{direct} = 1 foreach @notnewfds;
+	return $handles;
 };
 
-sub readwrite_gpg($$$$$%) {
-	my ($in, $inputfd, $stdoutfd, $stderrfd, $statusfd, %options) = @_;
 
+sub readwrite_gpg($$%) {
+	my ($in, $handles, %options) = @_;
+
+	my ($inputfd, $stdoutfd, $stderrfd, $statusfd) = @$handles{qw/stdin stdout stderr status/};
 	trace("Entering readwrite_gpg.");
 
 	my ($first_line, undef) = split /\n/, $in;
@@ -785,15 +796,16 @@ sub export_keys($$@) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init( %h );
 
-	my $stdout = IO::File->new();
-	my $handles = GnuPG::Handles->new( stdout => $stdout ); # don't redirect STDERR
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
 	my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
 
 	if (wantarray) {
-		return ($pid, $stdout);
+		return ($pid, $handles->{stdout});
 	} else {
+		my $stdout = $handles->{stdout};
 		my $asciikey = do { local $/; <$stdout> };
 		waitpid $pid, 0;
+		close $stdout;
 		return $asciikey;
 	}
 };
@@ -843,13 +855,13 @@ sub create_mail($$$@) {
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
 			'armor' => 1,
 			'meta_interactive' => 0 );
-		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		$gpg->options->push_recipients( $key_id );
 		if (defined $CONFIG{'also-encrypt-to'}) {
 			$gpg->options->push_recipients($_) foreach @{$CONFIG{'also-encrypt-to'}};
 		}
 		my $pid = $gpg->encrypt(handles => $handles);
-		my ($stdout, $stderr, $status) = readwrite_gpg($message, $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		my ($stdout, $stderr, $status) = readwrite_gpg($message, $handles);
 		waitpid $pid, 0;
 		if ($stdout eq '') {
 			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m) and
@@ -924,17 +936,17 @@ sub sanitize_uid($) {
 	return $good_uid;
 };
 
-sub delete_signatures($$$$$$$) {
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid, $keyids) = @_;
+sub delete_signatures($$$$) {
+	my ($handles, $longkeyid, $uid, $keyids) = @_;
 
-	readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark all uids from delsig
-	readwrite_gpg("uid $uid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark $uid for delsig
+	readwrite_gpg("uid 0\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark all uids from delsig
+	readwrite_gpg("uid $uid\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark $uid for delsig
 
 	my $last_signed_on = 0;
 	my %signers;
 
 	my ($stdout, $stderr, $status) =
-		readwrite_gpg("delsig\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+		readwrite_gpg("delsig\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
 
 	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 		# sig:?::17:EA2199412477CAF8:1058095214:::::13x
@@ -963,7 +975,7 @@ sub delete_signatures($$$$$$$) {
 			mywarn("I hit a bug, please report. Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$stdout) if @sigline;
 		}
 		($stdout, $stderr, $status) =
-			readwrite_gpg($answer."\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
+			readwrite_gpg($answer."\n", $handles, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
 	};
 
 	return ($last_signed_on, \%signers);
@@ -1047,12 +1059,11 @@ sub import_keys_from_gnupghome($$$@) {
 	$gpg->options->hash_init( %h );
 
 	# import keys from $pipe
-	my $status = IO::Handle->new();
-	my $handles = GnuPG::Handles->new( stdin => $pipe, status => $status ); # don't redirect STDERR
-	$handles->options('stdin')->{direct} = 1;
+	my $handles = make_gpg_fds( stdin => $pipe, stdout => $NULL, stderr => \*STDERR, status => undef );
 	my $iPid = $gpg->import_keys( handles => $handles );
 
 	# inspect the $status FD as data gets out.
+	my $status = $handles->{status};
 	while (<$status>) {
 		if (defined wantarray and /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $fpr = $1;
@@ -1064,7 +1075,7 @@ sub import_keys_from_gnupghome($$$@) {
 	}
 	waitpid $iPid, 0; # import done
 	waitpid $ePid, 0; # export done
-	close $_ for ($status, $pipe);
+	close $handles->{$_} for qw/stdin status/;
 
 	if (wantarray) {
 		return (keys %keyids); # failed to import
@@ -1097,11 +1108,11 @@ sub import_key_files($$) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init( %h );
 
-	my $status = IO::Handle->new();
-	my $handles = GnuPG::Handles->new( status => $status ); # don't redirect STDERR
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => $NULL, stderr => \*STDERR, status => undef );
 	my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
 
 	my $err = 1;
+	my $status = $handles->{status};
 	while (<$status>) {
 		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			info("Key $1 imported from $keyfile.");
@@ -1301,11 +1312,9 @@ if ($CONFIG{'no-download'}) {
 		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always }, '--keyserver='.$CONFIG{'keyserver'} ],
 		'meta_interactive' => 0 );
 
-	my $status = IO::Handle->new();
-	open my $logger, '>', '/dev/null';	# requesting key ... from hkp
-	open my $stdout, '>&=', $logger;	# gpgkeys: key ... not found on keyserver
-	my $handles = GnuPG::Handles->new( status => $status, logger => $logger, stdout => $stdout ); # don't redirect STDERR
-	$handles->options($_)->{direct} = 1 for qw/logger stdout/;
+	# logger: requesting key ... from hkp
+	# stdout: gpgkeys: key ... not found on keyserver
+	my $handles = make_gpg_fds( (map {$_ => $NULL} qw/stdin stdout logger/), stderr => \*STDERR, status => undef );
 	my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
 
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
@@ -1314,6 +1323,7 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	my $had_v3_keys = 0;
+	my $status = $handles->{status};
 	while (<$status>) {
 		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $imported_key = $1;
@@ -1340,7 +1350,7 @@ if ($CONFIG{'no-download'}) {
 		}
 	};
 	waitpid $pid, 0;
-	close $_ for ($stdout, $logger, $status);
+	close $status;
 
 	if (scalar %local_keyids) {
 		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
@@ -1372,13 +1382,11 @@ for my $keyid (@keyids_ok) {
 		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ],
 		'meta_interactive' => 0 );
 
-	open my $stderr, '>', '/dev/null';
-	my $stdout = IO::Handle->new();
-	my $handles = GnuPG::Handles->new( stdout => $stdout, stderr => $stderr );
-	$handles->options('stderr')->{direct} = 1;
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
 	# process the keys one by one so we can detect collisions
 	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
 
+	my $stdout = $handles->{stdout};
 	while (<$stdout>) {
 		if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
 			if (exists $KEYS{$keyid}) {
@@ -1415,7 +1423,7 @@ for my $keyid (@keyids_ok) {
 		}
 	}
 	waitpid $pid, 0;
-	close $_ for ($stdout, $stderr);
+	close $stdout;
 
 	unless (defined $KEYS{$keyid}) {
 		mywarn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME).");
@@ -1496,14 +1504,14 @@ for my $keyid (@keyids_ok) {
 			'homedir' => $uiddir,
 			'command_fd' => 0,
 			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --no-tty } ] );
-		my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		my $pid = $gpg->wrap_call(
 			commands     => [ '--edit' ],
 			command_args => [ $keyid ],
 			handles      => $handles );
 
 		debug("Starting edit session");
-		my ($stdout, $stderr, $status) = readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 
 		# delete other uids
 		###################
@@ -1514,14 +1522,14 @@ for my $keyid (@keyids_ok) {
 			next if $uid->{type} ne 'uid' and $uids[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
 
 			debug("Marking UID $i ($uids[$i-1]->{hash}) for deletion.");
-			readwrite_gpg("uid $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg("uid $i\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 			$delete_some++;
 		}
 
 		if ($delete_some) {
 			debug("Need to delete $delete_some uids.");
-			readwrite_gpg("deluid\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
-			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg("deluid\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
+			readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 		};
 
 		# delete all subkeys
@@ -1529,22 +1537,22 @@ for my $keyid (@keyids_ok) {
 		if (@{$KEYS{$keyid}->{subkeys}}) {
 			for (my $i = 1; $i <= $#{$KEYS{$keyid}->{subkeys}} + 1; $i++) {
 				debug("Marking subkey $i ($KEYS{$keyid}->{subkeys}->[$i-1]) for deletion.");
-				readwrite_gpg("key $i\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				readwrite_gpg("key $i\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 			};
-			readwrite_gpg("delkey\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
-			readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg("delkey\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
+			readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 		};
 
 		# delete signatures
 		###################
 		# this shouldn't delete anything as $longkeyid is already clean, but maybe we didn't sign that uid with all keys in @{$CONFIG{'keyid'}}
-		my ($last_signed_on, $signers) = delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
+		my ($last_signed_on, $signers) = delete_signatures($handles, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
 
-		delete_signatures($inputfd, $stdoutfd, $stderrfd, $statusfd, $longkeyid, $first_uid->{hash}, [])
+		delete_signatures($handles, $longkeyid, $first_uid->{hash}, [])
 			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
 
 
-		readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
+		readwrite_gpg("save\n", $handles);
 		waitpid $pid, 0;
 
 		my $asciikey = export_keys($uiddir, $keyid);
@@ -1626,29 +1634,29 @@ for my $keyid (@keyids_ok) {
 									# we know there is a working agent
 									, '--use-agent'
 									, qw{ --no-auto-check-trustdb --trust-model=always --no-tty } ] );
-				my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
+				my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 				my $pid = $gpg->wrap_call(
 					commands     => [ '--edit' ],
 					command_args => [ $keyid ],
 					handles      => $handles );
 
 				debug("Starting edit session on $keyid, signer $u");
-				readwrite_gpg('', $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				readwrite_gpg('', $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 
 				foreach my $level (0..3) {
 					my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
 					next unless @signeduids_with_level;
 
 					info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid.");
-					readwrite_gpg("uid 0\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					readwrite_gpg("uid $_->{hash}\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
+					readwrite_gpg("uid 0\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg("uid $_->{hash}\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
 						for @signeduids_with_level;
-					readwrite_gpg("lsign\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
-					readwrite_gpg("$level\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
-					readwrite_gpg("yes\n", $inputfd, $stdoutfd, $stderrfd, $statusfd, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg("lsign\n", $handles, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
+					readwrite_gpg("$level\n", $handles, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
+					readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 				}
 
-				readwrite_gpg("save\n", $inputfd, $stdoutfd, $stderrfd, $statusfd);
+				readwrite_gpg("save\n", $handles);
 				waitpid $pid, 0;
 			}
 		}
