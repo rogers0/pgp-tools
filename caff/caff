@@ -1401,11 +1401,12 @@ for my $keyid (@keyids_ok) {
 		elsif (/^sub:.:\d+:\d+:([0-9A-F]{16}):/) {
 			push $KEYS{$keyid}->{subkeys}, $1;
 		}
-		elsif (/^(uid|uat):.*:([0-9A-F]{40})::([^:]+):$/) {
+		elsif (/^(uid|uat):(.):.*:([0-9A-F]{40})::([^:]+):$/) {
 			push $KEYS{$keyid}->{uids}, {
 				type => $1,
-				hash => $2,
-				text => $1 eq 'uid' ? $3 : '[attribute]'
+				validity => $2,
+				hash => $3,
+				text => $1 eq 'uid' ? $4 : '[attribute]'
 			};
 		}
 		elsif (!/^(?:rvk|tru):/) {
@@ -1474,15 +1475,17 @@ for my $keyid (@keyids_ok) {
 
 	for (my $uid_number = 1; $uid_number <= $#uids+1; $uid_number++) {
 		debug("Doing key $keyid, uid $uid_number");
-		my $uiddir = File::Temp->newdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1 );
 		my $uid = $uids[$uid_number-1];
 
 		# /!\ this serial is valid in caff's GnuPGHOME only, and can't
 		# be relied upon if the keyring is modified in the meantime.
 		$uid->{serial} = $uid_number;
 
+		next if $uid->{validity} =~ /[eir]/; # skip expired / invalid / revokey UIDs
+
 		# copy pubring to temporary gpghome
 		###################################
+		my $uiddir = File::Temp->newdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1 );
 		copy("$keydir/pubring.gpg", "$uiddir/pubring.gpg");
 
 		# prune it
@@ -1670,6 +1673,13 @@ for my $keyid (@keyids_ok) {
 	my @attached;
 	for my $uid (@UIDS) {
 		trace("UID: $uid->{text}\n");
+		if ($uid->{validity} =~ /[eir]/) {
+			my $reason = $uid->{validity} =~ /e/ ? 'expired' :
+						 $uid->{validity} =~ /i/ ? 'invalid' :
+						 $uid->{validity} =~ /r/ ? 'revoked' : undef;
+			info("$longkeyid $uid->{serial} $uid->{text} is $reason, not writing.");
+			next;
+		}
 		unless ($uid->{last_signed_on}) {
 			info("$longkeyid $uid->{serial} $uid->{text} is not signed by me, not writing.");
 			next;
