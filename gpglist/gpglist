@@ -107,8 +107,8 @@ while (<SIGS>) {
 		$ids{$id} = $4;
 		# keep only the most recent sig (a more recent sig might appear anywhere in the list)
 		$sigs{$id}->{$uid} = $2 unless defined $sigs{$id}->{$uid} and
-									  $sigs{$id}->{$uid} > 0 and # < 0 means non-revocable
-									  $sigs{$id}->{$uid} > $2;
+									  ($sigs{$id}->{$uid} < 0 or # non revocable sig
+									  $sigs{$id}->{$uid} > $2);
 	}
 	elsif (/^spk:7:1:1:%00$/) { # non-revocable signature
 		$sigs{$id}->{$uid} = -1;
