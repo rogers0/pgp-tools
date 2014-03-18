@@ -458,13 +458,13 @@ sub generate_config() {
 			warn ("No data from gpg for list-key\n"); # There should be at least 'tru:' everywhere.
 		};
 
-		@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2,2}([^:]+):/mg);
+		@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
 		unless (scalar @keys) {
 			info("Error: No keys were found using \"gpg --list-public-keys '$gecos'\".");
 			@keys = qw{0123456789abcdef 89abcdef76543210};
 			$Ckeys = '#';
 		}
-		($email) =  ($stdout =~ /^uid:.*<(.+?@.+?)>.*:/m);
+		($email) = ($stdout =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+@[^@:]+)>(?::.*)?$/m);
 		unless (defined $email) {
 			info("Error: No email address was found using \"gpg --list-public-keys '$gecos'\".");
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
@@ -957,7 +957,7 @@ sub delete_signatures($$$$) {
 		}
 		else { # only if we found a sig here - we never remove revocation packets for instance
 			my $sig = pop @sigline;
-			$sig =~ /^sig:.::\d+:([0-9A-F]{16}):(\d+):.*:(1[0-3]|30)[lx]$/ or
+			$sig =~ /^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(?:[^:]*:){4}(1[0-3]|30)[lx](?::.*)?$/ or
 				mywarn("I hit a bug, please report. Couldn't parse sigline $sig.");
 			debug("[sigremoval] doing sigline $sig.");
 			if ($1 eq $longkeyid) {
@@ -1220,7 +1220,7 @@ if (-t \*STDIN) {
 		elsif (/^(?:-+|_+)$/) {
 			$goodblock = 0;
 		}
-		elsif (/^(#*)(?:\d+)\s+\[(.)\] Fingerprint(?:\(s\))? OK\s+\[(.)\] ID OK\s*$/) {
+		elsif (/^(#*)(?:\d+)\s+\[(.)\] Fingerprint(?:\(s\)|s)? OK\s+\[(.)\] ID OK\s*$/) {
 			$goodblock = (!$1 and lc $2 eq 'x' and lc $3 eq 'x') ? 1 : 0;
 		}
 		elsif (/^\s+Key fingerprint = ([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/) {
@@ -1388,7 +1388,7 @@ for my $keyid (@keyids_ok) {
 
 	my $stdout = $handles->{stdout};
 	while (<$stdout>) {
-		if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
+		if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
 			if (exists $KEYS{$keyid}) {
 				mywarn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint.");
 				last;
@@ -1398,18 +1398,18 @@ for my $keyid (@keyids_ok) {
 			}
 			$KEYS{$keyid} = { longkeyid => $2, flags => $3, uids => [], subkeys => [] };
 		}
-		elsif (/^fpr:.*:([0-9A-F]{40}):$/) {
+		elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/) {
 			$KEYS{$keyid}->{fpr} = $1;
 		}
-		elsif (/^fpr:.*:([0-9A-F]{32}):$/) {
+		elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{32})(?::.*)?$/) {
 			info("Ignoring v3 key $keyid.  v3 keys are obsolete.");
 			delete $KEYS{$keyid};
 			last;
 		}
-		elsif (/^sub:.:\d+:\d+:([0-9A-F]{16}):/) {
+		elsif (/^sub:[^:]+:(?:[^:]*:){2}([0-9A-F]{16}):/) {
 			push $KEYS{$keyid}->{subkeys}, $1;
 		}
-		elsif (/^(uid|uat):(.):.*:([0-9A-F]{40})::([^:]+):$/) {
+		elsif (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
 			push $KEYS{$keyid}->{uids}, {
 				type => $1,
 				validity => $2,

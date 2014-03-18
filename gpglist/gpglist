@@ -96,12 +96,12 @@ my %revs;
 my %ids;
 my $longkey;
 while (<SIGS>) {
-	if (/^uid:.:.*:([0-9A-F]{40})::([^:]+):$/) {
+	if (/^uid:(?:[^:]*:){6}([0-9A-F]{40}):[^:]*:([^:]+)/) {
 		$uid = $1; # use the SHA1 to have proper distinction between UIDs/UATs
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = $2;
 	}
-	elsif (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:([^:]+):1[0-3][lx]:$/) {
+	elsif (/^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){2}([^:]+):(1[0-3][lx])(?::.*)?$/) {
 		$id = $1;
 		next if $3 ne '' and $3 < $now; # expired
 		$ids{$id} = $4;
@@ -113,15 +113,15 @@ while (<SIGS>) {
 	elsif (/^spk:7:1:1:%00$/) { # non-revocable signature
 		$sigs{$id}->{$uid} = -1;
 	}
-	elsif (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
+	elsif (/^rev:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(?:[^:]*:){4}30x(?::.*)?$/) {
 		$revs{$1}->{$uid} = $2;
 	}
-	elsif (/^uat:.:.*:([0-9A-F]{40})::\d+ \d+:$/) {
+	elsif (/^uat:(?:[^:]*:){6}([0-9A-F]{40}):/) {
 		$uid = $1;
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = "Photo ID"; # XXX [jpeg image of size ...]
 	}
-	elsif (/^pub:.:\d+:\d+:([0-9A-F]{16}):/) {
+	elsif (/^pub:(?:[^:]*:){3}([0-9A-F]{16}):/) {
 		$longkey = $1;
 	}
 	elsif (/^sub:/) {

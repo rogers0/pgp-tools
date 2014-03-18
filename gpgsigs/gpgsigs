@@ -204,7 +204,7 @@ while ($output->count() > 0) {
 				}
 				chomp;
 				undef $sig unless /^spk:/;
-				if (/^pub:(.):\d+:\d+:([0-9A-F]{16}):.*:([escaESCAD]+):$/) {
+				if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
 					undef $key;
 					if ($1 =~ /[eir]/ or $3 =~ /D/ ) {
 						warn "Ignoring unusable key $2.\n";
@@ -216,7 +216,7 @@ while ($output->count() > 0) {
 					next;
 				}
 				next unless $key; # nothing to do on revoked keys
-				if (/^(uid|uat):(.):.*:([0-9A-F]{40})::([^:]+):$/) {
+				if (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
 					undef $uid;
 					next if $2 =~ /[er]/;
 
@@ -235,7 +235,7 @@ while ($output->count() > 0) {
 					next;
 				}
 				next unless $uid; # nothing to do on revoked uids
-				if (/^sig:::\d+:([0-9A-F]{16}):(\d+):(\d*):.*:(1[0-3][lx]):$/) {
+				if (/^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){3}(1[0-3][lx])(?::.*)?$/) {
 					if (!grep { /(?:$1|$key)$/ } @mykeys) {
 						$sig = []; # $key is not ours, and the signer isn't us: don't waste resources
 					} else {
@@ -250,7 +250,7 @@ while ($output->count() > 0) {
 					$sig->[$#$sig]->{revocable} = $1;
 					next;
 				}
-				if (/^rev:::\d+:([0-9A-F]{16}):(\d+):.*:30x:$/) {
+				if (/^rev:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(?:[^:]*:){4}30x(?::.*)?$/) {
 					$revs{$key}->{$uid}->{$1} = $2 # keep only the most recent revocation cert
 						unless defined $revs{$key}->{$uid}->{$1} and $revs{$key}->{$uid}->{$1} > $2;
 					next;
