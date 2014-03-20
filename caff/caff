@@ -368,14 +368,14 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 use strict;
 use IO::Handle;
 use English;
-use File::Copy;
+use File::Copy qw{copy};
 use File::Path qw{make_path};
 use File::Temp;
 use Text::Template;
 use MIME::Entity;
-use Encode;
-use I18N::Langinfo;
-use Net::IDN::Encode qw{email_to_ascii};
+use Encode ();
+use I18N::Langinfo qw{langinfo};
+use Net::IDN::Encode ();
 use Fcntl;
 use IO::Select;
 use Getopt::Long;
@@ -923,6 +923,21 @@ sub send_message($) {
 	};
 	$message_entity->send(@{$CONFIG{'mailer-send'}});
 };
+
+# Net::IDN::Encode::email_to_ascii crashes upon punycode conversion failure:
+# we don't want caff to crash, so upon errors return the input as is and
+# let the MUA handle that
+sub email_to_ascii($) {
+    my $email = shift;
+    my $res;
+
+    eval { $res = Net::IDN::Encode::email_to_ascii($email) };
+    return $res unless $@;
+
+    chomp $@;
+    mywarn($@);
+    return $email;
+}
 
 ######
 # clean up a UID so that it can be used on the FS.
