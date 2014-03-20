@@ -464,7 +464,7 @@ sub generate_config() {
 			@keys = qw{0123456789abcdef 89abcdef76543210};
 			$Ckeys = '#';
 		}
-		($email) = ($stdout =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+@[^@:]+)>(?::.*)?$/m);
+		($email) = ($stdout =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
 		unless (defined $email) {
 			info("Error: No email address was found using \"gpg --list-public-keys '$gecos'\".");
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
@@ -1711,7 +1711,7 @@ for my $keyid (@keyids_ok) {
 		if ($uid->{type} eq 'uat') {
 			my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email?", 1);
 			push @attached, $uid if $attach;
-		} elsif ($uid->{'text'} !~ /@/) {
+		} elsif ($uid->{'text'} !~ /\@/) {
 			my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email?", 1);
 			push @attached, $uid if $attach;
 		};

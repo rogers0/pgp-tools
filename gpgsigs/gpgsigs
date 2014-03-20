@@ -85,7 +85,7 @@ $fromcharset ||= "ISO-8859-1";
 $charset ||= $ENV{LC_ALL} || $ENV{LC_CTYPE} || $ENV{LANG} || "ISO-8859-1";
 $charset = "ISO-8859-1" unless $charset =~ /[\.-]/;
 $charset =~ s/.*\.//;
-$charset =~ s/@.*//;
+$charset =~ s/\@.*//;
 
 
 sub myrecode($$$) {
