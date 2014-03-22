@@ -1634,7 +1634,7 @@ for my $keyid (@keyids_ok) {
 			foreach my $u (@signers) {
 				my @signeduids; # uids signed by $u
 				foreach my $uid (@uids) {
-					# we use UIDs hashes to distinguish and select UIDs; it's only reliable way to identify them accross keyrings
+					# we use UIDs hashes to distinguish and select UIDs; it's the only reliable way to identify them accross keyrings
 					push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{signers}}) and
 											 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
 				}
@@ -1666,7 +1666,8 @@ for my $keyid (@keyids_ok) {
 					readwrite_gpg("uid 0\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 					readwrite_gpg("uid $_->{hash}\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
 						for @signeduids_with_level;
-					readwrite_gpg("lsign\n", $handles, exitwhenstatusmatches => $KEYEDIT_SIGNUID_CLASS_PROMPT, nocloseinput => 1);
+					my ($stdout, $stderr, $status) = readwrite_gpg("lsign\n", $handles, exitwhenstatusmatches => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/, nocloseinput => 1);
+					next if $status =~ /^\[GNUPG:\] $KEYEDIT_PROMPT/m; # already signed
 					readwrite_gpg("$level\n", $handles, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
 					readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
 				}
