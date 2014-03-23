@@ -5,7 +5,7 @@ Maintainer: Guilhem Moulin <guilhem@guilhem.org>
 Uploaders: Simon Richter <sjr@debian.org>,
  Franck Joncourt <franck@debian.org>,
  Thijs Kinkhorst <thijs@debian.org>
-Build-Depends: debhelper (>= 7), autotools-dev
+Build-Depends: debhelper (>= 7), autotools-dev, python
 Standards-Version: 3.9.5
 Homepage: http://pgp-tools.alioth.debian.org/
 Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
@@ -13,10 +13,10 @@ Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
 
 Package: signing-party
 Architecture: any
-Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}, gnupg,
- libgnupg-interface-perl, libtext-template-perl, libmime-tools-perl,
- libmailtools-perl, libterm-readkey-perl, libclass-methodmaker-perl,
- libnet-idn-encode-perl, qprint
+Depends: ${shlibs:Depends}, ${perl:Depends}, ${python:Depends},
+ ${misc:Depends}, gnupg, libgnupg-interface-perl, libtext-template-perl,
+ libmime-tools-perl, libmailtools-perl, libterm-readkey-perl,
+ libclass-methodmaker-perl, libnet-idn-encode-perl, qprint
 Recommends: default-mta | mail-transport-agent, libpaper-utils,
  libgd-gd2-noxpm-perl | libgd-gd2-perl,
  libtext-iconv-perl | libintl-perl | recode, dialog | whiptail

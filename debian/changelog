@@ -69,6 +69,8 @@ signing-party (1.1.6-1) unstable; urgency=low
   * debian.control:
     + Bump Standards-Version up to 3.9.5 (no changes).
     + Add autotools-dev as Build-Depends for keyanalyze.
+    + Add ${python:Depends} as Depends and python as Build-Depends for
+      gpgparticipants-prefill.
 
   [ Thijs Kinkhorst ]
   * Remove Peter Palfrader and Christoph Berg from uploaders, as per their
