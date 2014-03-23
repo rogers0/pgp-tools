@@ -64,6 +64,7 @@ signing-party (1.1.6-1) unstable; urgency=low
       and, when present, expiration date on keys and signatures.  Also, add
       options -E and -e to respectively exclude expired keys and signatures
       from the listing. (Closes: #603257)
+    + Upgrade aclocal.m4 to autoconf 2.69.
   * gpgwrap:
     + Link with "read-only relocation" flag set.
   * debian.control:
