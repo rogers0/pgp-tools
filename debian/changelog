@@ -64,6 +64,8 @@ signing-party (1.1.6-1) unstable; urgency=low
       and, when present, expiration date on keys and signatures.  Also, add
       options -E and -e to respectively exclude expired keys and signatures
       from the listing. (Closes: #603257)
+  * debian.control:
+    + Bump Standards-Version up to 3.9.5 (no changes).
 
   [ Thijs Kinkhorst ]
   * Remove Peter Palfrader and Christoph Berg from uploaders, as per their

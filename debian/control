@@ -6,7 +6,7 @@ Uploaders: Simon Richter <sjr@debian.org>,
  Franck Joncourt <franck@debian.org>,
  Thijs Kinkhorst <thijs@debian.org>
 Build-Depends: debhelper (>= 7)
-Standards-Version: 3.9.2
+Standards-Version: 3.9.5
 Homepage: http://pgp-tools.alioth.debian.org/
 Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
