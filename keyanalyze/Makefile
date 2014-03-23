@@ -7,7 +7,9 @@ keyanalyze: keyanalyze.o
 process_keys: process_keys.o
 
 pgpring/pgpring:
-	cd pgpring && ln -fs /usr/share/automake-1.11/depcomp . && CFLAGS="${CFLAGS}" ./configure && make pgpring
+	cd pgpring && touch AUTHORS ChangeLog INSTALL NEWS README && automake-1.11 --add-missing && automake-1.11
+	cd pgpring && autoconf && CFLAGS="${CFLAGS}" ./configure
+	make -C pgpring pgpring
 
 install:
 	install pgpring/pgpring $(DESTDIR)/usr/bin
