@@ -67,6 +67,8 @@ signing-party (1.1.6-1) unstable; urgency=low
     + Upgrade aclocal.m4 to autoconf 2.69.
     + Upgrade configure to autoconf 2.69.
     + Upgrade Makefile.in to automake 1.11.6.
+    + Remove unsafe symlink depcomp (automatically created by 'automake
+      --add-missing').
   * gpgwrap:
     + Link with "read-only relocation" flag set.
   * debian.control:
