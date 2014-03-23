@@ -68,6 +68,7 @@ signing-party (1.1.6-1) unstable; urgency=low
     + Link with "read-only relocation" flag set.
   * debian.control:
     + Bump Standards-Version up to 3.9.5 (no changes).
+    + Add autotools-dev as Build-Depends for keyanalyze.
 
   [ Thijs Kinkhorst ]
   * Remove Peter Palfrader and Christoph Berg from uploaders, as per their
