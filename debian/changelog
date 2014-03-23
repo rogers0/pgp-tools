@@ -28,7 +28,7 @@ signing-party (1.1.6-1) unstable; urgency=low
       view photos before signing. (Closes: #594252)
     + Ignore expired / invalid / revoked UIDs when pruning and exporting.
   * gpgsigs:
-    + Allow long keyids and key fingerprints (prefered). (Closes: #736963)
+    + Allow long keyids and key fingerprints (preferred). (Closes: #736963)
     + Wrap long UIDs (when used with --latex) and digest lines.
       (Closes: #738718)
     + Make --latex produce a {pdf,lua,Xe}LaTeX-compatible output.
