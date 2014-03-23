@@ -67,6 +67,8 @@ signing-party (1.1.6-1) unstable; urgency=low
   * gpgwrap:
     + Link with "read-only relocation" flag set.
   * debian.control:
+    + Add libnet-idn-encode-perl as Depends for gpgsigs.
+    + Add texlive-xetex and fonts-droid as Suggests for gpgsigs.
     + Bump Standards-Version up to 3.9.5 (no changes).
     + Add autotools-dev as Build-Depends for keyanalyze.
     + Add ${python:Depends} as Depends and python as Build-Depends for
