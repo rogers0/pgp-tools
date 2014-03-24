@@ -10,6 +10,7 @@ TARGET=../bin/gpgwrap
 all: ${TARGET}
 
 ${TARGET}: gpgwrap.c
+	[ -d $(dir ${TARGET}) ] || mkdir $(dir ${TARGET})
 	${CC} ${CFLAGS} ${LDFLAGS} -o ${TARGET} gpgwrap.c
 	${STRIP} ${TARGET} 2>/dev/null || true
 

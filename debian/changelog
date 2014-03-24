@@ -78,6 +78,7 @@ signing-party (1.1.6-1) unstable; urgency=low
     + Add ${python:Depends} as Depends and python as Build-Depends for
       gpgparticipants-prefill.
     + Add autoconf and automake1.11 as Build-Depends for keyanalyze.
+  * Don't checkout empty directories, as git-svn(1) doesn't like them.
 
   [ Thijs Kinkhorst ]
   * Remove Peter Palfrader and Christoph Berg from uploaders, as per their
