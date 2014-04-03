@@ -447,8 +447,9 @@ sub generate_config() {
 		my $gpg = GnuPG::Interface->new();
 		$gpg->call( 'gpg' );
 		$gpg->options->hash_init(
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode } ],
-			'meta_interactive' => 0 );
+			'meta_interactive' => 0,
+			'always_trust' => 1,
+			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fixed-list-mode } ] );
 		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
 		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles);
@@ -784,9 +785,10 @@ sub usage($$) {
 sub export_keys($$@) {
 	my ($gnupghome, $keyids, @export_options) = @_;
 
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
-			, 'armor' => wantarray ? 0 : 1 # don't armor when piping since it's faster
-			, 'meta_interactive' => 0 );
+	my %h = ( 'meta_interactive' => 0
+			, 'always_trust' => 1
+			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ]
+			, 'armor' => wantarray ? 0 : 1 ); # don't armor when piping since it's faster
 	$h{'homedir'} = $gnupghome if defined $gnupghome;
 
 	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
@@ -852,9 +854,10 @@ sub create_mail($$$@) {
 		my $gpg = GnuPG::Interface->new();
 		$gpg->call( $CONFIG{'gpg'} );
 		$gpg->options->hash_init( 'homedir' => $GNUPGHOME,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ],
-			'armor' => 1,
-			'meta_interactive' => 0 );
+			'meta_interactive' => 0,
+			'always_trust' => 1,
+			'extra_args' => [ qw{ --no-auto-check-trustdb } ],
+			'armor' => 1 );
 		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		$gpg->options->push_recipients( $key_id );
 		if (defined $CONFIG{'also-encrypt-to'}) {
@@ -1063,9 +1066,10 @@ sub import_keys_from_gnupghome($$$@) {
 			($src_gpghome // "your normal GnuPGHOME")." to ".($dst_gpghome // "your normal GnuPGHOME").".");
 	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
+	my %h = ( 'meta_interactive' => 0
 			, 'quiet' => 1
-			, 'meta_interactive' => 0 );
+			, 'always_trust' => 1
+			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ] );
 	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
 	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
 
@@ -1113,9 +1117,10 @@ sub import_keys_from_gnupghome($$$@) {
 sub import_key_files($$) {
 	my ($keyfile, $dst_gpghome) = @_;
 
-	my %h = ( 'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always } ]
+	my %h = ( 'meta_interactive' => 0
 			, 'quiet' => 1
-			, 'meta_interactive' => 0 );
+			, 'always_trust' => 1
+			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ] );
 	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
 	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
 
@@ -1324,8 +1329,9 @@ if ($CONFIG{'no-download'}) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always }, '--keyserver='.$CONFIG{'keyserver'} ],
-		'meta_interactive' => 0 );
+		'meta_interactive' => 0,
+		'always_trust' => 1,
+		'extra_args' => [ qw{ --no-auto-check-trustdb }, '--keyserver='.$CONFIG{'keyserver'} ] );
 
 	# logger: requesting key ... from hkp
 	# stdout: gpgkeys: key ... not found on keyserver
@@ -1394,8 +1400,9 @@ for my $keyid (@keyids_ok) {
 	$gpg->call( $CONFIG{'gpg'} );
 	$gpg->options->hash_init(
 		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --fingerprint --with-colons --fixed-list-mode } ],
-		'meta_interactive' => 0 );
+		'meta_interactive' => 0,
+		'always_trust' => 1,
+		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
 
 	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
 	# process the keys one by one so we can detect collisions
@@ -1467,8 +1474,7 @@ for my $keyid (@keyids_ok) {
 			push @command, '--local-user', $local_user if defined $local_user;
 			push @command, "--homedir=$GNUPGHOME";
 			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-			push @command, '--no-auto-check-trustdb';
-			push @command, '--trust-model=always';
+			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
 			push @command, $CONFIG{'gpg-sign-type'}.'sign';
@@ -1518,7 +1524,8 @@ for my $keyid (@keyids_ok) {
 		$gpg->options->hash_init(
 			'homedir' => $uiddir,
 			'command_fd' => 0,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --trust-model=always --with-colons --fixed-list-mode --no-tty } ] );
+			'always_trust' => 1,
+			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fixed-list-mode --no-tty } ] );
 		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		my $pid = $gpg->wrap_call(
 			commands     => [ '--edit' ],
@@ -1607,8 +1614,7 @@ for my $keyid (@keyids_ok) {
 				push @command, $CONFIG{'gpg-sign'};
 				push @command, '--local-user', $local_user if defined $local_user;
 				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
-				push @command, '--no-auto-check-trustdb';
-				push @command, '--trust-model=always';
+				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 				push @command, '--edit', $keyid;
 				push @command, 'showphoto' if $CONFIG{'show-photos'};
 				push @command, 'lsign';
@@ -1643,12 +1649,13 @@ for my $keyid (@keyids_ok) {
 				$gpg->call( $CONFIG{'gpg'} );
 				$gpg->options->hash_init(
 					'command_fd' => 0,
+					'always_trust' => 1,
 					'extra_args' => [ '--local-user', $u
 									, '--secret-keyring', $CONFIG{'secret-keyring'}
 									, '--ask-cert-level'
 									# we know there is a working agent
 									, '--use-agent'
-									, qw{ --no-auto-check-trustdb --trust-model=always --no-tty } ] );
+									, qw{ --no-auto-check-trustdb --no-tty } ] );
 				my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 				my $pid = $gpg->wrap_call(
 					commands     => [ '--edit' ],
