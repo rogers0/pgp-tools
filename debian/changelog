@@ -1,5 +1,7 @@
 signing-party (1.1.7-1) UNRELEASED; urgency=low
 
+  * caff:
+    + Give an example of 'mailer-send' with a custom envelope sender address.
   * gpgparticipants:
     + Escape hyphen-minuses (-) in the documentation, as groff may interpret
       them as hyphens (U+2010).

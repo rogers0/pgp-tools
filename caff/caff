@@ -333,7 +333,7 @@ This could for example be
 
 to use the perl SMTP client or
 
-	$CONFIG{'mailer-send'} =  [ 'sendmail', '-o8' ];
+	$CONFIG{'mailer-send'} =  [ 'sendmail', '-f', $CONFIG{'email'}, '-it' ];
 
 to pass arguments to the sendmail program.
 For more information run C<< perldoc Mail::Mailer >>.
