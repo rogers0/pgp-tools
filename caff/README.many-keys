@@ -18,6 +18,20 @@ Some hints to get the signing done faster:
   For convenience, caff also allows spaces in fingerprints/keyids as output by
   gpg --fingerprint.
 
+* Use gpgparticipants(1) formated input when possible.
+
+  When the KSP organizer provides a gpgparticipants(1) compatible list
+  of all the participants, it can be convenient to transcribe the
+  annotations made on the spot on the printout back to the digital copy.
+  Then you can run
+
+  $ caff <options> <ksp-annotated.txt
+
+  caff will ignore participants for which both the "ID" and
+  "Fingerprint" checkboxes are not *both* marked with an 'x'.
+  (Moreover, keys are selected using their 40-hex digits fingerprint,
+  which must be present in the list.)
+
 * v3 keys are evil.
 
   V3 keys (pgp 2.6x keys) are deprecated.  Not only do they rely on md5 for
@@ -59,4 +73,4 @@ Some hints to get the signing done faster:
   prompt any more; you will have *not* to send out some mails. (And you have
   unwanted signatures lingering around in ~/.caff/gnupghome/pubring.gpg.)
 
- -- Christoph Berg <cb@df7cb.de>  Mon, 25 Jun 2007 10:55:40 +0200
+ -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 03 Apr 2014 12:43:13 +0200
