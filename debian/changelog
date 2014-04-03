@@ -6,6 +6,8 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
   * gpgwrap:
     + Import the default Debian CPPFLAGS defined by dpkg-buildflags, which
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.
+  * debian.control:
+    + Update the Vcs-Svn and Vcs-Browser to canonical URIs.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 03 Apr 2014 11:50:02 +0200
 

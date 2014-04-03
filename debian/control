@@ -9,8 +9,8 @@ Build-Depends: debhelper (>= 7), python, autoconf, automake1.11
 Build-Conflicts: autoconf2.13, automake1.4
 Standards-Version: 3.9.5
 Homepage: http://pgp-tools.alioth.debian.org/
-Vcs-Svn: svn://svn.debian.org/svn/pgp-tools/trunk
-Vcs-Browser: http://svn.debian.org/wsvn/pgp-tools
+Vcs-Svn: svn://anonscm.debian.org/svn/pgp-tools/trunk
+Vcs-Browser: http://anonscm.debian.org/viewvc/pgp-tools
 
 Package: signing-party
 Architecture: any

@@ -21,8 +21,8 @@
 #
 # Keylookup is part of pgp-tools:
 #           http://pgp-tools.alioth.debian.org/
-#           svn://svn.debian.org/pgp-tools/trunk/
-#           http://svn.debian.org/wsvn/pgp-tools/trunk/
+#           svn://anonscm.debian.org/svn/pgp-tools/trunk
+#           http://anonscm.debian.org/viewvc/pgp-tools/trunk/
 
 delete @ENV{'IFS', 'CDPATH', 'ENV', 'BASH_ENV'};
 $|=1; # Always flush buffers
