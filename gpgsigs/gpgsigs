@@ -579,8 +579,8 @@ B<Note:> This writes jpg files to the current directory.
 
 =item I<keyid>
 
-Use this keyid (8 or 16 byte) for annotation. Multiple keyids can be separated
-by a comma (B<,>).
+Use this keyid (8 or 16 bytes, or full fingerprint) for annotation.
+Multiple keyids can be separated by a comma (B<,>).
 
 =item F<keytxt>
 
