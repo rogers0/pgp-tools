@@ -1,5 +1,8 @@
 signing-party (1.1.7-1) UNRELEASED; urgency=low
 
+  * gpgparticipants:
+    + Escape hyphen-minuses (-) in the documentation, as groff may interpret
+      them as hyphens (U+2010).
   * gpgwrap:
     + Import the default Debian CPPFLAGS defined by dpkg-buildflags, which
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.

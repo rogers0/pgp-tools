@@ -33,8 +33,8 @@ SHA256,RIPEMD160.
 
 To create a KSP file with all keys present in the keyring:
 
-    gpg --with-colons --fingerprint | grep ^fpr: | cut -d: -f 10 | \\
-        gpgparticipants - ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
+    gpg \-\-with-colons \-\-fingerprint | grep ^fpr: | cut \-d: \-f 10 | \\
+        gpgparticipants \- ksp-file.txt "20080222 1100" "My Name <my.name@my.mail>" "my party 08"
 
 .SH SEE ALSO
 .BR gpg (1), gpgsigs (1)
