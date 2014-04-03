@@ -4,6 +4,7 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
     + Give an example of 'mailer-send' with a custom envelope sender address.
     + Document a possible workflow in README.many-keys, when working with an
       annotated gpgparticipants(1) list.
+    + Document a possible workflow for offline signing.
   * gpgparticipants:
     + Escape hyphen-minuses (-) in the documentation, as groff may interpret
       them as hyphens (U+2010).

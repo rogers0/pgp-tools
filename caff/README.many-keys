@@ -32,6 +32,26 @@ Some hints to get the signing done faster:
   (Moreover, keys are selected using their 40-hex digits fingerprint,
   which must be present in the list.)
 
+* If you prefer to do the signing offline.
+
+  You'll have to make caff's GNUPGHOME know the keys that are to be
+  signed, somehow.  A possibility is to run multiple passes as explained
+  below.  However if the keyring of all participants has been provided
+  by the KSP organizers, then --key-file can be enough:
+
+  $ caff <options> --no-download --key-file keyring.asc <ksp-annotated.txt
+
+  Note however that if keys in keyring.asc were stripped off all (non
+  self-)signatures, for instance if keyring.asc was created with
+  '--export-options export-minimal', caff won't be able to detect your
+  old signatures unless they are already present in its own keyring
+  (which should be the case if signing is never done without caff).
+
+  Note also that if keys in keyring.asc were stripped off their
+  encryption subkeys (which fortunately gpg never does when exporting,
+  but which a zealous KSP organizer could have done manually to reduce
+  the file size), caff may send unencrypted mails.
+
 * v3 keys are evil.
 
   V3 keys (pgp 2.6x keys) are deprecated.  Not only do they rely on md5 for
