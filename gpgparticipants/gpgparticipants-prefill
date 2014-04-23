@@ -9,6 +9,8 @@ __copyright__ = "Copyright 2013, Stefan Huber"
 
 __license__ = "MIT"
 
+# also Copyright 2014 Peter Palfrader
+
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
 # files (the "Software"), to deal in the Software without
@@ -35,6 +37,7 @@ import sys
 import hashlib
 import getopt
 
+hexdigits = "0123456789abcdef"
 
 def insertspaces(s):
     """Inserts a space after every 4-th character, and three spaces after every
@@ -49,14 +52,17 @@ def insertspaces(s):
     return out
 
 
-def range_hex(length):
+def range_hex(length, fixed_prefix=''):
     """Give all hex-strings from 00...0 until ff...f of given length."""
 
     if length == 0:
         yield ""
-
+    elif len(fixed_prefix) > 0:
+      prefix = fixed_prefix[0]
+      for postfix in range_hex(length-1, fixed_prefix[1:]):
+        yield prefix + postfix
     elif length == 1:
-        for c in "0123456789abcdef":
+        for c in hexdigits:
             yield c
     elif length > 1:
         for prefix in range_hex(length-1):
@@ -83,6 +89,7 @@ OPTIONS:
                        is given then the program immediately jumps to the next
                        length.
   --min-length NUM     Start search with given length.
+  --max-length NUM     Stop search with given length.
 
 """.format(sys.argv[0]))
 
@@ -91,22 +98,28 @@ if __name__ == "__main__":
 
     fastforward = False
     minlength = 1
+    maxlength = 32
+    prefix = ''
 
-    optlist, args = getopt.getopt(sys.argv[1:], 'h', ['fastforward', 'min-length=', 'help'])
+    optlist, args = getopt.getopt(sys.argv[1:], 'h', ['fastforward', 'min-length=', 'max-length=', 'prefix=', 'help'])
     for o, a in optlist:
-
         if o in ("-h", "--help"):
             usage()
             exit(0)
-
-        if o in ("--fastforward"):
+        elif o in ("--fastforward"):
             fastforward = True
-
-        if o in ("--min-length"):
+        elif o in ("--min-length"):
             minlength = int(a)
+        elif o in ("--max-length"):
+            maxlength = int(a)+1
+        elif o in ("--prefix"):
+            prefix = a.lower()
 
     if len(args) < 2:
-        print >>sys.stderr, "You need to give two filenames."""
+        print >>sys.stderr, "You need to give two filenames."
+        exit(1)
+    if not all(c in hexdigits for c in prefix):
+        print >>sys.stderr, "Invalid prefix."
         exit(1)
 
     emptyfile = open(args[0]).read()
@@ -114,11 +127,10 @@ if __name__ == "__main__":
     idx = emptyfile.find("SHA256 Checksum:")
     idx = emptyfile.find("_", idx)
 
-    for l in range(minlength, 32):
+    for l in range(minlength, maxlength):
         print "Looking at length", l
 
-        for h in range_hex(l):
-
+        for h in range_hex(l, prefix):
             H = insertspaces(h.upper())
             filledfile = emptyfile[:idx] + H + emptyfile[idx+len(H):]
             actual = hashlib.sha256(filledfile).hexdigest()

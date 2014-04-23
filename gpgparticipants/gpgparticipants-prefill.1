@@ -3,15 +3,15 @@
 gpgparticipants-prefill \- insert checksum-digits in a gpgparticicpants' form
 .SH SYNOPSIS
 .B gpgparticipants-prefill
-\fIemptylist\fP \fIfilledlist\fP
+[\fIOPTIONS\fP] \fIEMPTYLIST\fP \fIFILLEDLIST\fP
 .SH DESCRIPTION
 .B gpgparticipants-prefill
-takes a file produced by \fBgpgparticipants\fP (\fIemptylist\fP) and trys to fill in some
+takes a file produced by \fBgpgparticipants\fP (\fIEMPTYLIST\fP) and tries to fill in some
 digits into the SHA256 field such that the resulting list actually has a SHA256
 checksum that starts with those digits.  In other words, it tries to produce a
 file that hashes to a checksum that is partially written down in the file.
-Whenever a match is found a file with the digits filled in is written to
-\fIfilledlist\fP\fB.\fP\fIDIGITS\fP.
+Whenever a match is found, a file with the digits filled in is written to
+\fIFILLEDLIST\fP\fB.\fP\fIDIGITS\fP.
 
 .SH OPTIONS
 
@@ -19,11 +19,16 @@ Whenever a match is found a file with the digits filled in is written to
 Print the usage text.
 
 .IP "\fB\-\-fastforward\fP" 8
-If a match is found of given length and \-\-fastforward is given then the program
-immediately jumps to the next length.
+If a match is found of some length, immediately jump to the next length.
 
 .IP "\fB\-\-min-length\fP \fINUM\fP" 8
 Start search with given length.
+
+.IP "\fB\-\-max-length\fP \fINUM\fP" 8
+Stop search after the given length.
+
+.IP "\fB\-\-prefix\fP \fIPREFIX\fP" 8
+Only consider hex strings starting with \fIPREFIX\fP.
 
 .SH SEE ALSO
 .BR gpgparticipants (1)
