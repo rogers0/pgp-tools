@@ -1,5 +1,6 @@
 signing-party (1.1.7-1) UNRELEASED; urgency=low
 
+  [ Guilhem Moulin ]
   * caff:
     + Give an example of 'mailer-send' with a custom envelope sender address.
     + Document a possible workflow in README.many-keys, when working with an
@@ -13,6 +14,10 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.
   * debian.control:
     + Update the Vcs-Svn and Vcs-Browser to canonical URIs.
+
+  [ Peter Palfrader ]
+  * gpgparticipants-prefill:
+    + add --max-length and --prefix options.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 03 Apr 2014 11:50:02 +0200
 
