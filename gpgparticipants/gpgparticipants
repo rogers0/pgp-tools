@@ -149,7 +149,7 @@ cat $input | \
 while read i; do
     k=$(($k+1));
     printf "\n%03d  [ ] Fingerprint OK        [ ] ID OK\n" $k;
-	gpg $options --display-charset utf-8 --fingerprint --list-keys -- $i \
+	LANGUAGE=en gpg $options --display-charset utf-8 --fingerprint --list-keys -- $i \
 		| grep -ve "^sub" -e '^uid *\[jpeg image of size ';
 	echo "_______________________________________________________________________________"
 done

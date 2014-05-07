@@ -12,6 +12,8 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
     + Use gpg's --display-charset to force the output to be UTF-8 encoded, as
       the C.UTF-8 locale isn't installed on all platforms. Patch from Stefan
       Huber. (Closes: #747296).
+    + Prefix gpg with LANGUAGE=en to force the output to be in English.
+      (Other tools in signing-party parse this output.)
   * gpgwrap:
     + Import the default Debian CPPFLAGS defined by dpkg-buildflags, which
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.
