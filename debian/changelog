@@ -14,6 +14,7 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
       Huber. (Closes: #747296).
     + Prefix gpg with LANGUAGE=en to force the output to be in English.
       (Other tools in signing-party parse this output.)
+    + Prefix date(1) with LC_ALL=C to prevent its output to be localized.
   * gpgwrap:
     + Import the default Debian CPPFLAGS defined by dpkg-buildflags, which
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.

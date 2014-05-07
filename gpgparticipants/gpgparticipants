@@ -65,7 +65,7 @@ title=$(echo "$5"|tr a-z A-Z|sed 's/\(.\)/\1 /g')
 [ "$output" = - ] && output=/path/to/ksp-file.txt || { exec > "$output"; }
 
 # Date of event
-LANG=C date --date="$date" +"%A, %B %e, %Y;  %H:%M"
+LC_ALL=C date --date="$date" +"%A, %B %e, %Y;  %H:%M"
 # Organiser contact
 printf "%80s\n\n\n" "$org"
 # Title
