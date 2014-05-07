@@ -9,6 +9,9 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
   * gpgparticipants:
     + Escape hyphen-minuses (-) in the documentation, as groff may interpret
       them as hyphens (U+2010).
+    + Use gpg's --display-charset to force the output to be UTF-8 encoded, as
+      the C.UTF-8 locale isn't installed on all platforms. Patch from Stefan
+      Huber. (Closes: #747296).
   * gpgwrap:
     + Import the default Debian CPPFLAGS defined by dpkg-buildflags, which
       makes lintian stop emitting the 'hardening-no-fortify-functions' tag.
