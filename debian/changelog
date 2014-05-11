@@ -1,4 +1,4 @@
-signing-party (1.1.7-1) UNRELEASED; urgency=low
+signing-party (1.1.7-1) unstable; urgency=low
 
   [ Guilhem Moulin ]
   * caff:
@@ -25,7 +25,7 @@ signing-party (1.1.7-1) UNRELEASED; urgency=low
   * gpgparticipants-prefill:
     + add --max-length and --prefix options.
 
- -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 03 Apr 2014 11:50:02 +0200
+ -- Guilhem Moulin <guilhem@guilhem.org>  Sun, 11 May 2014 14:49:43 +0200
 
 signing-party (1.1.6-1) unstable; urgency=low
 
