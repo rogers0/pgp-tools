@@ -1,7 +1,6 @@
 TODO
 ----
 
-* Replace the python-gnupg module with subprocess.
 * Add support for providing multiple exported keys.
 * Add support for providing a 40-character OpenPGP fingerprint string.
 * Add support for keyrings.
