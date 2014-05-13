@@ -1,0 +1,9 @@
+TODO
+----
+
+* Replace the python-gnupg module with subprocess.
+* Add support for providing multiple exported keys.
+* Add support for providing a 40-character OpenPGP fingerprint string.
+* Add support for keyrings.
+* Add ability to ceate an HTML/PDF document for keysigning parties.
+* Create documentation on analysis of art collisions, similar to OpenSSH.
