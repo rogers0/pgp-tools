@@ -1,5 +1,5 @@
 DIRS=caff gpg-key2ps gpg-mailkeys gpgsigs gpglist gpgparticipants keyanalyze keylookup \
-     sig2dot springgraph gpgwrap gpgdir
+     sig2dot springgraph gpgwrap gpgdir keyart
 VERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: ([^-]*)/')
 DEBVERSION=$(shell dpkg-parsechangelog 2>&1 | perl -ne 'print $$1 if /^Version: (.*)/')
 TGZ=../signing-party_$(VERSION).orig.tar.gz
