@@ -7,6 +7,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   * keyanalyze:
     + Import the default Debian CFLAGS defined by dpkg-buildflags, which makes
       the Buildd Log Scanner stop emitting 'W-dpkg-buildflags-missing CFLAGS'.
+  * sig2dot:
+    + Apply -d on OpenPGP signatures and revocation certificates only.
+      (LP: #393242)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
 

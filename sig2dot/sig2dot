@@ -188,7 +188,7 @@ while (my $line = <>)
 #sig 3        9456ADE2 2004-02-07  Michael Schiansky <michael#schiansky.de>
 
                  # type                          id       date       name
-   if ($line =~ m#([\w]+)[ !\?][ \dLNPRTX]{0,8} +([^ ]+) +([^ ]+)(?: +"?([^<"]*))?#)
+   if ($line =~ m#(pub|uid|sig|rev|sub)[ !\?][ \dLNPRTX]{0,8} +([^ ]+) +([^ ]+)(?: +"?([^<"]*))?#)
 # differences:
 # " " -> "[ !\?]" (to use 'gpg --check-sigs|sig2dot.mio|springgraph|display')
 # "[ \d]" -> "[ \dLRXP]" (signature attributes)
@@ -203,8 +203,9 @@ while (my $line = <>)
     my $name = $4 || "";
 
     $date =~ tr/-//d;
-    if ($type eq "pub" or $renderdate eq "" or $date <= $renderdate)
-    {
+    if (grep {$type eq $_} qw/sig rev/ and $renderdate ne "" and $date > $renderdate) {
+      print STDERR "Skipping due to date: $line\n";
+    } else {
       print STDERR "Using: $line\n" unless $opt{q};
       # strip trailing whitespace more cleanly:
       $name =~ s/\s+$//g;
@@ -253,8 +254,6 @@ while (my $line = <>)
 	  #push (@{$revokedby{$id}},$owner);
 	}
       }
-    } else {
-      print STDERR "Skipping due to date: $line\n";
     }
   } else {
     print STDERR "Skipping due to regex: $line\n" if $line ne "";
