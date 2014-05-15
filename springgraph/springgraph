@@ -383,20 +383,20 @@ while($continue > $done)
     $node{$nodenum}{oldz} = $node{$nodenum}{z} if $pov_or_vrml;
     $xmove = 0;
     $ymove = 0;
+    $zmove = 0 if $pov_or_vrml;
   }
   for $source (@nodelist)
   {
     $movecount = 0;
     for $dest (@nodelist)
     {
-      next if ($source eq $dest);
+      next if $source eq $dest; # loops are not supported
       $xdist = $node{$source}{oldx} - $node{$dest}{oldx};
       $ydist = $node{$source}{oldy} - $node{$dest}{oldy};
-      $dist = $xdist*$xdist + $ydist*$ydist;
-      if ($pov_or_vrml)
-      {
-	$zdist = $node{$source}{oldz} - $node{$dest}{oldz};
-        $dist += $zdist*$zdist;
+      $dist = $xdist**2 + $ydist**2;
+      if ($pov_or_vrml) {
+        $zdist = $node{$source}{oldz} - $node{$dest}{oldz};
+        $dist += $zdist**2;
       }
       # $distance = sqrt($dist);
       $percent = $push / $dist;
@@ -420,9 +420,12 @@ while($continue > $done)
       # print STDERR "is: $node[$source]{oldx} $node[$source]{oldy} $xdist $ydist, want: $wantxdist $wantydist ($newdist2)\n";
 
     }
-    $xmove = $xmove / $movecount;
-    $ymove = $ymove / $movecount;
-    $zmove = $zmove / $movecount if $pov_or_vrml;
+    if ($movecount) {
+        # renormalize if there are multiple nodes
+        $xmove /= $movecount;
+        $ymove /= $movecount;
+        $zmove /= $movecount if $pov_or_vrml;
+    }
     $node{$source}{x} -= $xmove;
     $node{$source}{y} -= $ymove;
     $node{$source}{z} -= $zmove if $pov_or_vrml;
@@ -861,21 +864,19 @@ sub cylinder {
     my $dx=$x1-$x2;
     my $dy=$y1-$y2;
     my $dz=$z1-$z2;
-    if (1) {
-        unless (0) {
-            $length = sqrt($dx*$dx + $dy*$dy + $dz*$dz);
-            $rx = $dx;
-            $ry = ($dy+$length);
-            $rz = $dz;
-            $dist = sqrt(abs($rx)**2 + abs($ry)**2);
-            $dist = sqrt(abs($rz)**2 + abs($dist)**2);
-            $rx = $rx / $dist;
-            $ry = $ry / $dist;
-            $rz = $rz / $dist;
-            $t = ($x1-($dx/2))." ".($y1-($dy/2))." ".($z1-($dz/2));
-            $r = "$rx $ry $rz $pi";
-        }
+    $length = sqrt($dx**2 + $dy**2 + $dz**2);
+    $rx = $dx;
+    $ry = $dy+$length;
+    $rz = $dz;
+    $dist = sqrt($rx**2 + $ry**2 + $rz**2);
+    if ($dist) {
+        # renormalize if the cylinder is not degenerated
+        $rx /= $dist;
+        $ry /= $dist;
+        $rz /= $dist;
     }
+    $t = ($x1-($dx/2))." ".($y1-($dy/2))." ".($z1-($dz/2));
+    $r = "$rx $ry $rz $pi";
     return ($t,$r,$length);
 }
 

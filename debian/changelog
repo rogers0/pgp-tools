@@ -10,6 +10,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   * sig2dot:
     + Apply -d on OpenPGP signatures and revocation certificates only.
       (LP: #393242)
+  * springgraph:
+    + Avoid 'illegal division by zero' errors when dealing with isolated nodes
+      and/or degenerated cylinders. (LP: #1267981)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
 
