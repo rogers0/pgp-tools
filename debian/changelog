@@ -14,6 +14,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
     + Avoid 'illegal division by zero' errors when dealing with isolated nodes
       and/or degenerated cylinders. (LP: #1267981)
 
+  [ Aaron Toponce ]
+  * Add keyart.
+
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
 
 signing-party (1.1.7-1) unstable; urgency=low
