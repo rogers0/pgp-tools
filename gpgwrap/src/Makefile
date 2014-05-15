@@ -1,5 +1,5 @@
 CC=${DIET} gcc -s
-CFLAGS:=-Wall -O2 -fomit-frame-pointer
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS) -fomit-frame-pointer
 CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
 LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 STRIP=strip -R .note -R .comment

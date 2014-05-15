@@ -1,5 +1,5 @@
 LDLIBS=-lpthread
-CFLAGS=-O2 -W -Wall -g
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
 
 all: keyanalyze process_keys pgpring/pgpring
 

@@ -1,3 +1,15 @@
+signing-party (1.1.8-1) UNRELEASED; urgency=low
+
+  [ Guilhem Moulin ]
+  * gpgwrap:
+    + Import the default Debian CFLAGS defined by dpkg-buildflags, which makes
+      the Buildd Log Scanner stop emitting 'W-dpkg-buildflags-missing CFLAGS'.
+  * keyanalyze:
+    + Import the default Debian CFLAGS defined by dpkg-buildflags, which makes
+      the Buildd Log Scanner stop emitting 'W-dpkg-buildflags-missing CFLAGS'.
+
+ -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
+
 signing-party (1.1.7-1) unstable; urgency=low
 
   [ Guilhem Moulin ]
