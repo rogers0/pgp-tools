@@ -30,12 +30,14 @@ build-arch: build-stamp
 build-indep: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
+	dh_autotools-dev_updateconfig
 	$(MAKE)
 	touch $@
 
 clean:
 	dh_testdir
 	dh_testroot
+	dh_autotools-dev_restoreconfig
 	$(MAKE) clean
 	rm -f build-stamp configure-stamp
 	dh_clean

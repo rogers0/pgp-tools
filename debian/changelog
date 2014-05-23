@@ -13,6 +13,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   * springgraph:
     + Avoid 'illegal division by zero' errors when dealing with isolated nodes
       and/or degenerated cylinders. (LP: #1267981)
+  * debian.control, debian.rules:
+    + Update the config files before building the package. Patch from Breno
+      Leitao. (Closes: #748977)
 
   [ Aaron Toponce ]
   * Add keyart.
