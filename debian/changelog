@@ -13,6 +13,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   * springgraph:
     + Avoid 'illegal division by zero' errors when dealing with isolated nodes
       and/or degenerated cylinders. (LP: #1267981)
+    + Add an option -f to set the (TrueType) font, style and size to use on
+      labels.  This allows proper displaying of non-ASCII labels (provided the
+      chosen font covers all the glyphs).
   * debian.control, debian.rules:
     + Update the config files before building the package. Patch from Breno
       Leitao. (Closes: #748977)

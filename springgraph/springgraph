@@ -152,7 +152,10 @@ $pov_or_vrml
 $opt_v
 $vrml
 $opt_t
+$opt_f
 $trans
+$font
+$fontsize
 $opt_h
 $opt_l
 @linecolor
@@ -177,7 +180,7 @@ srand 1; #comment out this line to generate graphs differently every time
 $pi = 3.141592653589793238462643383279502884197169399375105; # from memory
 $twopi = $pi * 2;
 
-getopts('s:pvhtb:l:');
+getopts('s:pvhtb:l:f:');
 
 # -h: Show some help
 if ($opt_h) {
@@ -237,6 +240,20 @@ if ($opt_l)
   @linecolor = (hex($1), hex($2), hex($3));
 } else {
   @linecolor = (169, 169, 169);
+}
+
+# -f: Set TrueType font, style and size
+if ($opt_f)
+{
+    $opt_f =~ m/^([^:]+)((:[^:]*)(:\d*)?)?$/ or die "Invalid font: $opt_f";
+    $font = $1;
+    $fontsize = 13;
+    if ($2) {
+        $2 =~ m/^(:[^:]*)(:\d*)?$/;
+        $font    .= $1 if defined $1 and $1 ne ':';
+        $fontsize = $2 if defined $2 and $2 ne ':';
+        $fontsize =~ s/^://;
+    }
 }
 
 $done = $done / $scale;
@@ -509,6 +526,7 @@ sub draw
   $powderblue = $im->colorAllocate(176,224,230);
   $black = $im->colorAllocate(0,0,0);
   $linecol = $im->colorAllocate(@linecolor);
+  $im->useFontConfig(1) if $opt_f;
 
   for $source (@nodelist)
   {
@@ -600,8 +618,12 @@ sub draw
 
   for $source (@nodelist)
   {
-    $im->arc($node{$source}{x},$node{$source}{y},(length($node{$source}{'label'}) * 8 + 16),$nodesize,0,360,$black);
-    #$im->arc($node{$source}{x},$node{$source}{y},$nodesize,$nodesize,0,360,$black);
+    if ($opt_f) {
+        my @bounds = GD::Image::->stringFT($black,$font,$fontsize,0,0,0,$node{$source}{'label'});
+        $im->arc($node{$source}{x},$node{$source}{y},$bounds[2]-$bounds[0]+1.5*$fontsize,$nodesize,0,360,$black);
+    } else {
+        $im->arc($node{$source}{x},$node{$source}{y},(length($node{$source}{'label'}) * 8 + 16),$nodesize,0,360,$black);
+    }
     if (defined $node{$source}{r} and defined $node{$source}{g} and defined $node{$source}{b})
     {
       $color = $im->colorResolve($node{$source}{r},$node{$source}{g},$node{$source}{b});
@@ -613,7 +635,12 @@ sub draw
   }
   for $source (@nodelist)
   {
-    $im->string(gdLargeFont,$node{$source}{x} - (length($node{$source}{'label'}) * 8 / 2) ,$node{$source}{y}-8,$node{$source}{'label'},$black);
+    if ($opt_f) {
+        my @bounds = GD::Image::->stringFT($black,$font,$fontsize,0,0,0,$node{$source}{'label'});
+        $im->stringFT($black,$font,$fontsize,0,$node{$source}{x} - ($bounds[0]+$bounds[2])/2.0,$node{$source}{y}+$fontsize/2.0,$node{$source}{'label'});
+    } else {
+        $im->string(gdLargeFont,$node{$source}{x} - (length($node{$source}{'label'}) * 8 / 2),$node{$source}{y}-8,$node{$source}{'label'},$black);
+    }
   }
 
 
@@ -886,7 +913,8 @@ springgraph - Render a .dot file into a graphic, taking that dot file
               on standard in and delivering a PNG on standard out.
 
 Usage:
-  springgraph [-p] [-v] [-s scale] [-t] [-b color] [-l color] [-h] \\
+  springgraph [-p] [-v] [-s scale] [-t] [-b color] [-l color] \\
+              [-f font[:[style]:size]] [-h]
   < example.dot > example.png
 
    -p   Create a file that can be rendered with POV-Ray
@@ -894,12 +922,14 @@ Usage:
    -s   This option specifies the scale. All of the node locations
         are multiplied by this. Increase the scale to eliminate node
         overlaps. Decrease the scale to make the graph smaller. 
-   -t   Make the background of the resulting image transpaent.
-   -b   set background color of image, specify it in the form RRGGBB,
+   -t   Make the background of the resulting image transparent.
+   -b   Set background color of image, specify it in the form RRGGBB,
         in hex digits, e.g. FFFFFF is white, 000000 is black, FF0000
         is red, ...
-   -l   set the line color, same format as the background color
-   -h   show this help
+   -l   Set the line color, same format as the background color
+   -f   Set the (TrueType) font, and optionally the style and size, to
+        use for labels.  Example: "DejaVu Serif:Italic:12".
+   -h   Show this help
 
 END
 }
