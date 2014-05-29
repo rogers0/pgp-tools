@@ -18,7 +18,8 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
       Leitao. (Closes: #748977)
 
   [ Aaron Toponce ]
-  * Add keyart.
+  * keyart: new script to dislay an ASCII art representation of OpenPGP key
+    files.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
 
