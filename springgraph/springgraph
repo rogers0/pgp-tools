@@ -152,8 +152,8 @@ $pov_or_vrml
 $opt_v
 $vrml
 $opt_t
-$opt_f
 $trans
+$opt_f
 $font
 $fontsize
 $opt_h
