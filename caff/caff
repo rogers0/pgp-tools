@@ -57,8 +57,11 @@ sigs and sigs done by you.  The mailed key is encrypted with itself as a means
 to verify that key belongs to the recipient.
 
 The list of keys to sign can also be provided through caff's standard
-input, as gpgparticipants(1) formatted content.  Only keys annotated
-with "Fingerprint OK" and "ID OK" are be considered for signing.
+input, as gpgparticipants(1) formatted content.  Only keys for which
+both the "Fingerprint OK" and "ID OK" boxes are ticked (i.e., marked
+with an "x") are considered for signing.  Furthermore, the input header
+must include at least one checksum line, and all checksum boxes must be
+marked as verified (with an "x").
 
 =head1 OPTIONS
 
@@ -1233,8 +1236,8 @@ if (-t \*STDIN) {
 					die "Unexpected input line: " .$_. "\n";
 				}
 			}
-			die "$md checksum wasn't verified!\n" unless lc $r eq 'x';
-			info "Found verified $md checksum (assumed good).";
+			die "$md checksum wasn't marked as verified!\n" unless lc $r eq 'x';
+			info "Found $md checksum (marked as verified, assumed good).";
 			push @checksums, uc $md;
 		}
 		elsif (/^(?:-+|_+)$/) {
