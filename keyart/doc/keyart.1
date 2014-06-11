@@ -5,12 +5,12 @@
 .B keyart
 \- Create ASCII art of an OpenPGP key.
 .SH SYNOPSIS
-.B keyart [-a|--ansi] FILE
+.B keyart [-a|--ansi] KEYID
 .SH DESCRIPTION
 .B keyart
-creates an ASCII art representation of a public OpenPGP key. The art is an
-implementation of the Drunken Bishop by Dirk Loss. Documentation about the
-algorithm can be found /usr/share/doc/keyart/, or as appropriate for your
+creates an ASCII art representation of a public OpenPGP key in your keyring. The
+art is an implementation of the Drunken Bishop by Dirk Loss. Documentation about
+the algorithm can be found /usr/share/doc/keyart/, or as appropriate for your
 distribution.
 
 .B keyart
@@ -23,6 +23,9 @@ color to printed character.
 .TP 8
 .B -a | --ansi
 \- Print the ASCII art using ANSI color to the terminal.
+.B KEYID
+\- Required. Can be any string that uniquely identifies a key, such as name,
+email, short key ID, long key ID, fingerprint, etc.
 .SH SEE ALSO
 .BR gpg (1)
 .SH AUTHOR
