@@ -3,6 +3,9 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   [ Guilhem Moulin ]
   * caff:
     + Improve the documentation of gpgparticipants annotations.
+    + When clean-exporting a key (aka pruning), don't ignore signatures just
+      because their certification level in under 'min-cert-level' (which
+      defaults to 2). (Closes: #751252)
   * gpgwrap:
     + Import the default Debian CFLAGS defined by dpkg-buildflags, which makes
       the Buildd Log Scanner stop emitting 'W-dpkg-buildflags-missing CFLAGS'.

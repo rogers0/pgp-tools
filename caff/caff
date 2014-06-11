@@ -795,6 +795,7 @@ sub export_keys($$@) {
 	$h{'homedir'} = $gnupghome if defined $gnupghome;
 
 	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
+	push @{$h{'extra_args'}}, '--min-cert-level=1' if grep { $_ eq 'export-clean' } @export_options;
 	push @{$h{'extra_args'}}, '--export-options', join (',', @export_options) if @export_options;
 
 	my $gpg = GnuPG::Interface->new();
