@@ -236,7 +236,8 @@ if __name__ == '__main__':
     cmd = [ gpg_bin, '--with-colons', '--fingerprint' ]
     if ARGS.file:
         cmd.append('--no-default-keyring')
-        cmd.extend([ '--keyring=%s' % keyring for keyring in ARGS.file ])
+        cmd.extend([ '--keyring=%s' % os.path.abspath(keyring) for keyring in
+                   ARGS.file ])
 
     if ARGS.keyid:
         cmd.append('--')
