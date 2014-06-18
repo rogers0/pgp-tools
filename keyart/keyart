@@ -9,13 +9,12 @@ import subprocess
 import sys
 
 PARSER = argparse.ArgumentParser(description='Create ASCII art of a PGP key.')
-GROUP = PARSER.add_mutually_exclusive_group(required=True)
 PARSER.add_argument('-a', '--ansi', help='Print the art with ANSI color.',
                     action='store_true')
-GROUP.add_argument('-i', '--id', type=str, nargs='+', metavar=('KEYID'),
-                   help='A key identifier (email, ID, fingerprint, etc.).')
-GROUP.add_argument('-f', '--file', type=str, nargs='+', metavar=('FILE'),
+PARSER.add_argument('-f', '--file', type=str, metavar=('FILE'), action='append',
                    help='A publicly exported GPG key or keyring.')
+PARSER.add_argument('keyid', type=str, nargs='*', metavar=('KEYID'),
+                   help='A key identifier (email, ID, fingerprint, etc.).')
 ARGS = PARSER.parse_args()
 
 def test_env():
@@ -239,9 +238,9 @@ if __name__ == '__main__':
         cmd.append('--no-default-keyring')
         cmd.extend([ '--keyring=%s' % keyring for keyring in ARGS.file ])
 
-    if ARGS.id:
+    if ARGS.keyid:
         cmd.append('--')
-        cmd.extend(ARGS.id)
+        cmd.extend(ARGS.keyid)
 
     gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for lines in gpg.communicate()[0].split('\n'):
