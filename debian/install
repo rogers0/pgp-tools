@@ -10,3 +10,8 @@ gpgparticipants/gpgparticipants-prefill usr/bin
 keyanalyze/analyze.sh usr/share/doc/signing-party/examples/keyanalyze
 keyanalyze/scripts/*  usr/share/doc/signing-party/examples/keyanalyze/scripts
 keyanalyze/willy/*    usr/share/doc/signing-party/examples/keyanalyze/willy
+
+keyart/keyart                usr/bin
+keyart/doc/examples          usr/share/doc/signing-party/examples/keyart
+keyart/doc/druken-bishop.txt usr/share/doc/signing-party/keyart
+keyart/doc/party-worksheet   usr/share/doc/signing-party/keyart
