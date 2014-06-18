@@ -39,10 +39,11 @@ SHA3 hexadecimal checksum. Useful for comparing and analyzing potential
 collisions with existing keys. This option can be repeated multiple times.
 .TP 8
 .B \-k | \-\-keyring \fIKEYRING\fR
-An OpenPGP key file or keyring, from which the \fIKEYID\fRs are
-exported.  This option can be repeated multiple times to provide a list
-of key files or keyrings; if this option is not present, the
-\fIKEYID\fRs are used from GnuPG's default keyring.
+An OpenPGP public key file or keyring, from which the \fIKEYID\fRs are to
+be found.  If this option is not present, the \fIKEYID\fRs are found from
+GnuPG's default keyring (usually ~/.gnupg/pubring.gpg); if it is
+repeated multiple times, the provided \fIKEYRING\fRs are used as
+successive sources.
 .TP 8
 .B \-h | \-\-help
 Print the help message and quit.
