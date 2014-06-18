@@ -23,7 +23,7 @@ def fix_gpg(gpg_bin, keyid, keyfile):
     See https://bugs.g10code.com/gnupg/issue1640."""
     with open(os.devnull, 'wb') as devnull:
         cmd = (gpg_bin, '--quiet', '--yes', '--output', '/tmp/.0x%s.gpg' % keyid,
-               '--no-default-keyring', '--keyring=%s' % keyfile, '--export',
+               '--no-default-keyring', '--keyring=%s' % keyfile, '--export', '--',
                keyid)
         gpg = subprocess.Popen(cmd, stdout=devnull)
         gpg.communicate()
@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
     if ARGS.id:
         for key in ARGS.id:
-            cmd = (gpg_bin, '--fingerprint', '--with-colons', key)
+            cmd = (gpg_bin, '--fingerprint', '--with-colons', '--', key)
             gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             for lines in gpg.communicate()[0].split('\n'):
                 colons = lines.split(':')
@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
     if ARGS.file:
         for key in ARGS.file:
-            cmd = (gpg_bin, '--with-fingerprint', '--with-colons', key)
+            cmd = (gpg_bin, '--with-fingerprint', '--with-colons', '--', key)
             gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             cmd = ('grep', '-E', '^(pub|fpr)')
             grep = subprocess.Popen(cmd, stdin=gpg.stdout,
