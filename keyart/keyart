@@ -8,11 +8,11 @@ import os
 import subprocess
 import sys
 
-PARSER = argparse.ArgumentParser(description='Create ASCII art of a PGP key.')
+PARSER = argparse.ArgumentParser(description='Creates ASCII art from OpenPGP keys.')
 PARSER.add_argument('-a', '--ansi', help='Print the art with ANSI color.',
                     action='store_true')
 PARSER.add_argument('-f', '--file', type=str, metavar=('FILE'), action='append',
-                   help='A publicly exported GPG key or keyring.')
+                   help='A publicly exported OpenPGP key or keyring.')
 PARSER.add_argument('keyid', type=str, nargs='*', metavar=('KEYID'),
                    help='A key identifier (email, ID, fingerprint, etc.).')
 ARGS = PARSER.parse_args()
