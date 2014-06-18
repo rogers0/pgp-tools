@@ -12,11 +12,36 @@ PARSER = argparse.ArgumentParser(description='Create ASCII art of a PGP key.')
 GROUP = PARSER.add_mutually_exclusive_group(required=True)
 PARSER.add_argument('-a', '--ansi', help='Print the art with ANSI color.',
                     action='store_true')
-GROUP.add_argument('-i', '--id', type=str, nargs='+', metavar=('KEID'),
-                   help='A key identifier.')
-GROUP.add_argument('-k', '--keyring', type=str, nargs='+', metavar=('KEYRING'),
-                   help='A GPG keyring.')
+GROUP.add_argument('-i', '--id', type=str, nargs='+', metavar=('KEYID'),
+                   help='A key identifier (email, ID, fingerprint, etc.).')
+GROUP.add_argument('-f', '--file', type=str, nargs='+', metavar=('FILE'),
+                   help='A publicly exported GPG key or keyring.')
 ARGS = PARSER.parse_args()
+
+def fix_gpg(gpg_bin, keyid, keyfile):
+    """Temporary work around for GnuPG bug #1640.
+    See https://bugs.g10code.com/gnupg/issue1640."""
+    with open(os.devnull, 'wb') as devnull:
+        cmd = (gpg_bin, '--quiet', '--yes', '--output', '/tmp/.0x%s.gpg' % keyid,
+               '--no-default-keyring', '--keyring=%s' % keyfile, '--export',
+               keyid)
+        gpg = subprocess.Popen(cmd, stdout=devnull)
+        gpg.communicate()
+
+        cmd = (gpg_bin, '--quiet', '--import', '/tmp/.0x%s.gpg' % keyid)
+        gpg = subprocess.Popen(cmd, stdout=devnull)
+        gpg.communicate()
+
+        os.remove('/tmp/.0x%s.gpg' % keyid)
+
+        cmd = (gpg_bin, '--fingerprint', '--with-colons', keyid)
+        gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        cmd = ('grep', '^fpr')
+        grep = subprocess.Popen(cmd, stdin=gpg.stdout, stdout=subprocess.PIPE)
+        out = grep.communicate()[0]
+        fpr = out.split(':')[9]
+
+    return fpr
 
 def test_env():
     """Test if and where GPG is installed."""
@@ -232,27 +257,37 @@ def _get_coin(num_of_hits, ansi_art=False, coin=None):
     return '{}{}{}'.format(color, coin, reset)
 
 if __name__ == '__main__':
-    GPG_BIN = test_env()
-    DEVNULL = open(os.devnull, 'wb')
+    gpg_bin = test_env()
 
     if ARGS.id:
         for key in ARGS.id:
-            gpg = subprocess.Popen((GPG_BIN, '--fingerprint', '--with-colons',
-                                    key), stdout=subprocess.PIPE, stderr=DEVNULL
-                                  )
-            out = gpg.communicate()
+            cmd = (gpg_bin, '--fingerprint', '--with-colons', key)
+            gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            out = gpg.communicate()[0].split('\n')
 
-            size = out[0].split('\n')[1].split(':')[2]
-            algo = out[0].split('\n')[1].split(':')[3]
-            fpr = out[0].split('\n')[2].split(':')[9]
+            size = out[1].split(':')[2]
+            algo = out[1].split(':')[3]
+            fpr = out[2].split(':')[9]
 
             print draw_art(size, algo, fpr)
 
-    if ARGS.keyring:
-        print "This code isn't ready."
-        #for keyring in ARGS.keyring:
-        #    gpg = subprocess.Popen((GPG_BIN, '--with-fingerprint',
-        #        '--with-colons', key),stdout=subprocess.PIPE, stderr=DEVNULL)
-        #    out = gpg.communicate()
+    if ARGS.file:
+        for key in ARGS.file:
+            cmd = (gpg_bin, '--with-fingerprint', '--with-colons', key)
+            gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            cmd = ('grep', '-E', '^(pub|fpr)')
+            grep = subprocess.Popen(cmd, stdin=gpg.stdout,
+                                    stdout=subprocess.PIPE)
+            out = grep.communicate()[0].split('\n')
 
-    DEVNULL.close()
+            for i in xrange(len(out)):
+                if out[i].split(':')[0] == 'pub':
+                    size = out[i].split(':')[2]
+                    algo = out[i].split(':')[3]
+                    if out[i+1].split(':')[0] == 'fpr':
+                        fpr = out[i+1].split(':')[9]
+                    else:
+                        keyid = out[i].split(':')[4]
+                        fpr = fix_gpg(gpg_bin, keyid, os.path.abspath(key))
+
+                    print draw_art(size, algo, fpr)
