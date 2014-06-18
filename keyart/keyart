@@ -263,13 +263,16 @@ if __name__ == '__main__':
         for key in ARGS.id:
             cmd = (gpg_bin, '--fingerprint', '--with-colons', key)
             gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            out = gpg.communicate()[0].split('\n')
+            for lines in gpg.communicate()[0].split('\n'):
+                colons = lines.split(':')
+                if colons[0] == 'pub':
+                    size = colons[2]
+                    algo = colons[3]
+                elif colons[0] == 'fpr':
+                    print draw_art(size, algo, colons[9])
+                    size = None
+                    algo = None
 
-            size = out[1].split(':')[2]
-            algo = out[1].split(':')[3]
-            fpr = out[2].split(':')[9]
-
-            print draw_art(size, algo, fpr)
 
     if ARGS.file:
         for key in ARGS.file:
