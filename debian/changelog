@@ -1,4 +1,4 @@
-signing-party (1.1.8-1) UNRELEASED; urgency=low
+signing-party (1.1.8-1) unstable; urgency=low
 
   [ Guilhem Moulin ]
   * caff:
@@ -29,7 +29,7 @@ signing-party (1.1.8-1) UNRELEASED; urgency=low
   * keyart: new script to dislay an ASCII art representation of OpenPGP key
     files.
 
- -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 15 May 2014 15:21:02 +0200
+ -- Guilhem Moulin <guilhem@guilhem.org>  Sat, 21 Jun 2014 17:32:13 +0200
 
 signing-party (1.1.7-1) unstable; urgency=low
 
