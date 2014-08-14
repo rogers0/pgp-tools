@@ -201,7 +201,7 @@ sub readwrite_gpg($$$$$%) {
 			}
 		}
 
-		next unless @$readyr; # Wait some more.
+		next unless defined $readyr and @$readyr; # Wait some more.
 
 		for my $rfd (@$readyr) {
 			$readwrote_stuff_this_time = 1;

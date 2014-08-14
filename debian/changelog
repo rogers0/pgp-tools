@@ -3,6 +3,9 @@ signing-party (1.1.9-1) UNRELEASED; urgency=low
   [ Guilhem Moulin ]
   * debian.copyright:
     + Upgragrade to the new, machine-readable, format.
+  * caff:
+    + Fix regression introduced in r518 when removing the 'defined' in
+      'defined @array'. (Closes: #756459)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Wed, 16 Jul 2014 00:07:24 +0200
 
