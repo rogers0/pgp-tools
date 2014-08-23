@@ -6,6 +6,9 @@ signing-party (1.1.9-1) UNRELEASED; urgency=low
   * caff:
     + Fix regression introduced in r518 when removing the 'defined' in
       'defined @array'. (Closes: #756459)
+  * gpg-key2ps:
+    + Replace ',' with '.' in paperconf's output, which is localized while
+      Postscript understands only '.' as decimal mark. (Closes: #758991)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Wed, 16 Jul 2014 00:07:24 +0200
 
