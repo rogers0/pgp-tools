@@ -5,11 +5,6 @@
 # See the pod documentation at the end of this file for author,
 # copyright, and licence information.
 #
-# Depends: 
-# 	   libintl-perl (Locale::Recode)
-# 	OR libtext-iconv-perl (Text::Iconv),
-# 	OR the "recode" binary
-#
 # Changelog:
 # 0.1
 # 0.2 2005-05-14 cb:
@@ -23,6 +18,8 @@ my $VERSION = qq$Rev$;
 
 use strict;
 use warnings;
+use Encode ();
+use I18N::Langinfo 'langinfo';
 use English;
 use IPC::Open3;
 use Getopt::Long;
@@ -81,42 +78,9 @@ GetOptions(
 
 
 # charset conversion
-$fromcharset ||= "ISO-8859-1";
-$charset ||= $ENV{LC_ALL} || $ENV{LC_CTYPE} || $ENV{LANG} || "ISO-8859-1";
-$charset = "ISO-8859-1" unless $charset =~ /[\.-]/;
-$charset =~ s/.*\.//;
-$charset =~ s/\@.*//;
-
-
-sub myrecode($$$) {
-	my ($text, $from, $to) = @_;
-
-	if (eval "require Locale::Recode") {
-		my $rt = Locale::Recode->new (from => $from, to => $to);
-
-		my $orig = $text;
-		$rt->recode($text);
-		return $text;
-	} elsif (eval "require Text::Iconv") {
-		my $it = Text::Iconv->new($from, $to);
-
-		my $result = $it->convert($text);
-		warn ("Could not convert '$text'\n") unless defined $result;
-		return ($result // $text);
-	} else {
-		my $pid = open3(\*WTRFH, \*RDRFH, \*ERRFH, 'recode', "utf8..$charset");
-		print WTRFH $text;
-		close WTRFH;
-		local $/ = undef;
-		my $result = <RDRFH>;
-		close RDRFH;
-		close ERRFH;
-		waitpid $pid, 0;
-		warn ("'recode' failed, is it installed?\n") unless defined $result;
-		return ($result // $text);
-	}
-}
-
+$fromcharset //= langinfo(I18N::Langinfo::CODESET());
+$charset //= langinfo(I18N::Langinfo::CODESET());
+my $locale = Encode::find_encoding($charset);
 
 # parse options
 my @mykeys = split /,/, uc(shift @ARGV);
@@ -224,7 +188,8 @@ while ($output->count() > 0) {
 					if ($1 eq 'uid') {
 						my $text = $4;
 						$text =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-						$uids{$key}->{$uid} = { type => 'uid', text => myrecode($text, "UTF-8", $charset) };
+						# --with-colons always output UTF-8
+						$uids{$key}->{$uid} = { type => 'uid', text => $locale->encode(Encode::decode_utf8($text)) };
 					}
 					else {
 						# we can't rely on $4 for the size: get it from
@@ -414,7 +379,6 @@ EOF
 
 while (<TXT>) {
 	$line++;
-	$_ = myrecode($_, $fromcharset, $charset);
 	if (/^(\S+) Checksum:/) {
 		my $md = getChecksum(uc $1, $keytxt);
 		if ($md) {
@@ -482,7 +446,7 @@ while (<TXT>) {
 	}
 	if ( m/^uid +(.*)$/ ) {
 		next if $refresh or $latex;
-		my $uid = $1;
+		my $uid = $locale->encode( Encode::decode($fromcharset, $1) );
 		unless (defined $key) {
 			warn "key is undefined - input text is possibly malformed near line $line\n";
 			next;

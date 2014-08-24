@@ -9,6 +9,10 @@ signing-party (1.1.9-1) UNRELEASED; urgency=low
   * gpg-key2ps:
     + Replace ',' with '.' in paperconf's output, which is localized while
       Postscript understands only '.' as decimal mark. (Closes: #758991)
+  * gpgsigs:
+    + Use Perl's "Encode" core module for charset conversion. Also, change the
+      default 'from' charset to be the locale in use, as it was the case for
+      'to'. (Use -f/-t to select alternative from/to charsets.)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Wed, 16 Jul 2014 00:07:24 +0200
 

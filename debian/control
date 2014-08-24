@@ -19,8 +19,7 @@ Depends: ${shlibs:Depends}, ${perl:Depends}, ${python:Depends},
  libmime-tools-perl, libmailtools-perl, libterm-readkey-perl,
  libclass-methodmaker-perl, libnet-idn-encode-perl, qprint
 Recommends: default-mta | mail-transport-agent, libpaper-utils,
- libgd-gd2-noxpm-perl | libgd-gd2-perl,
- libtext-iconv-perl | libintl-perl | recode, dialog | whiptail
+ libgd-gd2-noxpm-perl | libgd-gd2-perl, dialog | whiptail
 # springraph
 Suggests: imagemagick | graphicsmagick-imagemagick-compat, wipe, mutt,
  texlive-latex-recommended, texlive-xetex, fonts-droid
