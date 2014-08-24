@@ -231,7 +231,7 @@ while ($output->count() > 0) {
 						# the status fd instead
 						$uids{$key}->{$uid} = { type => 'uat' };
 					}
-					push $keys{$key}, $uid; # preserve order
+					push @{$keys{$key}}, $uid; # preserve order
 					next;
 				}
 				next unless $uid; # nothing to do on revoked uids
@@ -241,7 +241,7 @@ while ($output->count() > 0) {
 					} else {
 						$sigs{$key}->{$uid}->{$1} //= [];
 						$sig = $sigs{$key}->{$uid}->{$1};
-						push $sig, { created => $2, expiring => $3, class => $4, revocable => 1 };
+						push @$sig, { created => $2, expiring => $3, class => $4, revocable => 1 };
 					}
 					next;
 				}

@@ -1433,10 +1433,10 @@ for my $keyid (@keyids_ok) {
 			last;
 		}
 		elsif (/^sub:[^:]+:(?:[^:]*:){2}([0-9A-F]{16}):/) {
-			push $KEYS{$keyid}->{subkeys}, $1;
+			push @{$KEYS{$keyid}->{subkeys}}, $1;
 		}
 		elsif (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
-			push $KEYS{$keyid}->{uids}, {
+			push @{$KEYS{$keyid}->{uids}}, {
 				type => $1,
 				validity => $2,
 				hash => $3,
