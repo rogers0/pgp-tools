@@ -1,4 +1,4 @@
-signing-party (1.1.9-1) UNRELEASED; urgency=low
+signing-party (1.1.9-1) unstable; urgency=low
 
   [ Guilhem Moulin ]
   * debian.copyright:
@@ -14,7 +14,7 @@ signing-party (1.1.9-1) UNRELEASED; urgency=low
       default 'from' charset to be the locale in use, as it was the case for
       'to'. (Use -f/-t to select alternative from/to charsets.)
 
- -- Guilhem Moulin <guilhem@guilhem.org>  Wed, 16 Jul 2014 00:07:24 +0200
+ -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 25 Aug 2014 21:50:04 +0200
 
 signing-party (1.1.8-1) unstable; urgency=low
 
