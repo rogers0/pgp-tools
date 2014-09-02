@@ -2,6 +2,8 @@ signing-party (1.1.10-1) UNRELEASED; urgency=low
 
   * debian.compat:
     + Upgrade packaging to debhelper level 9.
+  * caff:
+    + Add a "Date" email header. Patch from Clint Adams. (Closes: #760316)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Tue, 02 Sep 2014 19:27:28 +0200
 

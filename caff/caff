@@ -383,6 +383,7 @@ use Fcntl;
 use IO::Select;
 use Getopt::Long;
 use GnuPG::Interface;
+use POSIX qw{strftime};
 
 my %CONFIG;
 my $REVISION = '$Rev$';
@@ -907,6 +908,7 @@ sub create_mail($$$@) {
 			Data        => $message);
 	};
 
+	$message_entity->head->add("Date", strftime("%a, %e %b %Y %H:%M:%S %z", localtime));
 	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
 	$message_entity->head->add("To", email_to_ascii(Encode::decode('utf-8', $address)));
 	$message_entity->head->add("From", '"'.Encode::encode('MIME-Q', $CONFIG{'owner'}).'" <'.$CONFIG{'email'}.'>');
