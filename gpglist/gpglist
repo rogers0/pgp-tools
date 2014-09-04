@@ -78,7 +78,7 @@ gpgsigs(1), gpg(1), caff(1).
 
 use strict;
 use warnings;
-use English;
+use English '-no_match_vars';
 
 my $now = time;
 my $key=shift @ARGV;

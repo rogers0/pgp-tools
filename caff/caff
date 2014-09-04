@@ -370,7 +370,7 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 
 use strict;
 use IO::Handle;
-use English;
+use English '-no_match_vars';
 use File::Copy qw{copy};
 use File::Path qw{make_path};
 use File::Temp;

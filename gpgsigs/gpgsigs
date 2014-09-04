@@ -20,7 +20,7 @@ use strict;
 use warnings;
 use Encode ();
 use I18N::Langinfo 'langinfo';
-use English;
+use English '-no_match_vars';
 use IPC::Open3;
 use Getopt::Long;
 use File::Temp;

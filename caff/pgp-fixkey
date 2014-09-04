@@ -79,7 +79,7 @@ Peter Palfrader <peter@palfrader.org>
 
 use strict;
 use IO::Handle;
-use English;
+use English '-no_match_vars';
 use File::Path;
 use Fcntl;
 use IO::Select;
