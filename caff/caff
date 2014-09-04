@@ -1764,9 +1764,9 @@ for my $keyid (@keyids_ok) {
 
 			my $keydir = "$KEYSBASE/$DATE_STRING";
 			my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($uid->{'text'});
-			open (MAILFILE, '>', $mailfile) or die ("Cannot open $mailfile: $!\n");
-			print MAILFILE $mail->stringify();
-			close MAILFILE;
+			open my $MAILFILE, '>', $mailfile or die "Cannot open $mailfile: $!\n";
+			$mail->print($MAILFILE);
+			close $MAILFILE;
 		} else {
 			warn "Generating mail failed.\n";
 		};
