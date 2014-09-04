@@ -1740,7 +1740,12 @@ for my $keyid (@keyids_ok) {
 		if ($uid->{type} eq 'uat') {
 			my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email?", 1);
 			push @attached, $uid if $attach;
-		} elsif ($uid->{'text'} !~ /\@/) {
+		} elsif ($uid->{'text'} ~= /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/) {
+			# XXX This does not cover the full RFC 2822 specification:
+			# The local part may contain '>' in a quoted string.
+			# However as of 1.4.18/2.0.26, gpg doesn't allow that either.
+			$uid->{'address'} = $1;
+		} else {
 			my $attach = ask("UID $uid->{'text'} is no email address, attach it to every email?", 1);
 			push @attached, $uid if $attach;
 		};
@@ -1752,13 +1757,11 @@ for my $keyid (@keyids_ok) {
 	my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 	for my $uid (@UIDS) {
 		next unless $uid->{last_signed_on}; # wasn't signed by me
-		next unless $uid->{type} eq 'uid' and $uid->{'text'} =~ /\@/;
+		next unless defined $uid->{address};
 
-		my $address = $uid->{'text'};
-		$address =~ s/.*<(.*)>$/$1/;
-		my $mail = create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
+		my $mail = create_mail($uid->{address}, $can_encrypt, $longkeyid, $uid, @attached);
 		if (defined $mail) {
-			my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $uid->{'text'} to '$address'?",
+			my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $uid->{'text'} to '$uid->{address}'?",
 									   $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
 			send_message($mail) if $should_send_mail;
 
