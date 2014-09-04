@@ -1740,7 +1740,7 @@ for my $keyid (@keyids_ok) {
 		if ($uid->{type} eq 'uat') {
 			my $attach = ask("UID $uid->{'text'} is an attribute UID, attach it to every email?", 1);
 			push @attached, $uid if $attach;
-		} elsif ($uid->{'text'} ~= /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/) {
+		} elsif ($uid->{'text'} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/) {
 			# XXX This does not cover the full RFC 2822 specification:
 			# The local part may contain '>' in a quoted string.
 			# However as of 1.4.18/2.0.26, gpg doesn't allow that either.
