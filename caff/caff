@@ -554,7 +554,7 @@ sub load_config() {
 	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
 	die ("$PROGRAM_NAME: keyid is not an array ref in $config.\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
 	for my $keyid (@{$CONFIG{'keyid'}}) {
-		$keyid =~ /^((?:0x)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/i
+		$keyid =~ /^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/
 		  or die ("$PROGRAM_NAME: key $keyid is not specified as a long (16 digit) keyid or fingerprint in $config.\n");
 	};
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
@@ -1028,15 +1028,14 @@ sub get_local_user_keys() {
 	# Check every key defined by the user...
 	for my $user_key (@key_list) {
 		
-		$user_key = uc $user_key;
-
-		unless ($user_key =~ m/^((?:0X)?[A-F0-9]{8}|(?:0X)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
+		unless ($user_key =~ m/^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
 			mywarn "Local-user $user_key is not a valid keyid.";
 			next;
 		}
 		
-		$user_key =~ s/^0x//i;
+		$user_key =~ s/^0x//;
 		$user_key =~ y/ //d;
+		$user_key = uc $user_key;
 
 		unless (grep {$user_key =~ /$_$/} @{$CONFIG{'keyid'}}) {
 			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used).";
@@ -1291,11 +1290,11 @@ $CONFIG{'mail-cant-encrypt'} //= $CONFIG{'mail'};
 push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
 
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
-	if ($keyid =~ /^([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/i) {
+	if ($keyid =~ /^(\p{AHex}{32}|(?:\p{AHex}{2} ){8}(?: \p{AHex}{2}){8})$/) {
 		info("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
 		next;
 	}
-	elsif ($keyid !~ /^((?:0x)?[A-F0-9]{8}|(?:0x)?[A-F0-9]{16}|[A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/i) {
+	elsif ($keyid !~ /^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
 		print STDERR "$keyid is not a keyid.\n";
 		usage(\*STDERR, 1);
 	};
