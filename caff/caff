@@ -855,6 +855,10 @@ sub create_mail($$$@) {
 
 	if ($can_encrypt) {
 		my $message = $message_entity->stringify();
+		# CRLF is the only accepted line separator in text/plain (RFC 2157 6.7)
+		# and PGP/MIME (RFC 3156 5).
+		$message =~ s/\x0D\x0A?/\x0A/g;
+		$message =~ s/\x0A/\x0D\x0A/g;
 
 		my $gpg = GnuPG::Interface->new();
 		$gpg->call( $CONFIG{'gpg'} );
