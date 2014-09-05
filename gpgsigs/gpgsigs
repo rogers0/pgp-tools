@@ -187,8 +187,8 @@ while ($output->count() > 0) {
 					$uid = $3; # use the SHA1 to have proper distinction between UIDs/UATs
 					if ($1 eq 'uid') {
 						my $text = $4;
-						$text =~ s/\\x([0-9a-f][0-9a-f])/ chr(hex($1)) /gie;
-						# --with-colons always output UTF-8
+						$text =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
+						# --with-colons always outputs UTF-8
 						$uids{$key}->{$uid} = { type => 'uid', text => $locale->encode(Encode::decode_utf8($text)) };
 					}
 					else {

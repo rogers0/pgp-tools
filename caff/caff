@@ -1446,6 +1446,7 @@ for my $keyid (@keyids_ok) {
 				      , hash => $3
 				      , text => $1 eq 'uid' ? $4 : '[attribute]'
 			};
+			$uid->{text} =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
 			# --with-colons always outputs UTF-8
 			$uid->{text} = Encode::decode_utf8($uid->{text});
 			push @{$KEYS{$keyid}->{uids}}, $uid;
