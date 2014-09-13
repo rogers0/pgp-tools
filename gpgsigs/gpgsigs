@@ -132,14 +132,13 @@ $gpg->call( 'gpg' );
 # correct attribute size
 $gpg->options->hash_init( 'extra_args' => [ '--attribute-file', $photos,
 											qw/ --list-options show-sig-subpackets
-												--fixed-list-mode --with-colons --no-tty/ ]
+												--fixed-list-mode --with-colons/ ]
 						, 'meta_interactive' => 0 );
 
 my $stdout = IO::Handle::->new();
 my $status = IO::Handle::->new();
 my $handles = GnuPG::Handles::->new( stdout => $stdout, status => $status );
-my $pid = $gpg->wrap_call( commands => [ '--list-sigs' ], command_args => [ @mykeys, @keys ]
-						 , handles => $handles );
+my $pid = $gpg->list_sigs( handles => $handles, command_args => [ @mykeys, @keys ] );
 
 $_->blocking(0) for ($stdout, $status);
 my $output = IO::Select::->new();

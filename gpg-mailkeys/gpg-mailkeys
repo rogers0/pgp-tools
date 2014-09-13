@@ -73,7 +73,7 @@ FAILKEYS=
 while [ -n "$1" ]; do
 	printf "[$1] "
 	TEMPFILE=`mktemp -t gpg2mail.XXXXXX`
-	ADDR=`gpg --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^re][^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
+	ADDR=`gpg --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^rei:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
 	if [ -z "$ADDR" ]; then
 		printf "(no usable user ids)\n"
 		FAILKEYS="$FAILKEYS:$1"
