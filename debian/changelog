@@ -5,6 +5,11 @@ signing-party (1.1.10-1) UNRELEASED; urgency=low
   * caff:
     + Add a "Date" email header. Patch from Clint Adams. (Closes: #760316)
     + Fix edge-case RFC 2822 violation in "From" and "Sender" email headers.
+    + Use gpg's --textmode to normalize the line separators to the standard
+      CRLF.
+    + Unescape escaped characters in gpg --with-colons's output (eg, ':').
+    + Fix encoding on non-UTF8 charsets.
+    + Improve key ID validation.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Tue, 02 Sep 2014 19:27:28 +0200
 
