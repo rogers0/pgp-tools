@@ -374,7 +374,7 @@ for my $keyid (@KEYIDS) {
 		'extra_args' => [ '--with-colons', '--fixed-list-mode', '--command-fd=0', '--no-tty' ] );
 	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	$pid = $gpg->wrap_call(
-		commands     => [ '--edit' ],
+		commands     => [ '--edit-key' ],
 		command_args => [ $keyid ],
 		handles      => $handles );
 

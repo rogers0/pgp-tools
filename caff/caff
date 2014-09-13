@@ -1487,7 +1487,7 @@ for my $keyid (@keyids_ok) {
 			push @command, "--homedir=$GNUPGHOME";
 			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
-			push @command, '--edit', $keyid;
+			push @command, '--edit-key', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
 			push @command, $CONFIG{'gpg-sign-type'}.'sign';
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
@@ -1537,10 +1537,10 @@ for my $keyid (@keyids_ok) {
 			'homedir' => $uiddir,
 			'command_fd' => 0,
 			'always_trust' => 1,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fixed-list-mode --no-tty } ] );
+			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fast-list-mode --fixed-list-mode --no-tty } ] );
 		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 		my $pid = $gpg->wrap_call(
-			commands     => [ '--edit' ],
+			commands     => [ '--edit-key' ],
 			command_args => [ $keyid ],
 			handles      => $handles );
 
@@ -1627,7 +1627,7 @@ for my $keyid (@keyids_ok) {
 				push @command, '--local-user', $local_user if defined $local_user;
 				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
-				push @command, '--edit', $keyid;
+				push @command, '--edit-key', $keyid;
 				push @command, 'showphoto' if $CONFIG{'show-photos'};
 				push @command, 'lsign';
 				push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
@@ -1670,7 +1670,7 @@ for my $keyid (@keyids_ok) {
 									, qw{ --no-auto-check-trustdb --no-tty } ] );
 				my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
 				my $pid = $gpg->wrap_call(
-					commands     => [ '--edit' ],
+					commands     => [ '--edit-key' ],
 					command_args => [ $keyid ],
 					handles      => $handles );
 
