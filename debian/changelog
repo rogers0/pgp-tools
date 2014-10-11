@@ -2,6 +2,8 @@ signing-party (1.1.10-1) unstable; urgency=low
 
   * debian.compat:
     + Upgrade packaging to debhelper level 9.
+  * debian.control:
+    + Upgrade Standards-Version to 3.9.6.
   * caff:
     + Add a "Date" email header. Patch from Clint Adams. (Closes: #760316)
     + Fix edge-case RFC 2822 violation in "From" and "Sender" email headers.

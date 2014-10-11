@@ -6,7 +6,7 @@ Uploaders: Simon Richter <sjr@debian.org>,
  Franck Joncourt <franck@debian.org>
 Build-Depends: debhelper (>= 9), python, autoconf, automake1.11, autotools-dev
 Build-Conflicts: autoconf2.13, automake1.4
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Homepage: http://pgp-tools.alioth.debian.org/
 Vcs-Svn: svn://anonscm.debian.org/pgp-tools/trunk
 Vcs-Browser: http://anonscm.debian.org/viewvc/pgp-tools
