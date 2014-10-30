@@ -383,7 +383,7 @@ use Fcntl;
 use IO::Select;
 use Getopt::Long;
 use GnuPG::Interface;
-use POSIX qw{strftime};
+use POSIX qw{strftime setlocale};
 
 my %CONFIG;
 my $REVISION = '$Rev$';
@@ -908,7 +908,7 @@ sub create_mail($$$@) {
 	};
 
 	$message_entity->head->add("From", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
-	$message_entity->head->add("Date", strftime("%a, %e %b %Y %H:%M:%S %z", localtime));
+	$message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
 	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
 	$message_entity->head->add("To", email_to_ascii($address));
 	$message_entity->head->add("Sender", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
@@ -1174,6 +1174,18 @@ sub import_keys_to_sign() {
 
 	return 0;
 }
+
+##
+# A non-localized version of POSIX::strftime.
+#
+sub strfCtime($@) {
+    my $lc_time = setlocale(POSIX::LC_TIME);
+    setlocale(POSIX::LC_TIME, 'C');
+    my $str = strftime(@_);
+    setlocale(POSIX::LC_TIME, $lc_time);
+    return $str;
+}
+
 
 ###################
 # argument handling
