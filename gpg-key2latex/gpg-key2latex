@@ -76,7 +76,7 @@ foreach my $keyid (@KEYIDS) {
                                                    --fixed-list-mode
                                                    --no-auto-check-trustdb --with-colons/ ]
                             , 'meta_interactive' => 0 );
-    
+
     my $stdout = IO::Handle::->new();
     my $status = IO::Handle::->new();
     my $handles = GnuPG::Handles::->new( stdout => $stdout, status => $status );
@@ -123,7 +123,7 @@ foreach my $keyid (@KEYIDS) {
                     if (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
                         undef $uid;
                         next if $2 =~ /[er]/;
-    
+
                         $uid = $3; # use the SHA1 to have proper distinction between UIDs/UATs
                         if ($1 eq 'uid') {
                             my $text = $4;
@@ -195,7 +195,7 @@ foreach my $keyid (@KEYIDS) {
             my $chunk;
             my $got = read $fd, $chunk, $_->{size} or die "Couldn't read: $!";
             warn "Read $_->{size} bytes but got $got bytes.\n" if $got != $_->{size};
-        
+
             # take the first non-revoked attribute
             unless ($_->{revoked}) {
                 $key{photo} = substr($key{fpr},-16).'.jpg';
