@@ -1,0 +1,504 @@
+#!/usr/bin/perl
+
+# gpg-key2latex -- Generate a LaTeX file for fingerprint slips.
+# $Id$
+#
+# Copyright (c) 2014 Guilhem Moulin <guilhem@guilhem.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use warnings;
+use strict;
+
+my $REVISION = '$Rev$';
+my ($REVISION_NUMBER) = $REVISION =~ /(\d+)/;
+our $VERSION = '0.0.0.'.($REVISION_NUMBER // 'unknown');
+
+use Encode ();
+use File::Temp ();
+use I18N::Langinfo 'langinfo';
+use IO::Handle ();
+use IO::Select ();
+use POSIX qw/dup2 strftime/;
+
+use Pod::Usage 'pod2usage';
+use Getopt::Long qw/:config posix_default no_ignore_case gnu_compat
+                            bundling auto_help auto_version/;
+use GnuPG::Interface ();
+
+my %options;
+GetOptions(\%options, qw/paper-size|p=s show-subkeys|s show-photo show-qrcode attr-height=i/) or pod2usage(2);
+pod2usage(2) unless @ARGV;
+my $LOCALE = Encode::find_encoding(langinfo(I18N::Langinfo::CODESET()));
+
+chomp ($options{'paper-size'} = `paperconf` || 'a4')
+    unless defined $options{'paper-size'};
+$options{'paper-size'} =~ y/[A-Z]/[a-z]/;
+
+my (@KEYIDS, @KEYS);
+
+# Get the list of all matching keys.
+{
+    my $gpg = GnuPG::Interface::->new();
+    $gpg->options->hash_init( 'extra_args' => [ qw/--fingerprint
+                                                   --fixed-list-mode
+                                                   --no-auto-check-trustdb --with-colons/ ]
+                            , 'meta_interactive' => 0 );
+    my $stdout = IO::Handle::->new();
+    my $handles = GnuPG::Handles::->new( stdout => $stdout );
+    my $pid = $gpg->list_public_keys( handles => $handles, command_args => \@ARGV );
+    while (<$stdout>) {
+        push @KEYIDS, $1 if /^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/;
+    }
+    waitpid $pid, 0;
+    close $stdout;
+}
+
+# Read each key independently
+foreach my $keyid (@KEYIDS) {
+    my $photos = $options{'show-photo'} ? File::Temp::->new(TMPDIR => 1) : '/dev/null';
+    my $gpg = GnuPG::Interface::->new();
+    # we need --attribute-{fd,file} and --status-{fd,file} to get the
+    # correct attribute size
+    $gpg->options->hash_init( 'extra_args' => [ '--attribute-file', $photos,
+                                                qw/--fingerprint --fingerprint
+                                                   --fixed-list-mode
+                                                   --no-auto-check-trustdb --with-colons/ ]
+                            , 'meta_interactive' => 0 );
+    
+    my $stdout = IO::Handle::->new();
+    my $status = IO::Handle::->new();
+    my $handles = GnuPG::Handles::->new( stdout => $stdout, status => $status );
+    my $pid = $gpg->list_public_keys( handles => $handles, command_args => [ $keyid ] );
+
+    $_->blocking(0) for ($stdout, $status);
+    my $output = IO::Select::->new();
+    $output->add($stdout, $status);
+
+    my %key;
+    my ($uid, $sub); # current context
+
+    my ($oldstdout, $oldstatus) = ('', '');
+    while ($output->count() > 0) {
+        foreach my $fd (@{(IO::Select::select($output))[0]}) { # reader
+            if ($fd->eof) {
+                $output->remove($fd);
+                close $fd;
+                next;
+            }
+            if ($fd == $stdout) {
+                while (<$fd>) {
+                    if ($oldstdout) { # prepend unfinished output
+                        $_ = $oldstdout . $_;
+                        $oldstdout = '';
+                    }
+                    if (!/\n\z/) { # there is more coming
+                        $oldstdout = $_;
+                        next;
+                    }
+                    chomp;
+                    if (/^pub:([^:]+):([^:]*):([^:]*):([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){4}([^:]*)/) {
+                        if ($1 =~ /[eir]/ or $7 =~ /D/ ) {
+                            warn "Ignoring unusable key $4.\n";
+                            last;
+                        }
+                        $key{length} = $2;
+                        $key{algo} = $3;
+                        $key{creation} = $5;
+                        $key{expiration} = $6 if $6 ne '';
+                        $key{flags} = $7;
+                        next;
+                    }
+                    if (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
+                        undef $uid;
+                        next if $2 =~ /[er]/;
+    
+                        $uid = $3; # use the SHA1 to have proper distinction between UIDs/UATs
+                        if ($1 eq 'uid') {
+                            my $text = $4;
+                            $text =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
+                            # --with-colons always outputs UTF-8
+                            push @{$key{uids}}, { type => 'uid', text => Encode::decode_utf8($text) };
+                        }
+                        next;
+                    }
+                    if (/^sub:([^:]+):([^:]*):([^:]*):([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){4}([^:]*)/) {
+                        undef $uid;
+                        undef $sub;
+                        next if $1 =~ /[eir]/ or $7 =~ /D/; # ignore unsable subkey
+                        $sub = {};
+                        $sub->{length} = $2;
+                        $sub->{algo} = $3;
+                        $sub->{creation} = $5;
+                        $sub->{expiration} = $6 if $6 ne '';
+                        $sub->{flags} = $7;
+                        next;
+                    }
+                    if (/^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/) {
+                        if (defined $sub) {
+                            $sub->{fpr} = $1;
+                            push @{$key{sub}}, $sub;
+                            undef $sub;
+                        }
+                        else {
+                            $key{fpr} = $1;
+                        }
+                        next;
+                    }
+                    if (!/^(?:rvk|tru|spk):/) { # revoke/revoker/trust/fpr
+                        warn "Unknown value: '$_'\n";
+                    }
+                }
+            }
+            elsif ($fd == $status) {
+                while (<$fd>) {
+                    if ($oldstatus) { # prepend unfinished output
+                        $_ = $oldstatus . $_;
+                        $oldstatus = '';
+                    }
+                    if (!/\n\z/) { # there is more coming
+                        $oldstatus = $_;
+                        next;
+                    }
+                    chomp;
+                    # see /usr/share/doc/gnupg2/DETAILS.gz
+                    if (/^\[GNUPG:\] ATTRIBUTE [0-9A-F]{24}([0-9A-F]{16}) (\d+) 1 1 1 \d+ \d+ (\d+)$/) {
+                        push @{$key{uats}}, {size => $2, revoked => $3 & 0x02};
+                        next;
+                    }
+                    if (!/^\[GNUPG:\] KEYEXPIRED \d+$/) {
+                        warn "Unknown value: '$_'";
+                    }
+                }
+            }
+        }
+    }
+    warn "Parsing gpg's output went wrong.\n" if $oldstdout or $oldstatus;
+    waitpid $pid, 0;
+    close $_ for ($stdout, $status);
+
+    if ($options{'show-photo'}) {
+        open my $fd, '<:raw', $photos or die "Couldn't open: $!";
+        # get photo sizes and split $photos
+        foreach (@{$key{uats}}) {
+            my $chunk;
+            my $got = read $fd, $chunk, $_->{size} or die "Couldn't read: $!";
+            warn "Read $_->{size} bytes but got $got bytes.\n" if $got != $_->{size};
+        
+            # take the first non-revoked attribute
+            unless ($_->{revoked}) {
+                $key{photo} = substr($key{fpr},-16).'.jpg';
+                open my $fd2, '>:raw', $key{photo} or die "Couldn't open: $!";
+                print $fd2 (substr $chunk, 16);
+                close $fd2;
+                last;
+            }
+        }
+        close $fd;
+    }
+
+    if ($options{'show-qrcode'}) {
+        $key{qrcode} = substr($key{fpr},-16).'-qrcode.pdf';
+        pipe my ($rfd, $wfd) or die "Can't pipe: $!";
+        if (my $pid = fork) {
+            close $wfd or die "Can't close: $!";
+            dup2 (fileno $rfd, 0);
+            close $rfd or die "Can't close: $!";
+            system qw/epstopdf -f -o/, $key{qrcode};
+            die "epstopdf exited with value $?.\n" if 0 < $? and $? <= 2;
+            waitpid $pid, 0;
+        }
+        else {
+            close $rfd or die "Can't close: $!";
+            dup2 (fileno $wfd, 1);
+            close $wfd or die "Can't close: $!";
+            exec qw/qrencode -i -m0 -d300 -tEPS -o -/, "OPENPGP4FPR:$key{fpr}" or die "Can't exec: $!";
+        }
+    }
+
+    push @KEYS, \%key;
+}
+
+print "\\documentclass[landscape,$options{'paper-size'}paper]{article}\n";
+print << 'EOF'
+\usepackage{fancyvrb}
+\usepackage[export]{adjustbox}
+\usepackage{graphicx,calc}
+\usepackage{ifluatex,ifxetex}
+\usepackage[margin=.5cm,centering]{geometry}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0
+  \usepackage[utf8x]{inputenc}
+\else
+  \usepackage[log-declarations=false]{xparse}
+  \usepackage{fontspec}
+  \setmonofont{Droid Sans Mono}
+  \ifxetex
+    \usepackage[quiet]{xeCJK}
+    \CJKfontspec{Droid Sans Fallback}
+  \fi
+\fi
+
+EOF
+;
+
+
+sub pubkey_string ($$) {
+    my ($type,$key) = @_;
+    my $str = $type.'  ';
+    # See 'pubkey_string' in gnupg's source code (g10/keyid.c)
+    $str .= $key->{algo} == 1  ? $key->{length}.'R' : # RSA
+            $key->{algo} == 2  ? $key->{length}.'r' : # RSA encrypt only (legacy)
+            $key->{algo} == 3  ? $key->{length}.'s' : # RSA sign only
+            $key->{algo} == 16 ? $key->{length}.'g' : # Elgamal encrypt only
+            $key->{algo} == 17 ? $key->{length}.'D' : # DSA
+            $key->{algo} == 20 ? $key->{length}.'G' : # Elgamal encrypt+sign (legacy)
+                                 $key->{length}.'?';
+    $str .= '/'.substr($key->{fpr},-8).' ';
+    $str .= strftime '%Y-%m-%d', localtime($key->{creation});
+    $str .= ' [expires: '.strftime('%Y-%m-%d', localtime($key->{expiration})).']'
+      if defined $key->{expiration};
+    $str .= ' ' x (72 + 1 - length($str) - length($key->{flags})) . $key->{flags};
+    $str . sprintf "\n     Key fingerprint = %s %s %s %s %s  %s %s %s %s %s\n",
+                   map { substr($key->{fpr}, ($_ * 4), 4) } (0..10);
+}
+
+unless (defined $options{'attr-height'}) {
+    $options{'attr-height'} = 0;
+    $options{'attr-height'} >= $_ or $options{'attr-height'} = $_ for map {$#{$_->{uids}}+1} @KEYS;
+    $options{'attr-height'} = 5 if $options{'attr-height'} > 5;
+}
+
+foreach my $n (0 .. $#KEYS) {
+    my $key = $KEYS[$n];
+    print "\\begin{SaveVerbatim}{PubKey$n}\n"
+         .pubkey_string('pub',$key)
+         ."\\end{SaveVerbatim}\n";
+
+    print "\\begin{SaveVerbatim}{UID$n}\n";
+    my $tag = "uid  ";
+    my $max = 72 - length $tag;
+    my $x = 2.2 * ($options{'attr-height'} > 5 ? 5 : $options{'attr-height'});
+    $max -= $x if defined $key->{photo};
+    $max -= $x if defined $key->{photo} and defined $key->{qrcode} and
+                  $#{$key->{uids}} < 1.5*$options{'attr-height'};
+    foreach my $uid (grep {$_->{type} eq 'uid'} @{$key->{uids}}) {
+        my $text = $LOCALE->encode($uid->{text});
+        for (my $i = 0; $i < length $text; $i+=$max) {
+            print STDOUT ($i ? ' ' x length $tag : $tag ), substr ($text, $i, $max), "\n";
+        }
+    }
+    print "\\end{SaveVerbatim}\n";
+
+    if ($options{'show-subkeys'}) {
+        print "\\begin{SaveVerbatim}{SubKey$n}\n";
+        print pubkey_string('sub',$_) foreach @{$key->{sub}};
+        print "\\end{SaveVerbatim}\n";
+    }
+    print "\\expandafter\\newsavebox\\csname Key$n\\endcsname\n\n";
+}
+
+print << "EOF"
+\\def\\COLUMNS{2}
+\\def\\MAXKEY{$#KEYS}
+
+EOF
+;
+
+print << 'EOF'
+\newlength\MaxWidth
+\newlength\Width
+
+\pagestyle{empty}
+\begin{document}
+\setlength\parindent{0pt}
+
+\setlength\MaxWidth{ \textwidth/\COLUMNS - 1ex*\COLUMNS - 1pt*(\COLUMNS-1) }
+\settowidth\Width{\texttt{xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}}
+%                        "     Key fingerprint = 7420 DF86 BCE1 5A45 8DCE  9976 3927 8DA8 109E 6244"
+
+EOF
+;
+
+foreach my $n (0 .. $#KEYS) {
+    my $key = $KEYS[$n];
+    my $w;
+    if (defined $key->{photo} and defined $key->{qrcode}) {
+        $w = $#{$key->{uids}} < 1.5*$options{'attr-height'}
+           ? ($options{'attr-height'}+5)."\\baselineskip+1pt" # horizontal
+           : '5\baselineskip'                               # vertical
+    }
+    elsif (defined $key->{photo}) {
+        $w = '5\baselineskip'
+    }
+    elsif (defined $key->{qrcode}) {
+        $w = "$options{'attr-height'}\\baselineskip"
+    }
+    print "\\expandafter\\savebox\\csname Key$n\\endcsname{%\n"
+         ."  \\begin{adjustbox}{minipage=\\Width,valign=t,max width=\\MaxWidth,margin=1ex}%\n"
+         ."    \\BUseVerbatim{PubKey$n}\\\\[.3\\baselineskip]%\n"
+         ."    \\parbox[b]{\\Width".(defined $w ? "-($w)" : '' )."}{\\BUseVerbatim{UID$n}}%\n";
+    if (defined $key->{photo} or defined $key->{qrcode}) {
+        print "    \\parbox[b]{$w}{\\raggedleft\\tt%\n";
+        print "      \\includegraphics[height=$options{'attr-height'}\\baselineskip,max width=5\\baselineskip,raise=-.3\\baselineskip]{$key->{photo}}%\n"
+            if defined $key->{photo};
+        print "      ".($#{$key->{uids}} < 1.5*$options{'attr-height'} ? "~" : "\\\\[1ex]")."%\n"
+            if defined $key->{photo} and defined $key->{qrcode};
+        print "      \\includegraphics[height=$options{'attr-height'}\\baselineskip,max width=5\\baselineskip,raise=-.3\\baselineskip]{$key->{qrcode}}%\n"
+            if defined $key->{qrcode};
+        print "    }%\n";
+    }
+    print "    \\\\[.3\\baselineskip]%\n"
+         ."    \\BUseVerbatim{SubKey$n}%\n"
+        if $options{'show-subkeys'};
+    print "  \\end{adjustbox}%\n}\n";
+}
+
+
+print << 'EOF'
+\makeatletter
+\newtoks\toks@table
+\newtoks\toks@row
+\newtoks\toks@cell
+\newcounter{n@column}
+\newcounter{n@key}
+
+\def\free@space{\textheight}
+\newlength\Row@Height
+\newlength\Cell@Height
+
+\toks@table = {\setcounter{n@key}{0}}
+\toks@cell  = {\expandafter\usebox\csname Key\then@key\endcsname}
+
+\loop {
+  \setcounter{n@column}{0}
+  \setlength\Row@Height{0pt}
+  \toks@row = {}
+
+  % generate a single row
+  \loop \ifnum \value{n@column} < \COLUMNS
+    \settototalheight\Cell@Height{\the\toks@cell}
+    \ifnum \Cell@Height>\Row@Height \global\Row@Height=\Cell@Height \fi
+
+    \ifnum \value{n@column} > 0 \toks@row = \expandafter{\the\toks@row & } \fi
+    \global\toks@row = \expandafter{\the\toks@row%
+      \the\toks@cell%
+      \stepcounter{n@key}%
+      \ifnum \value{n@key}>\MAXKEY \setcounter{n@key}{0} \fi%
+    }
+
+    \stepcounter{n@key}
+    \ifnum \value{n@key}>\MAXKEY \setcounter{n@key}{0} \fi
+    \stepcounter{n@column}
+  \repeat
+}
+\edef\free@space{\number \numexpr \free@space - \Row@Height \relax}
+\ifnum \free@space > 0
+  \toks@table = \expandafter{\the\toks@table\the\toks@row \\ \hline}
+  \repeat
+
+\begin{tabular}{@{}|*\COLUMNS{@{}l@{}|@{}}}\hline%
+  \the\toks@table
+\end{tabular}
+\makeatother
+\end{document}
+EOF
+;
+
+__END__
+
+=encoding utf8
+
+=head1 NAME
+
+gpg-key2latex - Generate a LaTeX file for fingerprint slips.
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<gpg-key2latex> [B<-p> I<papersize>] [B<-s>] I<keyid> [I<keyid>...]
+
+=back
+
+=head1 DESCRIPTION
+
+gpg-key2latex generates a LaTeX file with an OpenPGP key fingerprint and
+User IDs, repeated as often as it fits on a single page.  The LaTeX data
+is written to STDOUT.
+Note: In most cases the generated file can be compiled to PDF using
+pdflatex(1), but xelatex(1) is required if some UID contains CJK
+characters.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-p> I<paper-size>, B<--paper-size=>I<paper-size>
+
+Select the output paper size. The default is the output of paperconf(1),
+or I<a4> if libpaper-utils isn't installed.
+
+=item B<-s>, B<--show-subkeys>
+
+Show subkey information.
+
+=item B<--show-photo>
+
+Show the first valid user attribute, if any.  Note: This writes JPG
+files to the current directory.
+
+=item B<--show-qrcode>
+
+Show a QR code of the OpenPGP key fingerprint (40 hexadecimal digits,
+without spaces), prefixed with the string "OPENPGP4FPR:".  Note: This
+writes PDF files to the current directory.
+Requires qrencode(1) and epstopdf(1).
+
+=item B<--attr-height>
+
+The height, in number of lines, of the photo and QR code.  The default
+is the number of User ID, with a maximum of 5.
+
+=item B<-?>, B<--help>
+
+Print a brief help and exit.
+
+=item B<--version>
+
+Print the version and exit.
+
+=back
+
+=head1 WEBSITE
+
+L<http://pgp-tools.alioth.debian.org/>
+
+=head1 SEE ALSO
+
+gpg(1), gpg-key2ps(1)
+
+=head1 BUGS AND FEEDBACK
+
+Bugs or feature requests for B<gpg-key2latex> should be filed with the
+Debian project's bug tracker at L<https://www.debian.org/Bugs/>.
+
+=head1 AUTHOR
+
+Guilhem Moulin E<lt>guilhem@guilhem.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2014 Guilhem Moulin.
+B<gpg-key2latex> is free software, distributed under the GNU Public
+License, version 3 or later.

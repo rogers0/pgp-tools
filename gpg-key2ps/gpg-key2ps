@@ -402,6 +402,10 @@ Print version and exit.
 
 GNU Privacy Guard.
 
+=item gpg-key2latex(1)
+
+Like B<gpg-key2ps>, but produces LaTeX output instead.
+
 =item http://pgp-tools.alioth.debian.org/
 
 The homepage of B<gpg-key2ps> and the other tools bundled in B<signing-party>.
