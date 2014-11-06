@@ -4,7 +4,7 @@ This is a collection of several projects relating to OpenPGP.
 * pgp-clean: removes all non-self signatures from key
 * pgp-fixkey: removes broken packets from keys
 * gpg-mailkeys: simply mail out a signed key to its owner
-* gpg-key2ps: generate PostScript file with fingerprint paper strips
+* gpg-key2ps: generate PostScript file with fingerprint paper slips
 * gpgdir: recursive directory encryption tool
 * gpglist: show who signed which of your UIDs
 * gpgsigs: annotates list of GnuPG keys with already done signatures
@@ -15,6 +15,7 @@ This is a collection of several projects relating to OpenPGP.
 * sig2dot: converts a list of GnuPG signatures to a .dot file
 * springgraph: creates a graph from a .dot file
 * keyart: creates a random ASCII art of a PGP key file
+* gpg-key2latex: generate LaTeX file with fingerprint paper slips
 
 For more information on each of these tools, please see their respective
 manpages. Please note that each individual project has its own license,

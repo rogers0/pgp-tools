@@ -3,6 +3,7 @@ caff/pgp-clean usr/bin
 caff/pgp-fixkey usr/bin
 gpglist/gpglist usr/bin
 gpg-key2ps/gpg-key2ps usr/bin
+gpg-key2latex/gpg-key2latex usr/bin
 gpg-mailkeys/gpg-mailkeys usr/bin
 gpgparticipants/gpgparticipants usr/bin
 gpgparticipants/gpgparticipants-prefill usr/bin
