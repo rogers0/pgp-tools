@@ -94,7 +94,7 @@ map { y/ //d if /^(?:[0-9A-F]{4} ){5}(?: [0-9A-F]{4}){5}$/; # remove spaces in f
 if (!@mykeys || scalar @ARGV) {
 	usage(*STDERR, 1);
 }
-foreach my $falsekey (grep { $_ !~ /^([0-9A-F]{16,16}|[0-9A-F]{8,8})$/ } @mykeys) {
+foreach my $falsekey (grep { $_ !~ /^([0-9A-F]{16}|[0-9A-F]{8})$/ } @mykeys) {
 	print STDERR "Invalid keyid $falsekey given\n";
 	usage(*STDERR, 1);
 }
@@ -176,6 +176,7 @@ while ($output->count() > 0) {
 					$key = $2;
 					$keys{$key} = [];
 					print STDERR '.';
+					@mykeys = map { substr($key,-8) eq $_ ? $key : $_ } @mykeys;
 					next;
 				}
 				next unless $key; # nothing to do on revoked keys
@@ -200,7 +201,7 @@ while ($output->count() > 0) {
 				}
 				next unless $uid; # nothing to do on revoked uids
 				if (/^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){3}(1[0-3][lx])(?::.*)?$/) {
-					if (!grep { /(?:$1|$key)$/ } @mykeys) {
+					if (!grep { $1 =~ /$_$/ or $key =~ /$_$/ } @mykeys) {
 						$sig = []; # $key is not ours, and the signer isn't us: don't waste resources
 					} else {
 						$sigs{$key}->{$uid}->{$1} //= [];

@@ -8,6 +8,8 @@ signing-party (1.1.11-1) UNRELEASED; urgency=low
     + Fix RCF 2822 violation: Never localize the "Date" header, regarless of
       the LC_ALL, LC_TIME and LANG in use.  Regression introduced in r698.
       (Closes: #767371)
+    + Regression fix: allow 8-digits keyid to be passed for annotation.
+      (Closes: #768342)
   * gpg-key2latex: new script to generate a LaTeX file with fingerprint paper
     slips. (Closes: #316131, #412512)
 
