@@ -589,7 +589,9 @@ sub load_config() {
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
 	# ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
 	$CONFIG{'also-lsign-in-gnupghome'} = 'ask'
-		if $CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'} !~ /l/ and system qw/gpg-agent -q/;
+		if $CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and
+		   $CONFIG{'gpg-sign-type'} !~ /l/ and
+		   system (qw/gpg-agent -q/) == 0;
 	$CONFIG{'show-photos'} //= 0;
 };
 
@@ -1500,7 +1502,7 @@ for my $keyid (@keyids_ok) {
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 			print join(' ', @command),"\n";
 			system @command;
-			die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
+			die "system $command[0] failed: $?.\n" if $?;
 		};
 	};
 
@@ -1640,7 +1642,7 @@ for my $keyid (@keyids_ok) {
 				push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 				print join(' ', @command),"\n";
 				system @command;
-				die "$CONFIG{'gpg-sign'} exited with value $?.\n" if 0 < $? and $? <= 2;
+				die "system $command[0] failed: $?.\n" if $?;
 			};
 		}
 		else {
