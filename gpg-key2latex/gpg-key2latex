@@ -86,8 +86,7 @@ foreach my $keyid (@KEYIDS) {
     my $output = IO::Select::->new();
     $output->add($stdout, $status);
 
-    my %key;
-    my ($uid, $sub); # current context
+    my (%key, $sub); # current context
 
     my ($oldstdout, $oldstatus) = ('', '');
     while ($output->count() > 0) {
@@ -108,33 +107,31 @@ foreach my $keyid (@KEYIDS) {
                         next;
                     }
                     chomp;
-                    if (/^pub:([^:]+):([^:]*):([^:]*):([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){4}([^:]*)/) {
-                        if ($1 =~ /[eir]/ or $7 =~ /D/ ) {
-                            warn "Ignoring unusable key $4.\n";
-                            last;
+                    if (/^pub:([^:]*):([^:]*):([^:]*):([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){4}([^:]*)/) {
+                        my $keyid = $4;
+                        if ($1 =~ /[eir]/ or $7 =~ /D/) {
+                            warn "Ignoring unusable key $keyid.\n";
                         }
-                        $key{length} = $2;
-                        $key{algo} = $3;
-                        $key{creation} = $5;
-                        $key{expiration} = $6 if $6 ne '';
-                        $key{flags} = $7;
+                        else {
+                            $key{length} = $2;
+                            $key{algo} = $3;
+                            $key{creation} = $5;
+                            $key{expiration} = $6 if $6 ne '';
+                            $key{flags} = $7;
+                        }
                         next;
                     }
-                    if (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
-                        undef $uid;
-                        next if $2 =~ /[er]/;
+                    next unless %key;
+                    if (/^uid:([^:]+):(?:[^:]*:){6}[^:]*:([^:]+)/) {
+                        next if $1 =~ /[er]/;
 
-                        $uid = $3; # use the SHA1 to have proper distinction between UIDs/UATs
-                        if ($1 eq 'uid') {
-                            my $text = $4;
-                            $text =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
-                            # --with-colons always outputs UTF-8
-                            push @{$key{uids}}, { type => 'uid', text => Encode::decode_utf8($text) };
-                        }
+                        my $text = $2;
+                        $text =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
+                        # --with-colons always outputs UTF-8
+                        push @{$key{uids}}, { type => 'uid', text => Encode::decode_utf8($text) };
                         next;
                     }
                     if (/^sub:([^:]+):([^:]*):([^:]*):([0-9A-F]{16}):(\d+):(\d*):(?:[^:]*:){4}([^:]*)/) {
-                        undef $uid;
                         undef $sub;
                         next if $1 =~ /[eir]/ or $7 =~ /D/; # ignore unsable subkey
                         $sub = {};
@@ -147,16 +144,17 @@ foreach my $keyid (@KEYIDS) {
                     }
                     if (/^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/) {
                         if (defined $sub) {
+                            # subkey fingerprint
                             $sub->{fpr} = $1;
                             push @{$key{sub}}, $sub;
-                            undef $sub;
                         }
                         else {
+                            # key fingerprint
                             $key{fpr} = $1;
                         }
                         next;
                     }
-                    if (!/^(?:rvk|tru|spk):/) { # revoke/revoker/trust/fpr
+                    if (!/^(?:rvk|tru|spk|uat):/) { # revoke/revoker/trust/fpr
                         warn "Unknown value: '$_'\n";
                     }
                 }
@@ -216,7 +214,7 @@ foreach my $keyid (@KEYIDS) {
             dup2 (fileno $rfd, 0);
             close $rfd or die "Can't close: $!";
             system qw/epstopdf -f -o/, $key{qrcode};
-            die "epstopdf exited with value $?.\n" if 0 < $? and $? <= 2;
+            die "system epstopdf failed: $?.\n" if $?;
             waitpid $pid, 0;
         }
         else {
@@ -227,7 +225,7 @@ foreach my $keyid (@KEYIDS) {
         }
     }
 
-    push @KEYS, \%key;
+    push @KEYS, \%key if %key;
 }
 
 print "\\documentclass[landscape,$options{'paper-size'}paper]{article}\n";
@@ -427,7 +425,7 @@ gpg-key2latex - Generate a LaTeX file for fingerprint slips.
 
 =over
 
-=item B<gpg-key2latex> [B<-p> I<papersize>] [B<-s>] I<keyid> [I<keyid>...]
+=item B<gpg-key2latex> [B<-p> I<papersize>] [B<-s>] [B<--show-photo>] [B<--show-qrcode>] I<keyid> [I<keyid>...]
 
 =back
 
