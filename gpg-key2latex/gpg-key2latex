@@ -228,6 +228,8 @@ foreach my $keyid (@KEYIDS) {
     push @KEYS, \%key if %key;
 }
 
+die "No usable key found.\n" unless @KEYS;
+
 print "\\documentclass[landscape,$options{'paper-size'}paper]{article}\n";
 print << 'EOF'
 \usepackage{fancyvrb}
