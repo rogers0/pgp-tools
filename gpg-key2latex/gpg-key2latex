@@ -154,7 +154,7 @@ foreach my $keyid (@KEYIDS) {
                         }
                         next;
                     }
-                    if (!/^(?:rvk|tru|spk|uat):/) { # revoke/revoker/trust/fpr
+                    if (!/^(?:rvk|tru|uat):/) { # revoke/revoker/trust/uat
                         warn "Unknown value: '$_'\n";
                     }
                 }
@@ -175,7 +175,7 @@ foreach my $keyid (@KEYIDS) {
                         push @{$key{uats}}, {size => $2, revoked => $3 & 0x02};
                         next;
                     }
-                    if (!/^\[GNUPG:\] KEYEXPIRED \d+$/) {
+                    if (!/^\[GNUPG:\] (?:KEYEXPIRED \d+|SIGEXPIRED deprecated-use-keyexpired-instead)$/) {
                         warn "Unknown value: '$_'";
                     }
                 }
