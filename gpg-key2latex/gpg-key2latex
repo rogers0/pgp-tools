@@ -257,13 +257,13 @@ sub pubkey_string ($$) {
     my ($type,$key) = @_;
     my $str = $type.'  ';
     # See 'pubkey_string' in gnupg's source code (g10/keyid.c)
-    $str .= $key->{algo} == 1  ? $key->{length}.'R' : # RSA
-            $key->{algo} == 2  ? $key->{length}.'r' : # RSA encrypt only (legacy)
-            $key->{algo} == 3  ? $key->{length}.'s' : # RSA sign only
-            $key->{algo} == 16 ? $key->{length}.'g' : # Elgamal encrypt only
-            $key->{algo} == 17 ? $key->{length}.'D' : # DSA
-            $key->{algo} == 20 ? $key->{length}.'G' : # Elgamal encrypt+sign (legacy)
-                                 $key->{length}.'?';
+    $str .= $key->{algo} == 1  ? 'rsa'.$key->{length} : # RSA
+            $key->{algo} == 2  ? 'rsa'.$key->{length} : # RSA encrypt only (legacy)
+            $key->{algo} == 3  ? 'rsa'.$key->{length} : # RSA sign only
+            $key->{algo} == 16 ? 'elg'.$key->{length} : # Elgamal encrypt only
+            $key->{algo} == 17 ? 'dsa'.$key->{length} : # DSA
+            $key->{algo} == 20 ? 'xxx'.$key->{length} : # Elgamal encrypt+sign (legacy)
+                                 '?'  .$key->{length};
     $str .= '/'.substr($key->{fpr},-8).' ';
     $str .= strftime '%Y-%m-%d', localtime($key->{creation});
     $str .= ' [expires: '.strftime('%Y-%m-%d', localtime($key->{expiration})).']'
