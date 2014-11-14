@@ -1,4 +1,4 @@
-signing-party (1.1.11-1) UNRELEASED; urgency=low
+signing-party (1.1.11-1) unstable; urgency=medium
 
   [ Thijs Kinkhorst ]
   * Remove self from from uploaders.
@@ -13,7 +13,7 @@ signing-party (1.1.11-1) UNRELEASED; urgency=low
   * gpg-key2latex: new script to generate a LaTeX file with fingerprint paper
     slips. (Closes: #316131, #412512)
 
- -- Guilhem Moulin <guilhem@guilhem.org>  Thu, 30 Oct 2014 17:44:11 +0100
+ -- Guilhem Moulin <guilhem@guilhem.org>  Fri, 14 Nov 2014 01:16:49 +0100
 
 signing-party (1.1.10-1) unstable; urgency=low
 
