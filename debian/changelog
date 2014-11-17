@@ -2,6 +2,8 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
 
   * debian.control:
     + Remove useless Build-Conflicts autoconf2.13 and automake1.4.
+    + Suggest texlive-latex-extra due to gpg-key2latex using adjustbox.sty.
+      (Closes: #769956)
   * caff:
     + Don't consider KEYEXPIRED and SIGEXPIRED as unknown reply from gpg when
       downloading a key containing a revoked subkey or UID from a keyserver.
