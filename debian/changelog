@@ -1,3 +1,12 @@
+signing-party (1.1.12-1) UNRELEASED; urgency=low
+
+  * caff:
+    + Don't consider KEYEXPIRED and SIGEXPIRED as unknown reply from gpg when
+      downloading a key containing a revoked subkey or UID from a keyserver.
+      (Closes: #769892)
+
+ -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 17 Nov 2014 16:49:51 +0100
+
 signing-party (1.1.11-1) unstable; urgency=medium
 
   [ Thijs Kinkhorst ]

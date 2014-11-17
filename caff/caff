@@ -1384,7 +1384,7 @@ if ($CONFIG{'no-download'}) {
 			my $imported_key = $1;
 			notice ("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
 			$had_v3_keys = 1;
-		} elsif (!/^\[GNUPG:\] (?:NODATA|IMPORT_RES|IMPORTED) /) {
+		} elsif (!/^\[GNUPG:\] (?:NODATA \d|IMPORT_RES .+|IMPORTED .+|KEYEXPIRED \d+|SIGEXPIRED(?: deprecated-use-keyexpired-instead)?)$/) {
 			notice ("Got unknown reply from gpg: ".$_);
 		}
 	};
