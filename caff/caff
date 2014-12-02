@@ -291,6 +291,12 @@ The value of this option is considered instead of that of B<mail> for
 recipient keys without encryption capability.  Default to the value of
 B<mail>.
 
+=item B<mail-subject> [string]
+
+Sets the value of the "Subject:" header field.  C<%k> will be expanded
+to the long key ID of the signed key.
+Default: C<Your signed PGP key 0x%k>.
+
 =item B<mail-template> [string]
 
 Email template which is used as the body text for the email sent out
@@ -570,13 +576,15 @@ sub load_config() {
 	$CONFIG{'key-files'} //= [];
 	$CONFIG{'mailer-send'} //= [];
 	die ("$PROGRAM_NAME: mailer-send is not an array ref in $config.\n") unless (ref $CONFIG{'mailer-send'} eq 'ARRAY');
+	$CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
+
 	unless (defined $CONFIG{'mail-template'}) {
 		$CONFIG{'mail-template'} .= $_ foreach <DATA>;
 	}
 	$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ]
 		if defined $CONFIG{'also-encrypt-to'} and !ref $CONFIG{'also-encrypt-to'};
 	if (defined $LOCALE) {
-		$CONFIG{$_} = $LOCALE->decode($CONFIG{$_}) for qw/owner mail-template/;
+		$CONFIG{$_} = $LOCALE->decode($CONFIG{$_}) for qw/owner mail-template mail-subject/;
 		$CONFIG{$_} = email_to_ascii($LOCALE->decode($CONFIG{$_}))
 			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
 	}
@@ -911,7 +919,7 @@ sub create_mail($$$@) {
 
 	$message_entity->head->add("From", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
-	$message_entity->head->add("Subject", "Your signed PGP key 0x$key_id");
+	$message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/r));
 	$message_entity->head->add("To", email_to_ascii($address));
 	$message_entity->head->add("Sender", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
