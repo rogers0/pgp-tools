@@ -11,7 +11,6 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
     + Import the public part of *all* keys found in the secret keyring, not
       only those in @{$CONFIG{keyid}}.  Otherwise gpg(1) croaks with exit
       status 2 when there are secret keys without public part.
-      (Closes: #771857)
     + Add a configuration option 'mail-subject' to set the "Subject:" header
       field. (Closes: #771436)
 
