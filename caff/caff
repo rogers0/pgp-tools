@@ -1119,6 +1119,42 @@ sub import_keys_from_gnupghome($$$@) {
 	# void context
 }
 
+
+##
+# Import (the public part part of) each key listed in the private
+# keyring, and ensure that this includes all of the @{$CONFIG{keyid}}.
+# We don't import only the @{$CONFIG{keyid}} because gpg exits the edit
+# prompt with return value 2 whenever a key in the secret keyring
+# doesn't have a public counterpart.
+#
+sub import_mykeys () {
+	my @fprs;
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'meta_interactive' => 0,
+		'always_trust' => 1,
+		'extra_args' => [ '--secret-keyring', $CONFIG{'secret-keyring'}
+						, qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
+
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
+	my $pid = $gpg->list_secret_keys( handles => $handles );
+
+	my $stdout = $handles->{stdout};
+	while (<$stdout>) {
+		push @fprs, $1 if /^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/;
+	}
+	waitpid $pid, 0;
+	close $stdout;
+
+	my @failed = import_keys_from_gnupghome(\@fprs, undef, $GNUPGHOME, 'export-minimal');
+	foreach my $keyid (@{$CONFIG{'keyid'}}) {
+		die "Your key $keyid could not be imported from your normal GnuPGHOME.\n"
+			unless grep /\Q$keyid\E$/, @fprs; # not in the private keyring
+	}
+	die "Not all keys could be imported from your normal GnuPGHOME.\n" if @failed;
+}
+
 ##
 # Import a key file into a specified gnupghome.
 #
@@ -1328,9 +1364,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 # import own keys
 #################
-import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
-	die "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.\n";
-
+import_mykeys();
 import_keys_to_sign();
 
 #############################
