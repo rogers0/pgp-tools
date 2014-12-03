@@ -290,7 +290,7 @@ for my $keyid (@KEYIDS) {
 		next;
 	};
 	my $keyinfo = $stdout;
-	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	my @publine = grep /^pub/, (split /\n/, $stdout);
 	if ($#publine < 0) {
 		warn ("No public key found for $keyid.\n");
 		next;
@@ -351,7 +351,7 @@ for my $keyid (@KEYIDS) {
 
 	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 		# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
-		my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+		my @sigline = grep /^sig/, (split /\n/, $stdout);
 		$stdout =~ s/\n/\\n/g;
 		notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
 		my $line = pop @sigline;

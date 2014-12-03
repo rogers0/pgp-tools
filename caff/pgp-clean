@@ -328,7 +328,7 @@ for my $keyid (@KEYIDS) {
 		next;
 	};
 	my $keyinfo = $stdout;
-	my @publine = grep { /^pub/ } (split /\n/, $stdout);
+	my @publine = grep /^pub/, (split /\n/, $stdout);
 	my ($dummy1, $dummy2, $dummy3, $dummy4, $longkeyid, $dummy6, $dummy7, $dummy8, $dummy9, $dummy10, $dummy11, $flags) = split /:/, pop @publine;
 	my $can_encrypt = $flags =~ /E/;
 	unless (defined $longkeyid) {
@@ -421,7 +421,7 @@ for my $keyid (@KEYIDS) {
 
 	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 		# sig:?::17:EA2199412477CAF8:1058095214:::::13x:
-		my @sigline = grep { /^sig/ } (split /\n/, $stdout);
+		my @sigline = grep /^sig/, (split /\n/, $stdout);
 		$stdout =~ s/\n/\\n/g;
 		notice("[sigremoval] why are there ".(scalar @sigline)." siglines in that part of the dialog!? got: $stdout") if scalar @sigline >= 2; # XXX
 		my $line = pop @sigline;

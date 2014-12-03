@@ -983,7 +983,7 @@ sub delete_signatures($$$$) {
 
 	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 		# sig:?::17:EA2199412477CAF8:1058095214:::::13x
-		my @sigline = grep { /^sig:/ } (split /\n/, $stdout);
+		my @sigline = grep /^sig:/, (split /\n/, $stdout);
 		my $answer = "no";
 		if (!@sigline) {
 			debug("[sigremoval] no sig line here, only got:\n".$stdout);
@@ -1343,7 +1343,7 @@ if ($CONFIG{'no-download'}) {
 	unless (defined $CONFIG{'keyserver'}) {
 		my $gpgconf = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/gpg.conf';
 		if (-e $gpgconf and open my $fh, $gpgconf) {
-			my @keyservers = map { chomp; s/^\s*keyserver\s+//r } (grep {/^\s*keyserver\s/} <$fh>);
+			my @keyservers = map { chomp; s/^\s*keyserver\s+//r } (grep /^\s*keyserver\s/, <$fh>);
 			$CONFIG{'keyserver'} = $keyservers[$#keyservers] if @keyservers;
 			close $fh;
 		}

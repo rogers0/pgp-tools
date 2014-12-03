@@ -211,8 +211,7 @@ sub callDialog {
 	my %unique;
 	my @keys = grep { !$unique{$_}++ }
 		# get the keyID; can be 8, 16 or 40 nibbles
-		grep { /^((([a-zA-Z0-9]{24})?[a-zA-Z0-9]{8})?[a-zA-Z0-9]{8})$/ }
-		map { s/\s//g; $_ } <ERRFH>;
+		grep /^((([a-zA-Z0-9]{24})?[a-zA-Z0-9]{8})?[a-zA-Z0-9]{8})$/, map { s/\s//g; $_ } <ERRFH>;
 	wait;
 
 	# open(STDOUT, ">&SAVEOUT") || die "Cannot restore STDOUT: $!\n";
