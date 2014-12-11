@@ -14,6 +14,8 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
       status 2 when there are secret keys without public part.
     + Add a configuration option 'mail-subject' to set the "Subject:" header
       field. (Closes: #771436)
+  * keyart:
+    + Replace shebang by /usr/bin/python.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 17 Nov 2014 16:49:51 +0100
 
