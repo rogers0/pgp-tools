@@ -16,6 +16,9 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
       field. (Closes: #771436)
   * keyart:
     + Replace shebang by /usr/bin/python.
+  * gpg-key2latex
+    + Add a fixed 4 module wide quiet zone around QR codes as specified in the
+      standard. (Closes: #772854)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 17 Nov 2014 16:49:51 +0100
 
