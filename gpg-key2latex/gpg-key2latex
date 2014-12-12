@@ -221,7 +221,7 @@ foreach my $keyid (@KEYIDS) {
             close $rfd or die "Can't close: $!";
             dup2 (fileno $wfd, 1);
             close $wfd or die "Can't close: $!";
-            exec qw/qrencode -i -d300 -tEPS -o -/, "OPENPGP4FPR:$key{fpr}" or die "Can't exec: $!";
+            exec qw/qrencode -i -lM -d300 -tEPS -o -/, "OPENPGP4FPR:$key{fpr}" or die "Can't exec: $!";
         }
     }
 

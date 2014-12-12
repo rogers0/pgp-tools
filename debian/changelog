@@ -19,6 +19,7 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
   * gpg-key2latex
     + Add a fixed 4 module wide quiet zone around QR codes as specified in the
       standard. (Closes: #772854)
+    + Generate QR codes with (M)edium error correction level.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 17 Nov 2014 16:49:51 +0100
 
