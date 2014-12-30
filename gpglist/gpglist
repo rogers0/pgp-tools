@@ -86,7 +86,7 @@ unless (defined $key) {
 	die "Usage: $PROGRAM_NAME <keyid>\n";
 }
 
-open SIGS, '-|', qw/gpg --list-options show-sig-subpackets --fixed-list-mode --with-colons --list-sigs/, $key
+open SIGS, '-|', qw/gpg --no-auto-check-trustdb --list-options show-sig-subpackets --fixed-list-mode --with-colons --list-sigs/, $key
 	or die "can't get gpg listing";
 
 my ($uid, $id) = ('', '');

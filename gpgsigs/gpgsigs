@@ -132,6 +132,7 @@ $gpg->call( 'gpg' );
 # correct attribute size
 $gpg->options->hash_init( 'extra_args' => [ '--attribute-file', $photos,
 											qw/ --list-options show-sig-subpackets
+												--no-auto-check-trustdb
 												--fixed-list-mode --with-colons/ ]
 						, 'meta_interactive' => 0 );
 
