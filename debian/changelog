@@ -23,7 +23,7 @@ signing-party (1.1.12-1) UNRELEASED; urgency=low
   * gpgsigs:
     + Add --no-auto-check-trustdb to the gpg options (ownertrust values are
       irrelevant here).
-  * gpgsigs:
+  * gpglist:
     + Add --no-auto-check-trustdb to the gpg options (ownertrust values are
       irrelevant here).
 
