@@ -26,7 +26,6 @@ signing-party (1.1.12-1) unstable; urgency=low
   * gpglist:
     + Add --no-auto-check-trustdb to the gpg options (ownertrust values are
       irrelevant here).
-  * debian/changelog
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Fri, 02 Jan 2015 19:45:29 +0100
 
