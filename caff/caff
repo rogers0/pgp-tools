@@ -1082,7 +1082,8 @@ sub get_local_user_keys() {
 #
 sub import_keys_from_gnupghome($$$@) {
 	my ($keyids, $src_gpghome, $dst_gpghome, @export_options) = @_;
-	my %keyids = map { $_ => 1} @$keyids;
+	my %keyids = map {$_ => 1} @$keyids;
+	die "Error: Nothing to export." unless %keyids;
 
 	# export the (non-armored) keys to $pipe
 	trace("Exporting key(s) ".(join ',', @$keyids)." from ".
