@@ -807,6 +807,7 @@ sub usage($$) {
 ######
 sub export_keys($$@) {
 	my ($gnupghome, $keyids, @export_options) = @_;
+	die "Error: Nothing to export." unless defined $keyids and @$keyids;
 
 	my %h = ( 'meta_interactive' => 0
 			, 'always_trust' => 1
@@ -1083,7 +1084,6 @@ sub get_local_user_keys() {
 sub import_keys_from_gnupghome($$$@) {
 	my ($keyids, $src_gpghome, $dst_gpghome, @export_options) = @_;
 	my %keyids = map {$_ => 1} @$keyids;
-	die "Error: Nothing to export." unless %keyids;
 
 	# export the (non-armored) keys to $pipe
 	trace("Exporting key(s) ".(join ',', @$keyids)." from ".
@@ -1654,7 +1654,7 @@ for my $keyid (@keyids_ok) {
 		readwrite_gpg("save\n", $handles);
 		waitpid $pid, 0;
 
-		my $asciikey = export_keys($uiddir, $keyid);
+		my $asciikey = export_keys($uiddir, [$keyid]);
 		undef $uiddir; # delete dir
 
 		unless ($asciikey) {
