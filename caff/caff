@@ -182,10 +182,6 @@ Path to the GnuPG binary which is used to split off signatures.  This was
 needed while the upstream GnuPG was not fixed.  Default: what B<gpg>
 is set to.
 
-=item B<secret-keyring> [string]
-
-Path to your secret keyring.  Default: B<$HOME/.gnupg/secring.gpg>.
-
 =item B<also-encrypt-to> [keyid, or list of keyids]
 
 Additional keyids to encrypt messages to. Default: none.
@@ -570,7 +566,20 @@ sub load_config() {
 	$CONFIG{'gpg-sign'} //= $CONFIG{'gpg'};
 	$CONFIG{'gpg-delsig'} //= $CONFIG{'gpg'};
 	check_executable($_, $CONFIG{$_}) for qw/gpg gpg-sign gpg-delsig/;
-	$CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
+	if (defined $CONFIG{'secret-keyring'}) {
+		die ("\$CONFIG{'secret-keyring'} is deprecated and will be removed in a future release. "
+			."Create a symlink to $CONFIG{'secret-keyring'} in $CONFIG{'caffhome'}/gnupghome instead.\n");
+		delete $CONFIG{'secret-keyring'};
+	} else {
+		foreach my $sec (qw/secring.gpg private-keys-v1.d/) {
+			my $osec = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") .'/'. $sec;
+			my $nsec = $CONFIG{'caffhome'}.'/gnupghome/'.$sec;
+			unless (-e $nsec) {
+				info ("Creating symlink $nsec to $osec.");
+				symlink $osec, $nsec;
+			}
+		}
+	}
 	$CONFIG{'no-download'} //= 0;
 	$CONFIG{'no-sign'} //= 0;
 	$CONFIG{'key-files'} //= [];
@@ -1134,8 +1143,8 @@ sub import_mykeys () {
 	$gpg->options->hash_init(
 		'meta_interactive' => 0,
 		'always_trust' => 1,
-		'extra_args' => [ '--secret-keyring', $CONFIG{'secret-keyring'}
-						, qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
+		'homedir' => $GNUPGHOME,
+		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons } ] );
 
 	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
 	my $pid = $gpg->list_secret_keys( handles => $handles );
@@ -1147,11 +1156,16 @@ sub import_mykeys () {
 	waitpid $pid, 0;
 	close $stdout;
 
-	my @failed = import_keys_from_gnupghome(\@fprs, undef, $GNUPGHOME, 'export-minimal');
+	die "Error: No secret key.\nIf an empty secret keyring 'secring.gpg' ('private-keys-v1.d' for GnuPG 2.1 and latter) ".
+		"was automatically created by gpg(1) in $CONFIG{'caffhome'}/gnupghome, you may want to remove it and restart caff to ".
+		"use the secret keyring from your default GnuPGHOME instead.\n" unless @fprs;
+
 	foreach my $keyid (@{$CONFIG{'keyid'}}) {
 		die "Your key $keyid could not be imported from your normal GnuPGHOME.\n"
 			unless grep /\Q$keyid\E$/, @fprs; # not in the private keyring
 	}
+
+	my @failed = import_keys_from_gnupghome(\@fprs, undef, $GNUPGHOME, 'export-minimal');
 	die "Not all keys could be imported from your normal GnuPGHOME.\n" if @failed;
 }
 
@@ -1536,7 +1550,6 @@ for my $keyid (@keyids_ok) {
 			push @command, $CONFIG{'gpg-sign'};
 			push @command, '--local-user', $local_user if defined $local_user;
 			push @command, "--homedir=$GNUPGHOME";
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit-key', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
@@ -1676,7 +1689,6 @@ for my $keyid (@keyids_ok) {
 				my @command;
 				push @command, $CONFIG{'gpg-sign'};
 				push @command, '--local-user', $local_user if defined $local_user;
-				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 				push @command, '--edit-key', $keyid;
 				push @command, 'showphoto' if $CONFIG{'show-photos'};
@@ -1714,7 +1726,6 @@ for my $keyid (@keyids_ok) {
 					'command_fd' => 0,
 					'always_trust' => 1,
 					'extra_args' => [ '--local-user', $u
-									, '--secret-keyring', $CONFIG{'secret-keyring'}
 									, '--ask-cert-level'
 									# we know there is a working agent
 									, '--use-agent'
