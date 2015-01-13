@@ -929,7 +929,7 @@ sub create_mail($$$@) {
 
 	$message_entity->head->add("From", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
-	$message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/r));
+	$message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/gr));
 	$message_entity->head->add("To", email_to_ascii($address));
 	$message_entity->head->add("Sender", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
