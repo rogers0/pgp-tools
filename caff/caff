@@ -1655,6 +1655,7 @@ for my $keyid (@keyids_ok) {
 
 		readwrite_gpg("save\n", $handles);
 		waitpid $pid, 0;
+		die "Couldn't prune $keyid: $?.\n" if $?;
 
 		my $asciikey = export_keys($uiddir, [$keyid]);
 		undef $uiddir; # delete dir
@@ -1758,6 +1759,7 @@ for my $keyid (@keyids_ok) {
 
 				readwrite_gpg("save\n", $handles);
 				waitpid $pid, 0;
+				die "Couldn't auto lsign $keyid: $?.\n" if $?;
 			}
 		}
 	}
