@@ -97,7 +97,7 @@ my %ids;
 my $longkey;
 while (<SIGS>) {
 	if (/^uid:(?:[^:]*:){6}([0-9A-F]{40}):[^:]*:([^:]+)/) {
-		$uid = $1; # use the SHA1 to have proper distinction between UIDs/UATs
+		$uid = $1; # use the hash to have proper distinction between UATs
 		push @uids, $uid; # preserve the order
 		$uids{$uid} = $2;
 	}
