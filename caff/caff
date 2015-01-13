@@ -1592,7 +1592,9 @@ for my $keyid (@keyids_ok) {
 		# copy pubring to temporary gpghome
 		###################################
 		my $uiddir = File::Temp->newdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1 );
-		copy("$keydir/pubring.gpg", "$uiddir/pubring.gpg");
+		foreach (qw/pubring.gpg pubring.kbx/) {
+			copy($keydir.'/'.$_, $uiddir.'/'.$_) if -e $keydir.'/'.$_;
+		}
 
 		# prune it
 		##########
