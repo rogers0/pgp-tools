@@ -6,6 +6,9 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       is to be symlinked into ~/.caff/gnupghome.  Symlinks are automatically
       created if ~/.caff/gnupghome doesn't contain a secret keyring or
       directory.  (Closes: #771857)
+    + Don't redirect gpg's STDERR when listing the keys, as it makes gpg
+      croak on OSX when GPG_TTY is not set.  Patch from Ewen McNeill.
+      (Closes: #775702)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Sat, 03 Jan 2015 11:36:26 +0100
 

@@ -1147,7 +1147,7 @@ sub import_mykeys () {
 		'homedir' => $GNUPGHOME,
 		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons } ] );
 
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
 	my $pid = $gpg->list_secret_keys( handles => $handles );
 
 	my $stdout = $handles->{stdout};
@@ -1479,7 +1479,7 @@ for my $keyid (@keyids_ok) {
 		'always_trust' => 1,
 		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
 
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => $NULL );
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
 	# process the keys one by one so we can detect collisions
 	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
 
