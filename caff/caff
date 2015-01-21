@@ -1038,18 +1038,16 @@ sub delete_signatures($$$$) {
 #         (undef) if no valid key has been found
 #
 sub get_local_user_keys() {
-	my @local_user;
-	
 	# No user-defined key id has been specified by the user, no need for
 	# further checks
-	return undef unless $CONFIG{'local-user'};
-	
+	return @{$CONFIG{'keyid'}} unless $CONFIG{'local-user'};
+
 	# Parse the list of keys
 	my @key_list = ref $CONFIG{'local-user'} ?  @{$CONFIG{'local-user'}} : split /\s*,\s*/, $CONFIG{'local-user'};
+	my @local_user;
 
 	# Check every key defined by the user...
 	for my $user_key (@key_list) {
-		
 		unless ($user_key =~ m/^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
 			mywarn "Local-user $user_key is not a valid keyid.";
 			next;
@@ -1068,7 +1066,7 @@ sub get_local_user_keys() {
 	}
 
 	# If no local-user key are valid, there is no need to go further
-	myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc.") unless defined $local_user[0];
+	myerror	(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc.") unless @local_user;
 	return @local_user;
 }
 
@@ -1130,47 +1128,6 @@ sub import_keys_from_gnupghome($$$@) {
 		return %keyids ? 1 : 0;
 	}
 	# void context
-}
-
-
-##
-# Import (the public part part of) each key listed in the private
-# keyring, and ensure that this includes all of the @{$CONFIG{keyid}}.
-# We don't import only the @{$CONFIG{keyid}} because gpg exits the edit
-# prompt with return value 2 whenever a key in the secret keyring
-# doesn't have a public counterpart.
-#
-sub import_mykeys () {
-	my @fprs;
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'meta_interactive' => 0,
-		'always_trust' => 1,
-		'homedir' => $GNUPGHOME,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons } ] );
-
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
-	my $pid = $gpg->list_secret_keys( handles => $handles );
-
-	my $stdout = $handles->{stdout};
-	while (<$stdout>) {
-		push @fprs, $1 if /^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/;
-	}
-	waitpid $pid, 0;
-	close $stdout;
-
-	die "Error: No secret key.\nIf an empty secret keyring 'secring.gpg' ('private-keys-v1.d' for GnuPG 2.1 and latter) ".
-		"was automatically created by gpg(1) in $CONFIG{'caffhome'}/gnupghome, you may want to remove it and restart caff to ".
-		"use the secret keyring from your default GnuPGHOME instead.\n" unless @fprs;
-
-	foreach my $keyid (@{$CONFIG{'keyid'}}) {
-		die "Your key $keyid could not be imported from your normal GnuPGHOME.\n"
-			unless grep /\Q$keyid\E$/, @fprs; # not in the private keyring
-	}
-
-	my @failed = import_keys_from_gnupghome(\@fprs, undef, $GNUPGHOME, 'export-minimal');
-	die "Not all keys could be imported from your normal GnuPGHOME.\n" if @failed;
 }
 
 ##
@@ -1382,7 +1339,9 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 #################
 # import own keys
 #################
-import_mykeys();
+import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
+	die "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.\n";
+
 import_keys_to_sign();
 
 #############################
@@ -1552,7 +1511,7 @@ for my $keyid (@keyids_ok) {
 		foreach my $local_user (@LOCAL_USER) {
 			my @command;
 			push @command, $CONFIG{'gpg-sign'};
-			push @command, '--local-user', $local_user if defined $local_user;
+			push @command, '--local-user', $local_user;
 			push @command, "--homedir=$GNUPGHOME";
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit-key', $keyid;
@@ -1695,7 +1654,7 @@ for my $keyid (@keyids_ok) {
 			foreach my $local_user (@LOCAL_USER) {
 				my @command;
 				push @command, $CONFIG{'gpg-sign'};
-				push @command, '--local-user', $local_user if defined $local_user;
+				push @command, '--local-user', $local_user;
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 				push @command, '--edit-key', $keyid;
 				push @command, 'showphoto' if $CONFIG{'show-photos'};
