@@ -571,12 +571,15 @@ sub load_config() {
 			."Create a symlink to $CONFIG{'secret-keyring'} in $CONFIG{'caffhome'}/gnupghome instead.\n");
 		delete $CONFIG{'secret-keyring'};
 	} else {
+		unless (-d $CONFIG{'caffhome'}.'/gnupghome') {
+			mkdir $CONFIG{'caffhome'}.'/gnupghome', 0700 or die "Cannot mkdir: $!\n";
+		}
 		foreach my $sec (qw/secring.gpg private-keys-v1.d/) {
 			my $osec = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") .'/'. $sec;
 			my $nsec = $CONFIG{'caffhome'}.'/gnupghome/'.$sec;
 			unless (-e $nsec) {
 				info ("Creating symlink $nsec to $osec.");
-				symlink $osec, $nsec;
+				symlink $osec, $nsec or die "Cannot create symlink: $!\n";
 			}
 		}
 	}
