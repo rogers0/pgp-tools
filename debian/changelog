@@ -15,6 +15,8 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       there are secret keys without public part.)
   * gpgsigs:
     + Add a legend with the different signature types.
+    + Mark local signatures as 'L' (formerly they were marked as 'S'), and
+      expiring -- but not expired -- signatures as 'x'.
   * caff, pgp-clean, pgp-fixkey, gpg-key2latex, gpg-key2ps, gpg-mailkeys,
     gpgdir, gpgparticipants, gpgsigs, keyart, keylookup:
     + Add the possibility to choose the gpg binary via the "GNUPGBIN"

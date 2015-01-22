@@ -324,7 +324,7 @@ while (my ($key, $uids) = each %sigs) {
 						$class = 'S' if $class eq '0';
 					}
 				} else {
-					$class = 's';
+					$class = 'L';
 				}
 			}
 			undef $sigs;
@@ -497,7 +497,7 @@ print WRITE <<'EOF';
 Signature types:
   R  Revoked signature
   X  Expired signature
-  s  Local (non-exportable) signature
+  L  Local (non-exportable) signature
   x  Exportable signature with an expiration date in the future
   S  Non-expiring, exportable signature with certification level 0
   1  Non-expiring, exportable signature with certification level 1
