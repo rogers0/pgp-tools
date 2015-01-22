@@ -38,7 +38,7 @@ gpgsigs $VERSION- http://pgp-tools.alioth.debian.org/
   (c) 2004 Uli Martens <uli\@youam.net>
   (c) 2004, 2005 Peter Palfrader <peter\@palfrader.org>
   (c) 2004, 2005, 2006, 2007 Christoph Berg <cb\@df7cb.de>
-  (c) 2014 Guilhem Moulin <guilhem\@guilhem.org>
+  (c) 2014, 2015 Guilhem Moulin <guilhem\@guilhem.org>
 EOF
 }
 
@@ -255,6 +255,7 @@ while ($output->count() > 0) {
 }
 warn "Parsing gpg's output went wrong.\n" if $oldstdout or $oldstatus;
 waitpid $pid, 0;
+die if $?;
 close $_ for ($stdout, $status);
 
 my $photosfd;
@@ -314,11 +315,15 @@ while (my ($key, $uids) = each %sigs) {
 				if (@sigs) {
 					# we take the one with the best level
 					@sigs = sort { $a->{class} cmp $b->{class} } @sigs;
-					$class = (pop @sigs)->{class};
-					$class =~ s/1([0-3])./$1/;
-					$class ||= 'S';
+					my $s = pop @sigs;
+					if ($s->{expiring}) {
+						$class = 'x';
+					}
+					else {
+						$class = $s->{class} =~ s/1([0-3])./$1/r;
+						$class = 'S' if $class eq '0';
+					}
 				} else {
-					# XXX add an option to mark local sigs as exportable ones
 					$class = 's';
 				}
 			}
@@ -467,6 +472,7 @@ while (<TXT>) {
 	}
 	print WRITE;
 }
+close TXT;
 
 if ($latex and $keys > 0) {
 	print WRITE "\\end{samepage}\n";
@@ -475,17 +481,30 @@ if ($latex and $keys > 0) {
 print WRITE "Legend:\n";
 my $num_myuids = 0;
 foreach my $i (0 .. $#mykeys) {
-	print WRITE '(' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $uids{$mykeys[$i]}->{$keys{$mykeys[$i]}->[0]}->{text}\n";
+	print WRITE '  (' . ' 'x$i . 'S' . ' 'x(@mykeys-$i-1) . ") signed with $mykeys[$i] $uids{$mykeys[$i]}->{$keys{$mykeys[$i]}->[0]}->{text}\n";
 	$num_myuids += @{$keys{$mykeys[$i]}};
 }
 my $i = 0;
 foreach my $mykey (@mykeys) {
 	foreach my $myuid (@{$keys{$mykey}}) {
-		print WRITE "[" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $uids{$mykey}->{$myuid}->{text}\n";
+		print WRITE "  [" . ' 'x$i . 'S' . ' 'x($num_myuids-$i-1) . "] has signed $mykey $uids{$mykey}->{$myuid}->{text}\n";
 		$i++;
 	}
 }
-close TXT;
+
+print WRITE <<'EOF';
+
+Signature types:
+  R  Revoked signature
+  X  Expired signature
+  s  Local (non-exportable) signature
+  x  Exportable signature with an expiration date in the future
+  S  Non-expiring, exportable signature with certification level 0
+  1  Non-expiring, exportable signature with certification level 1
+  2  Non-expiring, exportable signature with certification level 2
+  3  Non-expiring, exportable signature with certification level 3
+EOF
+
 
 if ($latex) {
 	print WRITE <<'EOF';
@@ -586,7 +605,7 @@ http://www.palfrader.org/ksp-lt2k5.html
 =head1 BUGS
 
 B<GnuPG> is known to change its output format quite often. This version has
-been tested with gpg 1.2.5 and gpg 1.4.1. YMMV.
+been tested with gpg 1.4.18 and gpg 2.0.26. YMMV.
 
 =head1 SEE ALSO
 
@@ -602,7 +621,7 @@ http://pgp-tools.alioth.debian.org/
 
 (c) 2004, 2005, 2006, 2007 Christoph Berg <cb@df7cb.de>
 
-(c) 2014 Guilhem Moulin <guilhem@guilhem.org>
+(c) 2014, 2015 Guilhem Moulin <guilhem@guilhem.org>
 
 =head1 LICENSE
 
