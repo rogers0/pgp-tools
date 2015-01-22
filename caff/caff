@@ -1427,7 +1427,36 @@ if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 }
 
 my @LOCAL_USER;
-@LOCAL_USER = get_local_user_keys() unless $CONFIG{'no-sign'};
+unless ($CONFIG{'no-sign'}) {
+	@LOCAL_USER = get_local_user_keys();
+
+	# If a local user doesn't have a secret key, gpg --edit-key prints "gpg:
+	# error reading key: No secret key" and returns with status 2.  We're
+	# trying to display a more helpful message here.
+	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $CONFIG{'gpg'} );
+	$gpg->options->hash_init(
+		'homedir' => $GNUPGHOME,
+		'meta_interactive' => 0,
+		'always_trust' => 1,
+		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
+	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
+	my $pid = $gpg->list_secret_keys( handles => $handles, command_args => \@LOCAL_USER );
+
+	my $stdout = $handles->{stdout};
+	my %failed = map {$_ => 1} @LOCAL_USER;
+	while (<$stdout>) {
+		next unless /^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/;
+		delete @failed{ grep { $1 =~ /\Q$_\E$/ } @LOCAL_USER };
+	}
+	waitpid $pid, 0;
+	close $stdout;
+
+	die "Error: No secret key for ".join(',',keys %failed).".\n".
+		"If an empty secret keyring 'secring.gpg' ('private-keys-v1.d' for GnuPG 2.1 and latter) ".
+		"was automatically created by gpg(1) in $CONFIG{'caffhome'}/gnupghome, you may want to remove it and restart caff to ".
+		"use the secret keyring from your default GnuPGHOME instead.\n" if %failed;
+}
 
 my %KEYS;
 for my $keyid (@keyids_ok) {
