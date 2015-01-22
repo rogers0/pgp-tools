@@ -51,6 +51,7 @@ my (@KEYIDS, @KEYS);
 # Get the list of all matching keys.
 {
     my $gpg = GnuPG::Interface::->new();
+    $gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
     $gpg->options->hash_init( 'extra_args' => [ qw/--fingerprint
                                                    --fixed-list-mode
                                                    --no-auto-check-trustdb --with-colons/ ]
@@ -69,6 +70,7 @@ my (@KEYIDS, @KEYS);
 foreach my $keyid (@KEYIDS) {
     my $photos = $options{'show-photo'} ? File::Temp::->new(TMPDIR => 1) : '/dev/null';
     my $gpg = GnuPG::Interface::->new();
+    $gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
     # we need --attribute-{fd,file} and --status-{fd,file} to get the
     # correct attribute size
     $gpg->options->hash_init( 'extra_args' => [ '--attribute-file', $photos,
@@ -175,7 +177,7 @@ foreach my $keyid (@KEYIDS) {
                         push @{$key{uats}}, {size => $2, revoked => $3 & 0x02};
                         next;
                     }
-                    if (!/^\[GNUPG:\] (?:KEYEXPIRED \d+|SIGEXPIRED deprecated-use-keyexpired-instead)$/) {
+                    if (!/^\[GNUPG:\] (?:KEYEXPIRED \d+|SIGEXPIRED(?: deprecated-use-keyexpired-instead)?)$/) {
                         warn "Unknown value: '$_'";
                     }
                 }
@@ -477,6 +479,24 @@ Print a brief help and exit.
 =item B<--version>
 
 Print the version and exit.
+
+=back
+
+=head1 ENVIRONMENT
+
+=over
+
+=item I<HOME>
+
+The default home directory.
+
+=item I<GNUPGBIN>
+
+The gpg binary.  Default: C<"gpg">.
+
+=item I<GNUPGHOME>
+
+The default working directory for gpg.  Default: C<$HOME/.gnupg>.
 
 =back
 

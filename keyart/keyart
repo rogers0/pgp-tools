@@ -25,18 +25,6 @@ PARSER.add_argument('keyid', type=str, nargs='*', metavar=('KEYID'),
                     help='A key identifier (email, ID, fingerprint, etc.).')
 ARGS = PARSER.parse_args()
 
-def test_env():
-    """Test if and where GPG is installed."""
-    try:
-        if os.access('/usr/bin/gpg', os.X_OK):
-            gnupg = '/usr/bin/gpg'
-        else:
-            gnupg = '/usr/bin/gpg2'
-        return gnupg
-    except OSError:
-        print("Please install GnuPG before using this script.")
-        sys.exit(1)
-
 def draw_art(key_size, key_algo, key_fpr):
     """Execute the Drunken Bishop algorithm on a key."""
     art = ''
@@ -251,7 +239,7 @@ def gpg_cmd(cmd):
             algo = None
 
 if __name__ == '__main__':
-    gpg_bin = test_env()
+    gpg_bin = os.getenv('GNUPGBIN', 'gpg')
     strip_nonhex = re.compile('[^a-fA-F0-9]+')
 
     cmd = [gpg_bin, '--no-options', '--with-colons', '--fingerprint']

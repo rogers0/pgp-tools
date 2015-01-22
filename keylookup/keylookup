@@ -80,7 +80,7 @@ sub getHits($) {
 		open (STDIN, "/dev/null") || die ("Cannot open /dev/null as stdin: $!\n");
 
 		# child
-		my @ops = ('gpg');
+		my @ops = ($ENV{GNUPGBIN} // 'gpg');
 		if ($options->{'keyserver'}) {
 			push @ops, '--keyserver='.$options->{'keyserver'};
 		};
@@ -289,7 +289,7 @@ sub importKeys {
 	my $keyids = shift;
 	my $options = shift;
 
-	my @args = ('gpg');
+	my @args = ($ENV{GNUPGBIN} // 'gpg');
 	if ($options->{'keyserver'}) {
 		push @args, '--keyserver='.$options->{'keyserver'};
 	};

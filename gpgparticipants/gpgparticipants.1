@@ -29,6 +29,17 @@ algorithms supported by \fBgpg\fR(1), add a placeholder for the digest
 value (to be filled by the participants) to the output file.  Default:
 SHA256,RIPEMD160.
 
+.SH ENVIRONMENT
+.TP 13
+.I HOME
+Set the default home directory.
+.TP 13
+.I GNUPGBIN
+Set the gpg binary.  Default: "gpg".
+.TP 13
+.I GNUPGHOME
+Set the default working directory for gpg.  Default: "~/.gnupg".
+
 .SH EXAMPLES
 
 To create a KSP file with all keys present in the keyring:

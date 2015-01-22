@@ -52,7 +52,7 @@ halgos="$algos"
 algos=$(echo "$algos" | tr ',' ' ')
 for algo in $algos; do
 	# Ensure this is a valid algo
-	gpg --print-md "$algo" /dev/null >/dev/null || exit $?
+	${GNUPGBIN:-gpg} --print-md "$algo" /dev/null >/dev/null || exit $?
 done
 
 input="$1"
@@ -83,7 +83,7 @@ Here's what you have to do with this file:
 
 EOF
 for algo in $algos; do
-	printf "      gpg --print-md %s %s\n" "$algo" "$output"
+	printf "      ${GNUPGBIN:-gpg} --print-md %s %s\n" "$algo" "$output"
 done
 cat <<EOF
 
@@ -149,7 +149,7 @@ cat $input | \
 while read i; do
     k=$(($k+1));
     printf "\n%03d  [ ] Fingerprint OK        [ ] ID OK\n" $k;
-	LANGUAGE=en gpg $options --display-charset utf-8 --fingerprint --list-keys -- $i \
+	LANGUAGE=en ${GNUPGBIN:-gpg} $options --display-charset utf-8 --fingerprint --list-keys -- $i \
 		| grep -ve "^sub" -e '^uid *\[jpeg image of size ';
 	echo "_______________________________________________________________________________"
 done

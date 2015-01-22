@@ -59,6 +59,24 @@ Use this key.
 
 =back
 
+=head1 ENVIRONMENT
+
+=over
+
+=item I<HOME>
+
+The default home directory.
+
+=item I<GNUPGBIN>
+
+The gpg binary.  Default: C<"gpg">.
+
+=item I<GNUPGHOME>
+
+The default working directory for gpg.  Default: C<$HOME/.gnupg>.
+
+=back
+
 =head1 FILES
 
 =over
@@ -245,6 +263,7 @@ for my $keyid (@ARGV) {
 # find a list of all interesting keys.
 if (scalar @KEYIDS == 0) {
 	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fast-list-mode', '--fixed-list-mode' ] );
@@ -279,6 +298,7 @@ for my $keyid (@KEYIDS) {
 	# get key listing
 	#################
 	my $gpg = GnuPG::Interface->new();
+	$gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
 	$gpg->options->meta_interactive( 0 );
 	my ($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();
 	$gpg->options->hash_init( 'extra_args' => [ '--with-colons', '--fixed-list-mode' ] );
@@ -311,6 +331,7 @@ for my $keyid (@KEYIDS) {
 	# prune it
 	##########
 	$gpg = GnuPG::Interface->new();
+	$gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
 	$gpg->options->hash_init(
 		'extra_args' => [ '--with-colons', '--fixed-list-mode', '--command-fd=0', '--no-tty' ] );
 	($inputfd, $stdoutfd, $stderrfd, $statusfd, $handles) = make_gpg_fds();

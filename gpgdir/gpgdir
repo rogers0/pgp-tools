@@ -411,6 +411,7 @@ sub encrypt_or_sign_file() {
     my ($in_file, $out_file, $del_flag) = @_;
 
     my $gpg = GnuPG::Interface->new();
+    $gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
     $gpg->options->hash_init(%options);
 
     die "[*] Could not create new gpg object with ",
@@ -513,6 +514,7 @@ sub decrypt_or_verify_file() {
     my $handles   = '';
 
     my $gpg = GnuPG::Interface->new();
+    $gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
     $gpg->options->hash_init(%options);
 
     die "[*] Could not create new gpg object with ",

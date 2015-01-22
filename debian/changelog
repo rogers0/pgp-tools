@@ -13,6 +13,10 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       the public part of *all* keys found in the secret keyring.  (When not
       pruning the good keys with -u, gpg(1) croaks with exit status 2 when
       there are secret keys without public part.)
+  * caff, pgp-clean, pgp-fixkey, gpg-key2latex, gpg-key2ps, gpg-mailkeys,
+    gpgdir, gpgparticipants, gpgsigs, keyart, keylookup:
+    + Add the possibility to choose the gpg binary via the "GNUPGBIN"
+      environment variable.  (Default: "gpg".)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Sat, 03 Jan 2015 11:36:26 +0100
 

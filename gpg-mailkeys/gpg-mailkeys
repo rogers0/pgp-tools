@@ -73,7 +73,7 @@ FAILKEYS=
 while [ -n "$1" ]; do
 	printf "[$1] "
 	TEMPFILE=`mktemp -t gpg2mail.XXXXXX`
-	ADDR=`gpg --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^rei:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
+	ADDR=`${GNUPGBIN:-gpg} --with-colons --fixed-list-mode --list-key $1 | sed -e 's/^uid:[^rei:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:<]*<[^:>]*>\):.*/@@uid@@ \1/' -e '/^@@uid@@ /!d' -e 's/([^)]*)//g' -e 's/  */ /g' -e 's/^@@uid@@ //' | head -1`
 	if [ -z "$ADDR" ]; then
 		printf "(no usable user ids)\n"
 		FAILKEYS="$FAILKEYS:$1"
@@ -117,7 +117,7 @@ cat << EOM >> $TEMPFILE
 Content-Type: application/pgp-keys
 Content-Disposition: attachment; filename="$1.asc"
 
-`gpg --armor --export $1`
+`${GNUPGBIN:-gpg} --armor --export $1`
 
 --$BOUNDARY--
 EOM

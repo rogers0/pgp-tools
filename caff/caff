@@ -106,6 +106,24 @@ Try to import keys from your standard GnuPG keyrings.
 
 =back
 
+=head1 ENVIRONMENT
+
+=over
+
+=item I<HOME>
+
+The default home directory.
+
+=item I<GNUPGBIN>
+
+The gpg binary.  Default: C<"gpg">.
+
+=item I<GNUPGHOME>
+
+The default working directory for gpg.  Default: C<$HOME/.gnupg>.
+
+=back
+
 =head1 FILES
 
 =over
@@ -114,7 +132,7 @@ Try to import keys from your standard GnuPG keyrings.
 
 =item $HOME/.caff/keys/yyyy-mm-dd/  -  processed keys
 
-=item $HOME/.caff/gnupghome/  -  caff's working dir for gpg
+=item $HOME/.caff/gnupghome/  -  caff's working directory for gpg
 
 =item $HOME/.caff/gnupghome/gpg.conf  -  gpg configuration
 
@@ -169,7 +187,8 @@ Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
 =item B<gpg> [string]
 
-Path to the GnuPG binary.  Default: B<gpg>.
+Path to the GnuPG binary.  Default: The value of the I<GNUPGBIN>
+environment variable if set, otherwise C<gpg>.
 
 =item B<gpg-sign> [string]
 
@@ -452,7 +471,7 @@ sub generate_config() {
 		$gecos =~ s/,.*//;
 
 		my $gpg = GnuPG::Interface->new();
-		$gpg->call( 'gpg' );
+		$gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
 		$gpg->options->hash_init(
 			'meta_interactive' => 0,
 			'always_trust' => 1,
@@ -562,7 +581,7 @@ sub load_config() {
 	};
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'} //= 24*60*60;
-	$CONFIG{'gpg'} //= 'gpg';
+	$CONFIG{'gpg'} //= $ENV{GNUPGBIN} // 'gpg';
 	$CONFIG{'gpg-sign'} //= $CONFIG{'gpg'};
 	$CONFIG{'gpg-delsig'} //= $CONFIG{'gpg'};
 	check_executable($_, $CONFIG{$_}) for qw/gpg gpg-sign gpg-delsig/;

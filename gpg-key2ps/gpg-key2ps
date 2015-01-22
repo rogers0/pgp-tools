@@ -102,7 +102,7 @@ if ( `which paperconf` && $? == 0 ) {
 
 # open a gpg process we'll be reading from below
 # --list-key due to #382794
-open GPG, '-|', qw/gpg --list-key --with-fingerprint --with-colons/, @ARGV;
+open GPG, '-|', $ENV{GNUPGBIN} // 'gpg', qw/--list-key --with-fingerprint --with-colons/, @ARGV;
 
 sub start_postscript {
 # start the PostScript output
@@ -391,6 +391,24 @@ Print usage and exit.
 =item B<-v> B<--version>
 
 Print version and exit.
+
+=back
+
+=head1 ENVIRONMENT
+
+=over
+
+=item I<HOME>
+
+The default home directory.
+
+=item I<GNUPGBIN>
+
+The gpg binary.  Default: C<"gpg">.
+
+=item I<GNUPGHOME>
+
+The default working directory for gpg.  Default: C<$HOME/.gnupg>.
 
 =back
 
