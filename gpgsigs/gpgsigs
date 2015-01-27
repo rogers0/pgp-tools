@@ -169,12 +169,12 @@ while ($output->count() > 0) {
 				chomp;
 				undef $sig unless /^spk:/;
 				if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
-					undef $key;
-					if ($1 =~ /[eir]/ or $3 =~ /D/ ) {
-						warn "Ignoring unusable key $2.\n";
+					$key = $2;
+					if ($1 =~ /[ir]/ or $3 =~ /D/ ) {
+						warn "Ignoring unusable key $key.\n";
+						undef $key;
 						last;
 					}
-					$key = $2;
 					$keys{$key} = [];
 					print STDERR '.';
 					@mykeys = map { substr($key,-8) eq $_ ? $key : $_ } @mykeys;
