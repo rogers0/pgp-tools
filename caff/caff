@@ -596,7 +596,7 @@ sub load_config() {
 		foreach my $sec (qw/secring.gpg private-keys-v1.d/) {
 			my $osec = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") .'/'. $sec;
 			my $nsec = $CONFIG{'caffhome'}.'/gnupghome/'.$sec;
-			unless (-e $nsec) {
+			unless (-e $nsec or -l $nsec) {
 				info ("Creating symlink $nsec to $osec.");
 				symlink $osec, $nsec or die "Cannot create symlink: $!\n";
 			}
