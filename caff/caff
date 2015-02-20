@@ -826,11 +826,7 @@ sub usage($$) {
 sub export_keys($$@) {
 	my ($gnupghome, $keyids, @export_options) = @_;
 	myerror(1, "Nothing to export") unless defined $keyids and @$keyids;
-
-	my @extra_args;
-	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
-	push @extra_args, '--min-cert-level=1' if grep { $_ eq 'export-clean' } @export_options;
-	push @extra_args, '--export-options', join (',', @export_options) if @export_options;
+	my @extra_args = ('--export-options', join (',', @export_options)) if @export_options;
 
 	# don't armor when piping since it's faster
 	my $gpg = mkGnuPG( homedir => $gnupghome, armor => (wantarray ? 0 : 1), extra_args => \@extra_args );
@@ -1072,23 +1068,28 @@ sub get_local_user_keys() {
 # @param keyids         keyids of the OpenPGP keys to import
 # @param src_gnupghome  gnupghome directory where to export the key from
 # @param dst_gnupghome  gnupghome directory where to import the key into
-# @param export_options an array of export-options, see gpg(1)
+# @param import_options an array of import-options, see gpg(1)
 #
 # @ In list context, return the list of keyids that couldn't be
 # imported. In scalar context, return 0 if all keys were imported, and 1
 # otherwise.
 #
 sub import_keys_from_gnupghome($$$@) {
-	my ($keyids, $src_gpghome, $dst_gpghome, @export_options) = @_;
+	my ($keyids, $src_gpghome, $dst_gpghome, @import_options) = @_;
 	my %keyids = map {$_ => 1} @$keyids;
+
+	my @extra_args;
+	push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/ and !grep /import-local-sigs$/, @import_options;
+	push @extra_args, '--min-cert-level=1' if grep { $_ eq 'import-clean' } @import_options;
+	push @extra_args, '--import-options', join (',', @import_options) if @import_options;
 
 	# export the (non-armored) keys to $pipe
 	trace("Exporting key(s) ".(join ',', @$keyids)." from ".
 			($src_gpghome // "your normal GnuPGHOME")." to ".($dst_gpghome // "your normal GnuPGHOME").".");
+	my @export_options = ('export-local-sigs') if grep {$_ eq 'import-local-sigs'} @import_options;
 	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
-	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1 );
-	$gpg->options->push_extra_args(qw/--import-options import-local-sigs/) if $CONFIG{'gpg-sign-type'} =~ /l/;
+	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1, extra_args => \@extra_args );
 	my $handles = mkGnuPG_fds( stdin  => $pipe, status => undef ); # import keys from $pipe
 	my $iPid = $gpg->import_keys( handles => $handles );
 
@@ -1538,10 +1539,12 @@ for my $keyid (@keyids_ok) {
 	# export the key
 	################
 	my $keydir = File::Temp->newdir( "caff-$keyid-XXXXX", TMPDIR => 1 );
-	import_keys_from_gnupghome (\@{$CONFIG{'keyid'}}, $GNUPGHOME, $keydir, 'export-minimal') and
-		myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'export-minimal')");
-	import_keys_from_gnupghome ([$keyid], $GNUPGHOME, $keydir, 'export-clean') and
-		myerror(1, "$keyid couldn't be imported from caff's GnuPGHOME (with 'export-clean')");
+	# we can't use only one import here because the cleaning is done as the
+	# keys come and our keys might not be imported yet
+	import_keys_from_gnupghome ($CONFIG{'keyid'}, $GNUPGHOME, $keydir, 'import-minimal', 'import-local-sigs') and
+		myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'import-minimal')");
+	import_keys_from_gnupghome ([$keyid], $GNUPGHOME, $keydir, 'import-clean', 'import-local-sigs') and
+		myerror(1, "$keyid couldn't be imported from caff's GnuPGHOME (with 'import-clean')");
 
 	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
 	my @uids = @{$KEYS{$keyid}->{uids}};
@@ -1617,8 +1620,9 @@ for my $keyid (@keyids_ok) {
 
 		readwrite_gpg($handles, command => "save");
 		done_gpg($pid, $handles);
+		debug("Done editing");
 
-		my $asciikey = export_keys($uiddir, [$keyid]);
+		my $asciikey = export_keys($uiddir, [$keyid], 'export-local-sigs');
 		undef $uiddir; # delete dir
 
 		unless ($asciikey) {

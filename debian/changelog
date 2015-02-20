@@ -19,6 +19,7 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       signee has some already signed RFC 2822 UIDs and a freshly added
       attribute, for instance.
     + Use Term::ANSIColor to produce colored output.
+    + Prune keys with import-{clean,minimal} not export-{clean,minimal}.
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and
