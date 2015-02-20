@@ -1514,7 +1514,7 @@ for my $keyid (@keyids_ok) {
 			my @command = ($CONFIG{'gpg'});
 			push @command, '--local-user', $local_user;
 			push @command, "--homedir=$GNUPGHOME";
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+			push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit-key', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
@@ -1663,7 +1663,7 @@ for my $keyid (@keyids_ok) {
 		foreach my $local_user (@LOCAL_USER) {
 			my @command = ($CONFIG{'gpg'});
 			push @command, '--local-user', $local_user;
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
+			push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit-key', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
