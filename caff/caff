@@ -194,17 +194,6 @@ Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 Path to the GnuPG binary.  Default: The value of the I<GNUPGBIN>
 environment variable if set, otherwise C<gpg>.
 
-=item B<gpg-sign> [string]
-
-Path to the GnuPG binary which is used to sign keys.  Default: what
-B<gpg> is set to.
-
-=item B<gpg-delsig> [string]
-
-Path to the GnuPG binary which is used to split off signatures.  This was
-needed while the upstream GnuPG was not fixed.  Default: what B<gpg>
-is set to.
-
 =item B<secret-keyring> [string]
 
 Path to your secret keyring (GnuPG < 2.1), or to the GnuPGHOME
@@ -608,9 +597,9 @@ sub load_config() {
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'} //= 24*60*60;
 	$CONFIG{'gpg'} //= $ENV{GNUPGBIN} // 'gpg';
-	$CONFIG{'gpg-sign'} //= $CONFIG{'gpg'};
-	$CONFIG{'gpg-delsig'} //= $CONFIG{'gpg'};
-	check_executable($_, $CONFIG{$_}) for qw/gpg gpg-sign gpg-delsig/;
+	mywarn("deprecated option \$CONFIG{'$_'} = '$CONFIG{$_}'") for grep {defined $CONFIG{$_}} qw/gpg-sign gpg-delsig/;
+
+	check_executable('gpg', $CONFIG{gpg});
 	$CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
 	$CONFIG{'no-download'} //= 0;
 	$CONFIG{'no-sign'} //= 0;
@@ -1574,7 +1563,7 @@ for my $keyid (@keyids_ok) {
 	unless ($CONFIG{'no-sign'}) {
 		info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 		foreach my $local_user (@LOCAL_USER) {
-			my @command = ($CONFIG{'gpg-sign'});
+			my @command = ($CONFIG{'gpg'});
 			push @command, '--local-user', $local_user;
 			push @command, "--homedir=$GNUPGHOME";
 			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
@@ -1625,7 +1614,7 @@ for my $keyid (@keyids_ok) {
 		# prune it
 		##########
 		my $gpg = GnuPG::Interface->new();
-		$gpg->call( $CONFIG{'gpg-delsig'} );
+		$gpg->call( $CONFIG{'gpg'} );
 		$gpg->options->hash_init(
 			'homedir' => $uiddir,
 			'command_fd' => 0,
@@ -1716,7 +1705,7 @@ for my $keyid (@keyids_ok) {
 			# manually lsign the key
 			########################
 			foreach my $local_user (@LOCAL_USER) {
-				my @command = ($CONFIG{'gpg-sign'});
+				my @command = ($CONFIG{'gpg'});
 				push @command, '--local-user', $local_user;
 				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
