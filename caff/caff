@@ -458,6 +458,10 @@ sub trace2($) {
 	#print STDERR "[trace2] $line\n";
 };
 
+sub mysystem(@) {
+	system { $_[0] } @_;
+	myerror($?, "$_[0] exited with value ".($? >> 8)) if $?;
+}
 
 open my $NULL, '+<', '/dev/null';
 sub generate_config() {
@@ -1563,8 +1567,7 @@ for my $keyid (@keyids_ok) {
 	unless ($CONFIG{'no-sign'}) {
 		info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 		foreach my $local_user (@LOCAL_USER) {
-			my @command;
-			push @command, $CONFIG{'gpg-sign'};
+			my @command = ($CONFIG{'gpg-sign'});
 			push @command, '--local-user', $local_user;
 			push @command, "--homedir=$GNUPGHOME";
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
@@ -1573,8 +1576,7 @@ for my $keyid (@keyids_ok) {
 			push @command, $CONFIG{'gpg-sign-type'}.'sign';
 			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 			print join(' ', @command),"\n";
-			system @command;
-			die "system $command[0] failed: $?.\n" if $?;
+			mysystem(@command);
 		};
 	};
 
@@ -1706,8 +1708,7 @@ for my $keyid (@keyids_ok) {
 			# manually lsign the key
 			########################
 			foreach my $local_user (@LOCAL_USER) {
-				my @command;
-				push @command, $CONFIG{'gpg-sign'};
+				my @command = ($CONFIG{'gpg-sign'});
 				push @command, '--local-user', $local_user;
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 				push @command, '--edit-key', $keyid;
@@ -1715,8 +1716,7 @@ for my $keyid (@keyids_ok) {
 				push @command, 'lsign';
 				push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
 				print join(' ', @command),"\n";
-				system @command;
-				die "system $command[0] failed: $?.\n" if $?;
+				mysystem(@command);
 			};
 		}
 		else {
