@@ -1,11 +1,12 @@
 signing-party (1.1.13-1) UNRELEASED; urgency=low
 
   * caff:
-    + Deprecate $CONFIG{'secret-keyring'}.  Instead, the secret keyring
-      (secring.gpg for GnuPG < 2.1, private-keys-v1.d for GnuPG 2.1 or latter)
-      is to be symlinked into ~/.caff/gnupghome.  Symlinks are automatically
-      created if ~/.caff/gnupghome doesn't contain a secret keyring or
-      directory.  (Closes: #771857)
+    + Fix broken compatibility with GnuPG 2.1, due to --secret-keyring being
+      ignored by the most recent gpg(1).  On those we automaticalyl symlink
+      the S.gpg-agent (unless 'no-sign') and S.dirmngr (unless 'no-download')
+      sockets to avoid spawning new agents in caff's GNUPGHOME.  This require
+      an extra call to gpg(1) at the begining to determine the version.
+      (Closes: #771857)
     + Don't redirect gpg's STDERR when listing the keys, as it makes gpg
       croak on OSX when GPG_TTY is not set.  Patch from Ewen McNeill.
       (Closes: #775702)

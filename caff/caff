@@ -205,6 +205,14 @@ Path to the GnuPG binary which is used to split off signatures.  This was
 needed while the upstream GnuPG was not fixed.  Default: what B<gpg>
 is set to.
 
+=item B<secret-keyring> [string]
+
+Path to your secret keyring (GnuPG < 2.1), or to the GnuPGHOME
+of the agent managing the secret key material (GnuPG >= 2.1).
+Default: B<$HOME/.gnupg/secring.gpg>.
+If the value is not a directory with GnuPG >= 2.1, the parent directory
+(i.e., B<$HOME/.gnupg> by default) is considered instead.
+
 =item B<also-encrypt-to> [keyid, or list of keyids]
 
 Additional keyids to encrypt messages to. Default: none.
@@ -416,10 +424,17 @@ my ($REVISION_NUMER) = $REVISION =~ /(\d+)/;
 $REVISION_NUMER //= 'unknown';
 my $VERSION = "0.0.0.$REVISION_NUMER";
 my $LOCALE = Encode::find_encoding(langinfo(I18N::Langinfo::CODESET()));
+my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
 
 # Global variables
 my @KEYIDS;
+my @LOCAL_USER;
 my $params;
+
+my $GNUPG_VERSION;
+my $KEYSBASE;
+my $GNUPGHOME;
+
 
 ##
 # Display an error message on STDERR and then exit.
@@ -579,6 +594,14 @@ sub load_config() {
 	};
 
 	$CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
+	$KEYSBASE  = $CONFIG{'caffhome'}.'/keys';
+	$GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
+	foreach ($KEYSBASE, $GNUPGHOME) {
+		next if -d $_;
+		info("Creating $_");
+		mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");
+	}
+
 	die ("$PROGRAM_NAME: owner is not defined in $config.\n") unless defined $CONFIG{'owner'};
 	die ("$PROGRAM_NAME: email is not defined in $config.\n") unless defined $CONFIG{'email'};
 	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
@@ -593,23 +616,7 @@ sub load_config() {
 	$CONFIG{'gpg-sign'} //= $CONFIG{'gpg'};
 	$CONFIG{'gpg-delsig'} //= $CONFIG{'gpg'};
 	check_executable($_, $CONFIG{$_}) for qw/gpg gpg-sign gpg-delsig/;
-	if (defined $CONFIG{'secret-keyring'}) {
-		die ("\$CONFIG{'secret-keyring'} is deprecated and will be removed in a future release. "
-			."Create a symlink to $CONFIG{'secret-keyring'} in $CONFIG{'caffhome'}/gnupghome instead.\n");
-		delete $CONFIG{'secret-keyring'};
-	} else {
-		unless (-d $CONFIG{'caffhome'}.'/gnupghome') {
-			mkdir $CONFIG{'caffhome'}.'/gnupghome', 0700 or die "Cannot mkdir: $!\n";
-		}
-		foreach my $sec (qw/secring.gpg private-keys-v1.d/) {
-			my $osec = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") .'/'. $sec;
-			my $nsec = $CONFIG{'caffhome'}.'/gnupghome/'.$sec;
-			unless (-e $nsec or -l $nsec) {
-				info ("Creating symlink $nsec to $osec.");
-				symlink $osec, $nsec or die "Cannot create symlink: $!\n";
-			}
-		}
-	}
+	$CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
 	$CONFIG{'no-download'} //= 0;
 	$CONFIG{'no-sign'} //= 0;
 	$CONFIG{'key-files'} //= [];
@@ -634,11 +641,6 @@ sub load_config() {
 	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
 	die "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.\n"
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
-	# ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
-	$CONFIG{'also-lsign-in-gnupghome'} = 'ask'
-		if $CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and
-		   $CONFIG{'gpg-sign-type'} !~ /l/ and
-		   system (qw/gpg-agent -q/) == 0;
 	$CONFIG{'show-photos'} //= 0;
 };
 
@@ -799,14 +801,7 @@ my $KEYEDIT_DELSUBKEY_PROMPT = qr/GET_BOOL keyedit\.remove\.subkey\.okay/;
 my $KEYEDIT_SIGNUID_CLASS_PROMPT = qr/GET_LINE sign_uid\.class/;
 my $KEYEDIT_SIGNUID_PROMPT = qr/GET_BOOL sign_uid\.okay/;
 
-load_config;
-my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
-
-my $KEYSBASE =  $CONFIG{'caffhome'}.'/keys';
-my $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
-
--d $KEYSBASE  || make_path($KEYSBASE , {mode => 0700}) or die ("Cannot create $KEYSBASE: $!\n");
--d $GNUPGHOME || make_path($GNUPGHOME, {mode => 0700}) or die ("Cannot create $GNUPGHOME: $!\n");
+load_config();
 
 my $NOW = time;
 my  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($NOW);
@@ -1365,6 +1360,53 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 	push @KEYIDS, uc($keyid);
 };
 
+
+$GNUPG_VERSION = `$CONFIG{'gpg'} --with-colons --list-config version`;
+chomp $GNUPG_VERSION;
+$GNUPG_VERSION =~ s/^cfg:version:(\d+\.\d+).*/$1/;
+debug "gpg (GnuPG) $GNUPG_VERSION";
+
+if ($GNUPG_VERSION >= 2.1) {
+	my @sockets;
+	unless ($CONFIG{'no-sign'}) {
+		# Ensure we have a working agent for our secret key material
+		my $secdir = $CONFIG{'secret-keyring'};
+		$secdir =~ s#/[^/]+$## unless -d $secdir;
+		mysystem('gpg-connect-agent', '--homedir', $secdir, '/bye');
+		push @sockets, "$secdir/S.gpg-agent";
+	}
+	unless ($CONFIG{'no-download'}) {
+		# Ensure we have a working agent for the downloads
+		my $homedir = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg");
+		mysystem('gpg-connect-agent', '--homedir', $homedir, '--dirmngr', '/bye');
+		push @sockets, "$homedir/S.dirmngr";
+	}
+
+	foreach my $socket (@sockets) {
+		my $l = $socket =~ s#.*/(S\.[^/]+)$#$GNUPGHOME/$1#r;
+		if (-l $l) {
+			unlink $l
+		}
+		elsif (-S $l) {
+			# don't run agents in caff's homedir
+			myerror(1, "$l: socket exists; runaway gpg-agent?");
+		}
+		elsif (! -S $socket) {
+			myerror(1, "Missing socket $socket");
+		}
+		debug "Creating symlink $l to $socket";
+		symlink $socket, $l or myerror(1, "Cannot symlink: $!");
+	}
+}
+elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'} !~ /l/) {
+	# Ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
+	system qw/gpg-agent -q/;
+	unless ($? == 0) {
+		mywarn("No gpg-agent running: set \$CONFIG{'also-lsign-in-gnupghome'} = 'ask'");
+		$CONFIG{'also-lsign-in-gnupghome'} = 'ask';
+	}
+}
+
 #################
 # import own keys
 #################
@@ -1455,37 +1497,7 @@ if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
 	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
 
-my @LOCAL_USER;
-unless ($CONFIG{'no-sign'}) {
-	@LOCAL_USER = get_local_user_keys();
-
-	# If a local user doesn't have a secret key, gpg --edit-key prints "gpg:
-	# error reading key: No secret key" and returns with status 2.  We're
-	# trying to display a more helpful message here.
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $GNUPGHOME,
-		'meta_interactive' => 0,
-		'always_trust' => 1,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
-	my $pid = $gpg->list_secret_keys( handles => $handles, command_args => \@LOCAL_USER );
-
-	my $stdout = $handles->{stdout};
-	my %failed = map {$_ => 1} @LOCAL_USER;
-	while (<$stdout>) {
-		next unless /^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/;
-		delete @failed{ grep { $1 =~ /\Q$_\E$/ } @LOCAL_USER };
-	}
-	waitpid $pid, 0;
-	close $stdout;
-
-	die "Error: No secret key for ".join(',',keys %failed).".\n".
-		"If an empty secret keyring 'secring.gpg' ('private-keys-v1.d' for GnuPG 2.1 and latter) ".
-		"was automatically created by gpg(1) in $CONFIG{'caffhome'}/gnupghome, you may want to remove it and restart caff to ".
-		"use the secret keyring from your default GnuPGHOME instead.\n" if %failed;
-}
+@LOCAL_USER = get_local_user_keys() unless $CONFIG{'no-sign'};
 
 my %KEYS;
 for my $keyid (@keyids_ok) {
@@ -1570,6 +1582,7 @@ for my $keyid (@keyids_ok) {
 			my @command = ($CONFIG{'gpg-sign'});
 			push @command, '--local-user', $local_user;
 			push @command, "--homedir=$GNUPGHOME";
+			push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 			push @command, '--edit-key', $keyid;
 			push @command, 'showphoto' if $CONFIG{'show-photos'};
@@ -1710,6 +1723,7 @@ for my $keyid (@keyids_ok) {
 			foreach my $local_user (@LOCAL_USER) {
 				my @command = ($CONFIG{'gpg-sign'});
 				push @command, '--local-user', $local_user;
+				push @command, '--secret-keyring', $CONFIG{'secret-keyring'};
 				push @command, qw/--no-auto-check-trustdb --trust-model=always/;
 				push @command, '--edit-key', $keyid;
 				push @command, 'showphoto' if $CONFIG{'show-photos'};
