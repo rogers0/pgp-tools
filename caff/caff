@@ -104,6 +104,10 @@ Import keys from file. Can be supplied more than once.
 
 Try to import keys from your standard GnuPG keyrings.
 
+=item B<--debug>
+
+Enable debug messages.
+
 =back
 
 =head1 ENVIRONMENT
@@ -443,7 +447,7 @@ sub info($) {
 };
 sub debug($) {
 	my ($line) = @_;
-	#print STDERR "[DEBUG] $line\n";
+	print STDERR "[DEBUG] $line\n" if $params->{debug};
 };
 sub trace($) {
 	my ($line) = @_;
@@ -1252,6 +1256,7 @@ if (!GetOptions (
 	'--no-sign'         =>  \$params->{'no-sign'},
 	'--key-file=s@'     =>  \$params->{'key-files'},
 	'--keys-from-gnupg' =>  \$params->{'keys-from-gnupg'},
+	'--debug'			=>  \$params->{'debug'},
 	)) {
 	usage(\*STDERR, 1);
 };
