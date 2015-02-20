@@ -14,6 +14,10 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
     + Print {error,warnings,notice,info} lines on STDERR.
     + Add a --debug flag to enable debug messages.
     + Deprecate $CONFIG{'gpg-sign'} and $CONFIG{'gpg-delsig'}.
+    + Send attachements and non RFC 2822 UIDs to *all* signed addresses, not
+      only those for which the UID is exported.  This is useful when the
+      signee has some already signed RFC 2822 UIDs and a freshly added
+      attribute, for instance.
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and

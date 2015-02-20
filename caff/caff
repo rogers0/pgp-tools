@@ -1479,6 +1479,10 @@ for my $keyid (@keyids_ok) {
 			$uid->{text} =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
 			# --with-colons always outputs UTF-8
 			$uid->{text} = Encode::decode_utf8($uid->{text});
+			$uid->{address} = $1 if $uid->{type} eq 'uid' and $uid->{text} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/;
+			# XXX This does not cover the full RFC 2822 specification:
+			# The local part may contain '>' in a quoted string.
+			# However as of 1.4.18/2.0.26, gpg doesn't allow that either.
 			push @{$KEYS{$keyid}->{uids}}, $uid;
 		}
 		elsif (!/^(?:rvk|tru):/) {
@@ -1745,7 +1749,6 @@ for my $keyid (@keyids_ok) {
 
 		if ($NOW - $uid->{last_signed_on} > $CONFIG{'export-sig-age'} and
 				!ask("Signature on $text is old.  Export?", 0, $params->{'export-old'}, $params->{'no-export-old'})) {
-			undef $uid->{last_signed_on}; # won't write, won't send
 			next;
 		}
 
@@ -1755,47 +1758,65 @@ for my $keyid (@keyids_ok) {
 
 		my $keyfile = "$keydir/$longkeyid.key.$uid->{serial}.".sanitize_uid($text).".asc";
 		open my $KEY, '>', $keyfile or myerror(1, "Cannot open $keyfile: $!");
+		debug "Writing armored key 0x$longkeyid to $keyfile";
 		print $KEY $uid->{key};
 		close $KEY;
 
 		if ($uid->{type} eq 'uat') {
-			my $attach = ask("UID $text is an attribute UID, attach it to every email?", 1);
-			push @attached, $uid if $attach;
-		} elsif ($uid->{'text'} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/) {
-			# XXX This does not cover the full RFC 2822 specification:
-			# The local part may contain '>' in a quoted string.
-			# However as of 1.4.18/2.0.26, gpg doesn't allow that either.
-			$uid->{'address'} = $1;
-		} else {
-			my $attach = ask("UID $text is no email address, attach it to every email?", 1);
-			push @attached, $uid if $attach;
+			if (ask("UID $text is an attribute UID, attach it to every email?", 1)) {
+				push @attached, $uid;
+				$uid->{export} = 1;
+			}
+		} elsif (!defined $uid->{address}) {
+			if (ask("UID $text is no email address, attach it to every email?", 1)) {
+				push @attached, $uid;
+				$uid->{export} = 1;
+			}
+		}
+		else {
+			$uid->{export} = 1;
 		}
 
 		info("$longkeyid $uid->{serial} $text done.");
 	}
 
-	notice("Key has no encryption capabilities, mail(s) will be sent/stored unencrypted") unless $can_encrypt;
-	my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
-	for my $uid (@UIDS) {
-		next unless $uid->{last_signed_on}; # wasn't signed by me
-		next unless defined $uid->{address};
+	@UIDS = grep {$_->{last_signed_on}} @UIDS; 				# ignore UIDs we didn't sign
+	delete $_->{key} foreach grep {!$_->{export}} @UIDS;	# delete non-exported keys
 
-		my $mail = create_mail($uid->{address}, $can_encrypt, $longkeyid, $uid, @attached);
-		if (defined $mail) {
-			my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
-			my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $text to '$uid->{address}'?",
-									   $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
-			send_message($mail) if $should_send_mail;
+	if (!grep {defined $_->{address}} @UIDS) {
+		mywarn "No signed RFC 2822 UID on $longkeyid; won't send other signed UID and attributes!"
+			if @attached;
+	}
+	elsif (grep {$_->{export}} @UIDS) {
+		notice "Key has no encryption capabilities, mail(s) will be sent/stored unencrypted" unless $can_encrypt;
+		my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 
-			my $keydir = "$KEYSBASE/$DATE_STRING";
-			my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($text);
-			open my $MAILFILE, '>', $mailfile or myerror(1, "Cannot open $mailfile: $!");
-			$mail->print($MAILFILE);
-			close $MAILFILE;
-		} else {
-			mywarn "Generating mail failed.";
-		};
-	};
+		for my $uid (@UIDS) {
+			next unless defined $uid->{address};
+			next unless $uid->{export} or @attached;
+			my @keys = @attached;
+			unshift @keys, $uid if exists $uid->{key};
+
+			my $mail = create_mail($uid->{address}, $can_encrypt, $longkeyid, @keys);
+			if (defined $mail) {
+				my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
+				my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $text to '$uid->{address}'?",
+										   $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
+				send_message($mail) if $should_send_mail;
+
+				my $keydir = "$KEYSBASE/$DATE_STRING";
+				my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($text);
+				open my $MAILFILE, '>', $mailfile or myerror(1, "Cannot open $mailfile: $!");
+				debug "Writing message to $mailfile";
+				$mail->print($MAILFILE);
+				close $MAILFILE;
+			} else {
+				mywarn "Generating mail failed.";
+			}
+		}
+	}
+
+	info "key $longkeyid done";
 };
 
 ###########################
