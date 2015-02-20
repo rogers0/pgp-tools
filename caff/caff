@@ -944,7 +944,7 @@ sub create_mail($$$@) {
 			Disposition => 'attachment',
 			Encoding    => "7bit",
 			Data        => "Version: 1\n");
-			
+
 		$message_entity->attach(
 			Type        => "application/octet-stream",
 			Filename    => 'msg.asc',
@@ -1075,7 +1075,7 @@ sub get_local_user_keys() {
 			mywarn "Local-user $user_key is not a valid keyid.";
 			next;
 		}
-		
+
 		$user_key =~ s/^0x//;
 		$user_key =~ y/ //d;
 		$user_key = uc $user_key;
@@ -1084,7 +1084,7 @@ sub get_local_user_keys() {
 			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used).";
 			next;
 		}
-		
+
 		push @local_user, $user_key;
 	}
 
@@ -1333,8 +1333,9 @@ if (-t \*STDIN) {
 for my $hashkey (qw{local-user no-download no-sign no-mail mail keys-from-gnupg}) {
 	$CONFIG{$hashkey} = $params->{$hashkey}  if defined $params->{$hashkey};
 };
+
 # If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
-if ( defined $CONFIG{'no-mail'} || 
+if ( defined $CONFIG{'no-mail'} ||
      ( defined $CONFIG{'mail'} && $CONFIG{'mail'}  eq 'no' ) ) {
 	$CONFIG{'mail'} = 'no';
 
