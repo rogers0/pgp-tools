@@ -403,7 +403,6 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 
 use strict;
 use IO::Handle;
-use English '-no_match_vars';
 use File::Copy qw{copy};
 use File::Path qw{make_path};
 use File::Temp;
@@ -569,12 +568,12 @@ sub check_executable($$) {
 	# Only check provided fnames with a slash in them.
 	return unless defined $fn;
 	if ($fn =~ m!/!) {
-		myerror(1, "$PROGRAM_NAME: $purpose executable '$fn' not found.") unless -x $fn;
+		myerror(1, "$0: $purpose executable '$fn' not found.") unless -x $fn;
 	} else {
 		for my $p (split(':', $ENV{PATH})) {
 			return if -x "$p/$fn";
 		};
-		myerror(1, "$PROGRAM_NAME: $purpose executable '$fn' not found on path.") unless -x $fn;
+		myerror(1, "$0: $purpose executable '$fn' not found on path.") unless -x $fn;
 	};
 };
 
@@ -590,12 +589,12 @@ sub load_config() {
 		exit(1);
 	}
 	unless (scalar eval `cat $config`) {
-		myerror(1, "Couldn't parse $config: $EVAL_ERROR") if $EVAL_ERROR;
+		myerror(1, "Couldn't parse $config: $@") if $@;
 	};
 
-	myerror(1, "$PROGRAM_NAME: $_ is not defined in $config.") for grep {!defined $CONFIG{$_}} qw/owner email keyid/;
-	myerror(1, "$PROGRAM_NAME: keyid is not an array ref in $config.") unless ref $CONFIG{'keyid'} eq 'ARRAY';
-	myerror(1, "$PROGRAM_NAME: key $_ is not specified as a long (16 digit) keyid or fingerprint in $config.") for
+	myerror(1, "$0: $_ is not defined in $config.") for grep {!defined $CONFIG{$_}} qw/owner email keyid/;
+	myerror(1, "$0: keyid is not an array ref in $config.") unless ref $CONFIG{'keyid'} eq 'ARRAY';
+	myerror(1, "$0: key $_ is not specified as a long (16 digit) keyid or fingerprint in $config.") for
 		grep !/^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/, @{$CONFIG{'keyid'}};
 
 	$CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
@@ -618,7 +617,7 @@ sub load_config() {
 	$CONFIG{'no-sign'} //= 0;
 	$CONFIG{'key-files'} //= [];
 	$CONFIG{'mailer-send'} //= [];
-	myerror(1, "$PROGRAM_NAME: mailer-send is not an array ref in $config.") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
+	myerror(1, "$0: mailer-send is not an array ref in $config.") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
 	$CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
 
 	unless (defined $CONFIG{'mail-template'}) {
@@ -632,11 +631,11 @@ sub load_config() {
 			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
 	}
 	$CONFIG{'gpg-sign-type'} //= '';
-	myerror(1, "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.")
+	myerror(1, "$0: $CONFIG{'gpg-sign-type'} is an invalid signature type.")
 		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
 	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
 	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
-	myerror(1, "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.")
+	myerror(1, "$0: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.")
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
 	$CONFIG{'show-photos'} //= 0;
 };
@@ -666,7 +665,7 @@ sub readwrite_gpg($$%) {
 	my ($first_line, undef) = split /\n/, $in;
 	debug("readwrite_gpg sends ".(defined $first_line ? $first_line : "<nothing>"));
 
-	local $INPUT_RECORD_SEPARATOR = undef;
+	local $/ = undef;
 	my $sout = IO::Select->new();
 	my $sin = IO::Select->new();
 	my $offset = 0;
@@ -807,13 +806,13 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 sub version($) {
 	my ($fd) = @_;
-	print $fd "caff $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
+	print $fd "$0 $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
 };
 
 sub usage($$) {
 	my ($fd, $exitcode) = @_;
 	version($fd);
-	print $fd "Usage: $PROGRAM_NAME [-eERS] [-m <yes|ask-yes|ask-no|no>] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+	print $fd "Usage: $0 [-eERS] [-m <yes|ask-yes|ask-no|no>] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
 	print $fd "Consult the manual page for more information.\n";
 	exit $exitcode;
 };
