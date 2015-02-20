@@ -838,8 +838,7 @@ sub export_keys($$@) {
 	if (wantarray) {
 		return ($pid, $handles->{stdout});
 	} else {
-		my $stdout = $handles->{stdout};
-		my $asciikey = do { local $/; <$stdout> };
+		my $asciikey = do { local $/; readline $handles->{stdout} };
 		done_gpg($pid, $handles);
 		return $asciikey;
 	}
@@ -876,9 +875,9 @@ sub create_mail($$$@) {
 			Type        => "application/pgp-keys",
 			Disposition => 'attachment',
 			Encoding    => "7bit",
-			Description => "PGP Key 0x$key_id, uid ".Encode::encode_utf8($key->{'text'}).' ('.$key->{'serial'}.'), signed by 0x'.$CONFIG{'keyid'}[0],
-			Data        => $key->{'key'},
-			Filename    => "0x$key_id.".$key->{'serial'}.".signed-by-0x".$CONFIG{'keyid'}[0].".asc");
+			Description => "PGP Key 0x$key_id, uid ".Encode::encode_utf8($key->{text})." ($key->{serial}), signed by 0x$CONFIG{keyid}[0]",
+			Data        => $key->{key},
+			Filename    => "0x$key_id.$key->{serial}.signed-by-0x$CONFIG{keyid}[0].asc");
 	};
 
 	if ($can_encrypt) {
@@ -926,11 +925,12 @@ sub create_mail($$$@) {
 			Data        => $message);
 	};
 
-	$message_entity->head->add("From", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
+	my $from = Encode::encode('MIME-Q', $CONFIG{owner})." <$CONFIG{email}>";
+	$message_entity->head->add("From", $from);
 	$message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
 	$message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/gr));
 	$message_entity->head->add("To", email_to_ascii($address));
-	$message_entity->head->add("Sender", Encode::encode('MIME-Q', $CONFIG{'owner'}).' <'.$CONFIG{'email'}.'>');
+	$message_entity->head->add("Sender", $from);
 	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
 	$message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
 	$message_entity->head->add("User-Agent", $USER_AGENT);
@@ -1091,8 +1091,7 @@ sub import_keys_from_gnupghome($$$@) {
 	my $iPid = $gpg->import_keys( handles => $handles );
 
 	# inspect the $status FD as data gets out.
-	my $status = $handles->{status};
-	while (<$status>) {
+	while (readline $handles->{status}) {
 		if (defined wantarray and /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $fpr = $1;
 			my @keys = grep { $fpr =~ /$_$/ } @$keyids;
@@ -1130,8 +1129,7 @@ sub import_key_files($$) {
 	my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
 
 	my $err = 1;
-	my $status = $handles->{status};
-	while (<$status>) {
+	while (readline $handles->{status}) {
 		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			info("Key $1 imported from $keyfile.");
 			$err = 0;
@@ -1395,8 +1393,7 @@ if ($CONFIG{'no-download'}) {
 # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
 	my %local_keyids = map { $_ => 1 } @KEYIDS;
 	my $had_v3_keys = 0;
-	my $status = $handles->{status};
-	while (<$status>) {
+	while (readline $handles->{status}) {
 		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $imported_key = $1;
 			my $whole_fpr = $imported_key;
@@ -1451,8 +1448,7 @@ for my $keyid (@keyids_ok) {
 	# process the keys one by one so we can detect collisions
 	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
 
-	my $stdout = $handles->{stdout};
-	while (<$stdout>) {
+	while (readline $handles->{stdout}) {
 		if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
 			if (exists $KEYS{$keyid}) {
 				mywarn ("More than one key matched $keyid.  Try to specify the long keyid or fingerprint.");
@@ -1733,6 +1729,7 @@ for my $keyid (@keyids_ok) {
 	my @attached;
 	for my $uid (@UIDS) {
 		my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
+
 		trace("UID: $text\n");
 		if ($uid->{validity} =~ /[eir]/) {
 			my $reason = $uid->{validity} =~ /e/ ? 'expired' :
@@ -1750,7 +1747,7 @@ for my $keyid (@keyids_ok) {
 				!ask("Signature on $text is old.  Export?", 0, $params->{'export-old'}, $params->{'no-export-old'})) {
 			undef $uid->{last_signed_on}; # won't write, won't send
 			next;
-		};
+		}
 
 		# save the armored key
 		my $keydir = "$KEYSBASE/$DATE_STRING";
@@ -1772,10 +1769,10 @@ for my $keyid (@keyids_ok) {
 		} else {
 			my $attach = ask("UID $text is no email address, attach it to every email?", 1);
 			push @attached, $uid if $attach;
-		};
+		}
 
 		info("$longkeyid $uid->{serial} $text done.");
-	};
+	}
 
 	notice("Key has no encryption capabilities, mail(s) will be sent/stored unencrypted") unless $can_encrypt;
 	my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
