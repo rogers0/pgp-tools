@@ -607,10 +607,7 @@ sub load_config() {
 	$CONFIG{'mailer-send'} //= [];
 	myerror(1, "$0: mailer-send is not an array ref in $config.") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
 	$CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
-
-	unless (defined $CONFIG{'mail-template'}) {
-		$CONFIG{'mail-template'} .= $_ foreach <DATA>;
-	}
+	$CONFIG{'mail-template'} //= do { local $/; <DATA> };
 	$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ]
 		if defined $CONFIG{'also-encrypt-to'} and !ref $CONFIG{'also-encrypt-to'};
 	if (defined $LOCALE) {
