@@ -495,13 +495,13 @@ sub generate_config() {
 
 		@keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
 		unless (scalar @keys) {
-			info("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"");
+			notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"");
 			@keys = qw{0123456789abcdef 89abcdef76543210};
 			$Ckeys = '#';
 		}
 		($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
 		unless (defined $email) {
-			info("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"");
+			notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"");
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
 			$Cemail = '#';
 		}
@@ -572,7 +572,7 @@ sub load_config() {
 	$GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
 	foreach ($KEYSBASE, $GNUPGHOME) {
 		next if -d $_;
-		info("Creating $_");
+		debug("Creating $_");
 		mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");
 	}
 
@@ -1095,7 +1095,7 @@ sub import_keys_from_gnupghome($$$@) {
 		if (defined wantarray and /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $fpr = $1;
 			my @keys = grep { $fpr =~ /$_$/ } @$keyids;
-			mywarn ("Multiple (".($#keys+1).") keys matched $fpr in ".($src_gpghome // "your normal GnuPGHOME"))
+			mywarn("Multiple (".($#keys+1).") keys matched $fpr in ".($src_gpghome // "your normal GnuPGHOME"))
 				if $#keys > 0;
 			delete @keyids{@keys};
 		}
@@ -1225,7 +1225,7 @@ if (-t \*STDIN) {
 	my $got_input; # detect xargs, /dev/null, ...
 	while (<STDIN>) {
 		unless ($got_input) {
-			info("Reading gpgparticipants formatted input on STDIN");
+			notice("Reading gpgparticipants formatted input on STDIN");
 			$got_input = 1;
 		}
 
@@ -1242,7 +1242,7 @@ if (-t \*STDIN) {
 				}
 			}
 			myerror(1, "$md checksum wasn't marked as verified!") unless lc $r eq 'x';
-			info "Found $md checksum (marked as verified, assumed good)";
+			notice "Found $md checksum (marked as verified, assumed good)";
 			push @checksums, uc $md;
 		}
 		elsif (/^(?:-+|_+)$/) {
@@ -1295,7 +1295,7 @@ push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'ke
 
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
 	if ($keyid =~ /^(\p{AHex}{32}|(?:\p{AHex}{2} ){8}(?: \p{AHex}{2}){8})$/) {
-		info("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
+		mywarn("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
 		next;
 	}
 	elsif ($keyid !~ /^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
@@ -1379,7 +1379,7 @@ if ($CONFIG{'no-download'}) {
 		}
 	}
 	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
-	info ("Fetching keys from $CONFIG{keyserver}, this may take a while...");
+	notice("Fetching keys from $CONFIG{keyserver}, this may take a while...");
 
 	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
 	# logger: requesting key ... from hkp
@@ -1404,7 +1404,7 @@ if ($CONFIG{'no-download'}) {
 				$speced_key = $spec if $local_keyids{$spec};
 			};
 			unless ($speced_key) {
-			    notice ("Imported unexpected key; got: $imported_key\nAre you trying to work on a subkey?");
+			    mywarn("Imported unexpected key; got: $imported_key\nAre you trying to work on a subkey?");
 			    next;
 			};
 			debug ("Imported $imported_key for $speced_key");
@@ -1412,16 +1412,16 @@ if ($CONFIG{'no-download'}) {
 			unshift @keyids_ok, $imported_key;
 		} elsif (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
 			my $imported_key = $1;
-			notice("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
+			mywarn("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
 			$had_v3_keys = 1;
 		} elsif (!/^\[GNUPG:\] (?:NODATA \d|IMPORT_RES .+|IMPORTED .+|KEYEXPIRED \d+|SIGEXPIRED(?: deprecated-use-keyexpired-instead)?)$/) {
-			notice ("Got unknown reply from gpg: ".$_);
+			mywarn("Got unknown reply from gpg: ".$_);
 		}
 	};
 	done_gpg($pid, $handles);
 
 	if (scalar %local_keyids) {
-		notice ("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
+		mywarn("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
 		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
 		if (scalar keys %local_keyids == 1) {
 			mywarn("Assuming ". (join ' ', keys %local_keyids)." is a fine keyid");
@@ -1451,10 +1451,10 @@ for my $keyid (@keyids_ok) {
 	while (readline $handles->{stdout}) {
 		if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
 			if (exists $KEYS{$keyid}) {
-				mywarn ("More than one key matched $keyid; try to specify the long keyid or fingerprint");
+				mywarn("More than one key matched $keyid; try to specify the long keyid or fingerprint");
 				last;
 			} elsif ($1 =~ /[eir]/ or $3 =~ /D/ ) {
-				mywarn ("Ignoring unusable key $keyid");
+				mywarn("Ignoring unusable key $keyid");
 				last;
 			}
 			$KEYS{$keyid} = { longkeyid => $2, flags => $3, uids => [], subkeys => [] };
@@ -1463,7 +1463,7 @@ for my $keyid (@keyids_ok) {
 			$KEYS{$keyid}->{fpr} = $1;
 		}
 		elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{32})(?::.*)?$/) {
-			info("Ignoring v3 key $keyid.  v3 keys are obsolete.");
+			mywarn("Ignoring v3 key $keyid.  v3 keys are obsolete.");
 			delete $KEYS{$keyid};
 			last;
 		}
@@ -1487,13 +1487,13 @@ for my $keyid (@keyids_ok) {
 		}
 		elsif (!/^(?:rvk|tru):/) {
 			chomp;
-			notice ("Got unknown reply from gpg: ".$_);
+			mywarn("Got unknown reply from gpg: ".$_);
 		}
 	}
 	done_gpg($pid, $handles);
 
 	unless (defined $KEYS{$keyid}) {
-		mywarn ("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME)");
+		mywarn("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME)");
 		next;
 	}
 }
@@ -1512,7 +1512,7 @@ for my $keyid (@keyids_ok) {
 	# sign keys
 	###########
 	unless ($CONFIG{'no-sign'}) {
-		info("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
+		notice("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
 		foreach my $local_user (@LOCAL_USER) {
 			my @command = ($CONFIG{'gpg'});
 			push @command, '--local-user', $local_user;
@@ -1698,7 +1698,7 @@ for my $keyid (@keyids_ok) {
 					my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
 					next unless @signeduids_with_level;
 
-					info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid");
+					notice("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid");
 					readwrite_gpg($handles, command => "uid 0",          status => $KEYEDIT_PROMPT);
 					readwrite_gpg($handles, command => "uid $_->{hash}", status => $KEYEDIT_PROMPT) for @signeduids_with_level;
 					my %output = readwrite_gpg($handles, command => "lsign", statusmatches => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/);
