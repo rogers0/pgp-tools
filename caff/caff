@@ -1071,12 +1071,13 @@ sub get_local_user_keys() {
 # @param import_options an array of import-options, see gpg(1)
 #
 # @ In list context, return the list of keyids that couldn't be
-# imported. In scalar context, return 0 if all keys were imported, and 1
-# otherwise.
+# imported.  Otherwise, croak if any key couldn't be imported.
 #
 sub import_keys_from_gnupghome($$$@) {
 	my ($keyids, $src_gpghome, $dst_gpghome, @import_options) = @_;
 	my %keyids = map {$_ => 1} @$keyids;
+	my $src = $src_gpghome // "your normal GnuPGHOME";
+	my $dst = $dst_gpghome // "your normal GnuPGHOME";
 
 	my @extra_args;
 	push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/ and !grep /import-local-sigs$/, @import_options;
@@ -1084,8 +1085,7 @@ sub import_keys_from_gnupghome($$$@) {
 	push @extra_args, '--import-options', join (',', @import_options) if @import_options;
 
 	# export the (non-armored) keys to $pipe
-	trace("Exporting key(s) ".(join ',', @$keyids)." from ".
-			($src_gpghome // "your normal GnuPGHOME")." to ".($dst_gpghome // "your normal GnuPGHOME").".");
+	debug("Exporting key(s) ".(join ',', @$keyids)." from $src to $dst");
 	my @export_options = ('export-local-sigs') if grep {$_ eq 'import-local-sigs'} @import_options;
 	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
@@ -1095,24 +1095,18 @@ sub import_keys_from_gnupghome($$$@) {
 
 	# inspect the $status FD as data gets out.
 	while (readline $handles->{status}) {
-		if (defined wantarray and /^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
 			my $fpr = $1;
 			my @keys = grep { $fpr =~ /$_$/ } @$keyids;
-			mywarn("Multiple (".($#keys+1).") keys matched $fpr in ".($src_gpghome // "your normal GnuPGHOME"))
-				if $#keys > 0;
+			mywarn("Multiple (".($#keys+1).") keys matched $fpr in $src") if $#keys > 0;
 			delete @keyids{@keys};
 		}
 	}
 	done_gpg($iPid, $handles);	# import done
 	done_gpg($ePid);			# export done
 
-	if (wantarray) {
-		return (keys %keyids); # failed to import
-	} elsif (defined wantarray) {
-		# scalar context
-		return %keyids ? 1 : 0;
-	}
-	# void context
+	return (keys %keyids) if wantarray; # list context
+	myerror(1, "Couldn't import key(s) ".(join ',', keys %keyids)." from $src") if %keyids;
 }
 
 ##
@@ -1162,11 +1156,7 @@ sub import_keys_to_sign() {
 	};
 
 	# Import user specified key files
-	foreach my $keyfile (@{$CONFIG{'key-files'}}) {
-		import_key_files($keyfile, $GNUPGHOME);
-	}
-
-	return 0;
+	import_key_files($_, $GNUPGHOME) foreach @{$CONFIG{'key-files'}};
 }
 
 ##
@@ -1358,12 +1348,10 @@ elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'}
 	}
 }
 
-#################
-# import own keys
-#################
-import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
-	myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.");
-
+##################################
+# import own keys and keys to sign
+##################################
+import_keys_from_gnupghome($CONFIG{'keyid'}, undef, $GNUPGHOME);
 import_keys_to_sign();
 
 #############################
@@ -1541,10 +1529,8 @@ for my $keyid (@keyids_ok) {
 	my $keydir = File::Temp->newdir( "caff-$keyid-XXXXX", TMPDIR => 1 );
 	# we can't use only one import here because the cleaning is done as the
 	# keys come and our keys might not be imported yet
-	import_keys_from_gnupghome ($CONFIG{'keyid'}, $GNUPGHOME, $keydir, 'import-minimal', 'import-local-sigs') and
-		myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'import-minimal')");
-	import_keys_from_gnupghome ([$keyid], $GNUPGHOME, $keydir, 'import-clean', 'import-local-sigs') and
-		myerror(1, "$keyid couldn't be imported from caff's GnuPGHOME (with 'import-clean')");
+	import_keys_from_gnupghome($CONFIG{'keyid'}, $GNUPGHOME, $keydir, 'import-minimal', 'import-local-sigs');
+	import_keys_from_gnupghome([$keyid],		 $GNUPGHOME, $keydir, 'import-clean',	'import-local-sigs');
 
 	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
 	my @uids = @{$KEYS{$keyid}->{uids}};
