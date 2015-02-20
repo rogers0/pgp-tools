@@ -20,6 +20,10 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       attribute, for instance.
     + Use Term::ANSIColor to produce colored output.
     + Prune keys with import-{clean,minimal} not export-{clean,minimal}.
+    + Fix $CONFIG{'also-lsign-in-gnupghome'}: local signatures are directly
+      imported from caff's GNUPGHOME to our own; in auto-lsign'ing mode, lsign
+      UID for which we have an exportable signature (preserving the signer and
+      cert level).
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and
