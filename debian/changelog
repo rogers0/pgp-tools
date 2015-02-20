@@ -7,9 +7,6 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       sockets to avoid spawning new agents in caff's GNUPGHOME.  This require
       an extra call to gpg(1) at the begining to determine the version.
       (Closes: #771857)
-    + Don't redirect gpg's STDERR when listing the keys, as it makes gpg
-      croak on OSX when GPG_TTY is not set.  Patch from Ewen McNeill.
-      (Closes: #775702)
     + Default $CONFIG{'local-user'} to $CONFIG{'keyid'} rather than importing
       the public part of *all* keys found in the secret keyring.  (When not
       pruning the good keys with -u, gpg(1) croaks with exit status 2 when
@@ -25,6 +22,8 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
     gpgdir, gpgparticipants, gpgsigs, keyart, keylookup:
     + Add the possibility to choose the gpg binary via the "GNUPGBIN"
       environment variable.  (Default: "gpg".)
+    + Never redirect STDERR.  Send the logger output to /dev/null instead
+      (unless in debug mode).  (Closes: #775702)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Sat, 03 Jan 2015 11:36:26 +0100
 

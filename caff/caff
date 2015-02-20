@@ -465,7 +465,9 @@ sub mysystem(@) {
 	myerror($?, "$_[0] exited with value ".($? >> 8)) if $?;
 }
 
-open my $NULL, '+<', '/dev/null';
+
+open NULL, '+<', '/dev/null';
+my $NULL = fileno NULL;
 sub generate_config() {
 	notice("Error: \$LOGNAME is not set.") unless defined $ENV{'LOGNAME'};
 	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
@@ -480,13 +482,9 @@ sub generate_config() {
 	if (defined $gecos) {
 		$gecos =~ s/,.*//;
 
-		my $gpg = GnuPG::Interface->new();
-		$gpg->call( $ENV{GNUPGBIN} ) if defined $ENV{GNUPGBIN};
-		$gpg->options->hash_init(
-			'meta_interactive' => 0,
-			'always_trust' => 1,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fixed-list-mode } ] );
-		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
+		$CONFIG{'gpg'} = $ENV{GNUPGBIN} // 'gpg';
+		my $gpg = mkGnuPG( extra_args => ['--with-colons'] );
+		my $handles = mkGnuPG_fds ( stdout => undef, status => undef );
 		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
 		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles);
 		waitpid $pid, 0;
@@ -608,18 +606,50 @@ sub load_config() {
 	$CONFIG{'show-photos'} //= 0;
 };
 
+# Create a new GnuPG::Interface object with common options
+sub mkGnuPG(%) {
+	my %h = @_;
+	my $gpg = GnuPG::Interface::->new();
+	$gpg->call( $CONFIG{'gpg'} );
+
+	$h{meta_interactive} //= 0;
+	$h{always_trust} //= 1;
+	$h{extra_args} //= [];
+
+	push @{$h{extra_args}}, '--no-auto-check-trustdb';
+	push @{$h{extra_args}}, '--fixed-list-mode' if $GNUPG_VERSION < 2.0;
+	push @{$h{extra_args}}, '--no-autostart'    if $GNUPG_VERSION >= 2.1; # never autostart
+
+	$gpg->options->hash_init(%h);
+	debug(join (' ', $gpg->call(), $gpg->options->get_args(), "..."));
+	return $gpg;
+}
+
+
 # Create a GnuPG::Handles object.  This function takes a hash where keys
 # are handle names, and values are either IO::Handle objects, in which
 # case the existing handle is used, or undefined, in which case a new
 # IO::Handle is created.
-sub make_gpg_fds(%) {
-	my %fds = @_;
+sub mkGnuPG_fds(%) {
+	my %fd = @_;
+	my @direct;
 
-	my @notnewfds = grep {defined $fds{$_}} keys %fds;
-	$fds{$_} = IO::Handle::->new() foreach grep {!defined $fds{$_}} keys %fds;
+	foreach (keys %fd) {
+		push @direct, $_ if defined $fd{$_} and $fd{$_} !~ /^[<>]&/;
+		$fd{$_} //= IO::Handle::->new();
+	}
 
-	my $handles = GnuPG::Handles::->new( %fds );
-	$handles->options($_)->{direct} = 1 foreach @notnewfds;
+	# Redirect the STDIN and STDOUT to /dev/null unless explicitely
+	# redirected.  Also redirect logger to /dev/null in non-debug mode,
+	# but NEVER redirect STDERR!
+	$fd{stdin}  = "<&=$NULL" unless exists $fd{stdin};
+	$fd{stdout} = ">&=$NULL" unless exists $fd{stdout};
+	$fd{logger} = ">&=$NULL" unless exists $fd{logger} or $params->{debug};
+
+	my $handles = GnuPG::Handles::->new(%fd);
+	$handles->options($_)->{direct} = 1 foreach @direct;
+	debug(join (', ', map {"$_: " . ($handles->options($_)->{direct} ? $fd{$_}->fileno : $fd{$_})} keys %fd));
+
 	return $handles;
 };
 
@@ -798,21 +828,14 @@ sub export_keys($$@) {
 	my ($gnupghome, $keyids, @export_options) = @_;
 	myerror(1, "Nothing to export.") unless defined $keyids and @$keyids;
 
-	my %h = ( 'meta_interactive' => 0
-			, 'always_trust' => 1
-			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ]
-			, 'armor' => wantarray ? 0 : 1 ); # don't armor when piping since it's faster
-	$h{'homedir'} = $gnupghome if defined $gnupghome;
-
+	my @extra_args;
 	push @export_options, 'export-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/;
-	push @{$h{'extra_args'}}, '--min-cert-level=1' if grep { $_ eq 'export-clean' } @export_options;
-	push @{$h{'extra_args'}}, '--export-options', join (',', @export_options) if @export_options;
+	push @extra_args, '--min-cert-level=1' if grep { $_ eq 'export-clean' } @export_options;
+	push @extra_args, '--export-options', join (',', @export_options) if @export_options;
 
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init( %h );
-
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
+	# don't armor when piping since it's faster
+	my $gpg = mkGnuPG( homedir => $gnupghome, armor => (wantarray ? 0 : 1), extra_args => \@extra_args );
+	my $handles = mkGnuPG_fds( stdout => undef );
 	my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
 
 	if (wantarray) {
@@ -864,20 +887,12 @@ sub create_mail($$$@) {
 
 	if ($can_encrypt) {
 		my $message = $message_entity->stringify();
-		my $gpg = GnuPG::Interface->new();
-		$gpg->call( $CONFIG{'gpg'} );
-		$gpg->options->hash_init( 'homedir' => $GNUPGHOME,
-			'meta_interactive' => 0,
-			'always_trust' => 1,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --textmode } ],
-			'armor' => 1 );
-		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
-		$gpg->options->push_recipients( $key_id );
-		if (defined $CONFIG{'also-encrypt-to'}) {
-			$gpg->options->push_recipients($_) foreach @{$CONFIG{'also-encrypt-to'}};
-		}
+		my $gpg = mkGnuPG( homedir => $GNUPGHOME, armor => 1, textmode => 1 );
+		$gpg->options->push_recipients($key_id);
+		$gpg->options->push_recipients(@{$CONFIG{'also-encrypt-to'}}) if defined $CONFIG{'also-encrypt-to'};
+		my $handles = mkGnuPG_fds( stdin => undef, stdout => undef, status => undef );
 		my $pid = $gpg->encrypt(handles => $handles);
-		my ($stdout, $stderr, $status) = readwrite_gpg($message, $handles);
+		my ($stdout, $status) = readwrite_gpg($message, $handles);
 		waitpid $pid, 0;
 		if ($stdout eq '') {
 			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m) and
@@ -1077,19 +1092,9 @@ sub import_keys_from_gnupghome($$$@) {
 			($src_gpghome // "your normal GnuPGHOME")." to ".($dst_gpghome // "your normal GnuPGHOME").".");
 	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
-	my %h = ( 'meta_interactive' => 0
-			, 'quiet' => 1
-			, 'always_trust' => 1
-			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ] );
-	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
-	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
-
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init( %h );
-
-	# import keys from $pipe
-	my $handles = make_gpg_fds( stdin => $pipe, stdout => $NULL, stderr => \*STDERR, status => undef );
+	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1 );
+	$gpg->options->push_extra_args(qw/--import-options import-local-sigs/) if $CONFIG{'gpg-sign-type'} =~ /l/;
+	my $handles = mkGnuPG_fds( stdin  => $pipe, status => undef ); # import keys from $pipe
 	my $iPid = $gpg->import_keys( handles => $handles );
 
 	# inspect the $status FD as data gets out.
@@ -1127,19 +1132,9 @@ sub import_keys_from_gnupghome($$$@) {
 #
 sub import_key_files($$) {
 	my ($keyfile, $dst_gpghome) = @_;
-
-	my %h = ( 'meta_interactive' => 0
-			, 'quiet' => 1
-			, 'always_trust' => 1
-			, 'extra_args' => [ qw{ --no-auto-check-trustdb } ] );
-	$h{homedir} = $dst_gpghome if defined $dst_gpghome;
-	push @{$h{'extra_args'}}, qw/--import-options import-local-sigs/ if $CONFIG{'gpg-sign-type'} =~ /l/;
-
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init( %h );
-
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => $NULL, stderr => \*STDERR, status => undef );
+	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1 );
+	$gpg->options->push_extra_args(qw/--import-options import-local-sigs/) if $CONFIG{'gpg-sign-type'} =~ /l/;
+	my $handles = mkGnuPG_fds( status => undef );
 	my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
 
 	my $err = 1;
@@ -1397,17 +1392,10 @@ if ($CONFIG{'no-download'}) {
 	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
 	info ("Fetching keys from $CONFIG{keyserver}, this may take a while...");
 
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $GNUPGHOME,
-		'meta_interactive' => 0,
-		'always_trust' => 1,
-		'extra_args' => [ qw{ --no-auto-check-trustdb }, '--keyserver='.$CONFIG{'keyserver'} ] );
-
+	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
 	# logger: requesting key ... from hkp
 	# stdout: gpgkeys: key ... not found on keyserver
-	my $handles = make_gpg_fds( (map {$_ => $NULL} qw/stdin stdout logger/), stderr => \*STDERR, status => undef );
+	my $handles = mkGnuPG_fds( status => undef );
 	my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
 
 # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
@@ -1467,15 +1455,9 @@ my %KEYS;
 for my $keyid (@keyids_ok) {
 	# get key listing (and ensure there is no collision)
 	####################################################
-	my $gpg = GnuPG::Interface->new();
-	$gpg->call( $CONFIG{'gpg'} );
-	$gpg->options->hash_init(
-		'homedir' => $GNUPGHOME,
-		'meta_interactive' => 0,
-		'always_trust' => 1,
-		'extra_args' => [ qw{ --no-auto-check-trustdb --fingerprint --with-colons --fixed-list-mode } ] );
+	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--with-fingerprint', '--with-colons'] );
+	my $handles = mkGnuPG_fds( stdout => undef );
 
-	my $handles = make_gpg_fds( stdin => $NULL, stdout => undef, stderr => \*STDERR );
 	# process the keys one by one so we can detect collisions
 	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
 
@@ -1593,14 +1575,8 @@ for my $keyid (@keyids_ok) {
 
 		# prune it
 		##########
-		my $gpg = GnuPG::Interface->new();
-		$gpg->call( $CONFIG{'gpg'} );
-		$gpg->options->hash_init(
-			'homedir' => $uiddir,
-			'command_fd' => 0,
-			'always_trust' => 1,
-			'extra_args' => [ qw{ --no-auto-check-trustdb --with-colons --fast-list-mode --fixed-list-mode --no-tty } ] );
-		my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
+		my $gpg = mkGnuPG( homedir => $uiddir, extra_args => ['--with-colons'] );
+		my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
 		my $pid = $gpg->wrap_call(
 			commands     => [ '--edit-key' ],
 			command_args => [ $keyid ],
@@ -1718,17 +1694,10 @@ for my $keyid (@keyids_ok) {
 											 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
 				}
 
-				my $gpg = GnuPG::Interface->new();
-				$gpg->call( $CONFIG{'gpg'} );
-				$gpg->options->hash_init(
-					'command_fd' => 0,
-					'always_trust' => 1,
-					'extra_args' => [ '--local-user', $u
-									, '--ask-cert-level'
-									# we know there is a working agent
-									, '--use-agent'
-									, qw{ --no-auto-check-trustdb --no-tty } ] );
-				my $handles = make_gpg_fds( map {$_ => undef} qw/stdin stdout stderr status/ );
+				my $gpg = mkGnuPG( extra_args => ['--local-user' => $u, '--ask-cert-level'] );
+				$gpg->options->push_extra_args('--secret-keyring', $CONFIG{'secret-keyring'}) if $GNUPG_VERSION < 2.1;
+				$gpg->options->push_extra_args('--use-agent') if $GNUPG_VERSION < 2.0; # we know there is a working agent
+				my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
 				my $pid = $gpg->wrap_call(
 					commands     => [ '--edit-key' ],
 					command_args => [ $keyid ],
