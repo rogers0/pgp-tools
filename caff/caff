@@ -404,6 +404,7 @@ use IO::Select;
 use Getopt::Long;
 use GnuPG::Interface;
 use POSIX qw{strftime setlocale};
+use Term::ANSIColor qw{colored};
 
 my %CONFIG;
 my $REVISION = '$Rev$';
@@ -431,21 +432,22 @@ my $GNUPGHOME;
 #
 sub myerror($$) {
 	my ($exitcode, $line) = @_;
-	print STDERR "[ERROR] $line\n";
+	print STDERR colored("[ERROR] $line", 'bold bright_red'), "\n";
 	exit $exitcode;
 };
 
 sub mywarn($) {
 	my ($line) = @_;
-	print STDERR "[WARN] $line\n";
+	print STDERR colored("[WARN] $line", 'bright_red'), "\n";
 };
-sub notice($) {
-	my ($line) = @_;
-	print STDERR "[NOTICE] $line\n";
+sub notice($;$) {
+	my ($line,$color) = @_;
+	$color = !defined $color ? 'bold' : $color ? 'bold green' : 'bold yellow';
+	print STDERR colored("[NOTICE] $line", $color), "\n";
 };
-sub info($) {
-	my ($line) = @_;
-	print STDERR "[INFO] $line\n";
+sub info($$) {
+	my ($line,$color) = @_;
+	print STDERR colored("[INFO] $line", $color ? 'green' : 'yellow'), "\n";
 };
 sub debug($) {
 	my ($line) = @_;
@@ -469,7 +471,7 @@ sub mysystem(@) {
 open NULL, '+<', '/dev/null';
 my $NULL = fileno NULL;
 sub generate_config() {
-	notice("Error: \$LOGNAME is not set") unless defined $ENV{'LOGNAME'};
+	notice("Error: \$LOGNAME is not set", 0) unless defined $ENV{'LOGNAME'};
 	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
 	my $email;
 	my @keys;
@@ -495,13 +497,13 @@ sub generate_config() {
 
 		@keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
 		unless (scalar @keys) {
-			notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"");
+			notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"", 0);
 			@keys = qw{0123456789abcdef 89abcdef76543210};
 			$Ckeys = '#';
 		}
 		($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
 		unless (defined $email) {
-			notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"");
+			notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
 			$Cemail = '#';
 		}
@@ -1131,7 +1133,7 @@ sub import_key_files($$) {
 	my $err = 1;
 	while (readline $handles->{status}) {
 		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
-			info("Key $1 imported from $keyfile");
+			info("Key $1 imported from $keyfile", 1);
 			$err = 0;
 		}
 	}
@@ -1153,7 +1155,7 @@ sub import_keys_to_sign() {
 	if ($CONFIG{'keys-from-gnupg'}) {
 		my @failed = import_keys_from_gnupghome(\@KEYIDS, undef, $GNUPGHOME);
 		foreach my $keyid (@KEYIDS) {
-			info("Key $keyid imported from your normal GnuPGHOME")
+			info("Key $keyid imported from your normal GnuPGHOME", 1)
 				unless grep { $keyid eq $_ } @failed;
 		}
 	};
@@ -1257,10 +1259,10 @@ if (-t \*STDIN) {
 		elsif (/^\s+Key fingerprint = ([A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
 			my $fpr = ($1 =~ y/ //dr);
 			if ($goodblock) {
-				info("Adding fingerprint $fpr");
+				info("Adding fingerprint $fpr", 1);
 				push @KEYIDS, $fpr;
 			} else {
-				info("Ignoring fingerprint $fpr");
+				info("Ignoring fingerprint $fpr", 0);
 			}
 		}
 	}
@@ -1499,7 +1501,7 @@ for my $keyid (@keyids_ok) {
 }
 
 unless (keys %KEYS) {
-	notice ("No keys to sign found");
+	notice("No keys to sign found", 0);
 	exit 0;
 }
 
@@ -1698,7 +1700,7 @@ for my $keyid (@keyids_ok) {
 					my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
 					next unless @signeduids_with_level;
 
-					notice("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid");
+					notice("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid", 1);
 					readwrite_gpg($handles, command => "uid 0",          status => $KEYEDIT_PROMPT);
 					readwrite_gpg($handles, command => "uid $_->{hash}", status => $KEYEDIT_PROMPT) for @signeduids_with_level;
 					my %output = readwrite_gpg($handles, command => "lsign", statusmatches => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/);
@@ -1724,7 +1726,7 @@ for my $keyid (@keyids_ok) {
 	my @UIDS = @{$KEYS{$keyid}->{uids}};
 
 	unless (grep {$_->{last_signed_on}} @UIDS) {
-		info("Key $longkeyid has no signed uids, skipping");
+		info("Key 0x$longkeyid has no signed uids, skipping", 0);
 		next;
 	}
 
@@ -1737,11 +1739,11 @@ for my $keyid (@keyids_ok) {
 			my $reason = $uid->{validity} =~ /e/ ? 'expired' :
 						 $uid->{validity} =~ /i/ ? 'invalid' :
 						 $uid->{validity} =~ /r/ ? 'revoked' : undef;
-			info("Key $longkeyid ".(uc $uid->{type})." $uid->{serial} $text is $reason, skipping");
+			info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is $reason, skipping", 0);
 			next;
 		}
 		unless ($uid->{last_signed_on}) {
-			info("Key $longkeyid ".(uc $uid->{type})." $uid->{serial} $text is not signed by me, skipping");
+			info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is not signed by me, skipping", 0);
 			next;
 		}
 
@@ -1775,7 +1777,7 @@ for my $keyid (@keyids_ok) {
 			$uid->{export} = 1;
 		}
 
-		info("Key $longkeyid ".(uc $uid->{type})." $uid->{serial} $text done");
+		info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text done", 1);
 	}
 
 	@UIDS = grep {$_->{last_signed_on}} @UIDS; 				# ignore UIDs we didn't sign
@@ -1786,7 +1788,7 @@ for my $keyid (@keyids_ok) {
 			if @attached;
 	}
 	elsif (grep {$_->{export}} @UIDS) {
-		notice "Key has no encryption capabilities, mail(s) will be sent/stored unencrypted" unless $can_encrypt;
+		notice("Key 0x$longkeyid has no encryption capabilities, mail(s) will be sent/stored unencrypted", 0) unless $can_encrypt;
 		my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 
 		for my $uid (@UIDS) {
@@ -1814,7 +1816,7 @@ for my $keyid (@keyids_ok) {
 		}
 	}
 
-	info "Key $longkeyid done";
+	info("Key 0x$longkeyid done", 1);
 };
 
 ###########################

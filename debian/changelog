@@ -18,6 +18,7 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       only those for which the UID is exported.  This is useful when the
       signee has some already signed RFC 2822 UIDs and a freshly added
       attribute, for instance.
+    + Use Term::ANSIColor to produce colored output.
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and
