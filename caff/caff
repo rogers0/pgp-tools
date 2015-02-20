@@ -505,7 +505,7 @@ sub generate_config() {
 		waitpid $pid, 0;
 
 		if ($stdout eq '') {
-			warn ("No data from gpg for list-key\n"); # There should be at least 'tru:' everywhere.
+			mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
 		};
 
 		@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
@@ -569,12 +569,12 @@ sub check_executable($$) {
 	# Only check provided fnames with a slash in them.
 	return unless defined $fn;
 	if ($fn =~ m!/!) {
-		die ("$PROGRAM_NAME: $purpose executable '$fn' not found.\n") unless -x $fn;
+		myerror(1, "$PROGRAM_NAME: $purpose executable '$fn' not found.") unless -x $fn;
 	} else {
 		for my $p (split(':', $ENV{PATH})) {
 			return if -x "$p/$fn";
 		};
-		die ("$PROGRAM_NAME: $purpose executable '$fn' not found on path.\n") unless -x $fn;
+		myerror(1, "$PROGRAM_NAME: $purpose executable '$fn' not found on path.") unless -x $fn;
 	};
 };
 
@@ -584,14 +584,19 @@ sub load_config() {
 		print "No configfile $config present, I will use this template:\n";
 		my $template = generate_config();
 		print "$template\nPlease edit $config and run caff again.\n";
-		open F, '>', $config or die "$config: $!";
+		open F, '>', $config or myerror(1, "$config: $!");
 		print F $template;
 		close F;
 		exit(1);
 	}
 	unless (scalar eval `cat $config`) {
-		die "Couldn't parse $config: $EVAL_ERROR\n" if $EVAL_ERROR;
+		myerror(1, "Couldn't parse $config: $EVAL_ERROR") if $EVAL_ERROR;
 	};
+
+	myerror(1, "$PROGRAM_NAME: $_ is not defined in $config.") for grep {!defined $CONFIG{$_}} qw/owner email keyid/;
+	myerror(1, "$PROGRAM_NAME: keyid is not an array ref in $config.") unless ref $CONFIG{'keyid'} eq 'ARRAY';
+	myerror(1, "$PROGRAM_NAME: key $_ is not specified as a long (16 digit) keyid or fingerprint in $config.") for
+		grep !/^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/, @{$CONFIG{'keyid'}};
 
 	$CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
 	$KEYSBASE  = $CONFIG{'caffhome'}.'/keys';
@@ -602,14 +607,6 @@ sub load_config() {
 		mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");
 	}
 
-	die ("$PROGRAM_NAME: owner is not defined in $config.\n") unless defined $CONFIG{'owner'};
-	die ("$PROGRAM_NAME: email is not defined in $config.\n") unless defined $CONFIG{'email'};
-	die ("$PROGRAM_NAME: keyid is not defined in $config.\n") unless defined $CONFIG{'keyid'};
-	die ("$PROGRAM_NAME: keyid is not an array ref in $config.\n") unless (ref $CONFIG{'keyid'} eq 'ARRAY');
-	for my $keyid (@{$CONFIG{'keyid'}}) {
-		$keyid =~ /^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/
-		  or die ("$PROGRAM_NAME: key $keyid is not specified as a long (16 digit) keyid or fingerprint in $config.\n");
-	};
 	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
 	$CONFIG{'export-sig-age'} //= 24*60*60;
 	$CONFIG{'gpg'} //= $ENV{GNUPGBIN} // 'gpg';
@@ -621,7 +618,7 @@ sub load_config() {
 	$CONFIG{'no-sign'} //= 0;
 	$CONFIG{'key-files'} //= [];
 	$CONFIG{'mailer-send'} //= [];
-	die ("$PROGRAM_NAME: mailer-send is not an array ref in $config.\n") unless (ref $CONFIG{'mailer-send'} eq 'ARRAY');
+	myerror(1, "$PROGRAM_NAME: mailer-send is not an array ref in $config.") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
 	$CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
 
 	unless (defined $CONFIG{'mail-template'}) {
@@ -635,11 +632,11 @@ sub load_config() {
 			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
 	}
 	$CONFIG{'gpg-sign-type'} //= '';
-	die "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.\n"
+	myerror(1, "$PROGRAM_NAME: $CONFIG{'gpg-sign-type'} is an invalid signature type.")
 		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
 	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
 	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
-	die "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.\n"
+	myerror(1, "$PROGRAM_NAME: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}.")
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
 	$CONFIG{'show-photos'} //= 0;
 };
@@ -832,7 +829,7 @@ sub usage($$) {
 ######
 sub export_keys($$@) {
 	my ($gnupghome, $keyids, @export_options) = @_;
-	die "Error: Nothing to export." unless defined $keyids and @$keyids;
+	myerror(1, "Nothing to export.") unless defined $keyids and @$keyids;
 
 	my %h = ( 'meta_interactive' => 0
 			, 'always_trust' => 1
@@ -873,13 +870,13 @@ sub export_keys($$@) {
 sub create_mail($$$@) {
 	my ($address, $can_encrypt, $key_id, @keys) = @_;
 
-	my $template = Text::Template->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'})
-	    or die "Error creating template: $Text::Template::ERROR";
+	my $template = Text::Template::->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'});
+	myerror(1, "Cannot create template: $Text::Template::ERROR") unless defined $template;
 
 	my $message = $template->fill_in(HASH => { key => $key_id,
 						   uids => [ map {$_->{'text'}} @keys ],
-						   owner => $CONFIG{'owner'}})
-	    or die "Error filling template in: $Text::Template::ERROR";
+						   owner => $CONFIG{'owner'}});
+	myerror(1, "Cannot fill in template: $Text::Template::ERROR") unless defined $message;
 
 	my $message_entity = MIME::Entity->build(
 		Type        => "text/plain",
@@ -921,14 +918,14 @@ sub create_mail($$$@) {
 				my $reason = $1;
 				my $keyid = $2;
 				if (grep { $_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
-					warn("Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.\n".
-					     "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>\n".
-					     "or try the following if you are slightly more daring:\n".
-					     " gpg --export $keyid | gpg --homedir=$GNUPGHOME --import\n");
+					mywarn "Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}.";
+					mywarn "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>";
+					mywarn "or try the following if you are slightly more daring:";
+					mywarn "  gpg --export $keyid | gpg --homedir=$GNUPGHOME --import";
 					return;
 				};
 			};
-			warn ("No data from gpg for encrypting mail.  STDERR was:\n$stderr\nstatus output was:\n$status\n");
+			mywarn "No data from gpg for encrypting mail.  STDERR was:\n$stderr\nstatus output was:\n$status\n";
 			return;
 		};
 		$message = $stdout;
@@ -1290,10 +1287,10 @@ if (-t \*STDIN) {
 					$r = $1;
 				}
 				elsif (!/^(:?\s+[_ 0-9A-F]+)?$/i) {
-					die "Unexpected input line: " .$_. "\n";
+					myerror(1, "Unexpected input line: $_");
 				}
 			}
-			die "$md checksum wasn't marked as verified!\n" unless lc $r eq 'x';
+			myerror(1, "$md checksum wasn't marked as verified!") unless lc $r eq 'x';
 			info "Found $md checksum (marked as verified, assumed good).";
 			push @checksums, uc $md;
 		}
@@ -1326,7 +1323,7 @@ if (-t \*STDIN) {
 	}
 
 	close STDIN;
-	open TTY, '<', '/dev/tty' or die "No TTY."
+	open TTY, '<', '/dev/tty' or myerror(1,"No TTY.")
 }
 
 for my $hashkey (qw{local-user no-download no-sign no-mail mail keys-from-gnupg}) {
@@ -1411,7 +1408,7 @@ elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'}
 # import own keys
 #################
 import_keys_from_gnupghome(\@{$CONFIG{'keyid'}}, undef, $GNUPGHOME) and
-	die "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.\n";
+	myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from your normal GnuPGHOME.");
 
 import_keys_to_sign();
 
@@ -1602,9 +1599,9 @@ for my $keyid (@keyids_ok) {
 	################
 	my $keydir = File::Temp->newdir( "caff-$keyid-XXXXX", TMPDIR => 1 );
 	import_keys_from_gnupghome (\@{$CONFIG{'keyid'}}, $GNUPGHOME, $keydir, 'export-minimal') and
-		die "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'export-minimal').\n";
+		myerror(1, "Not all keys in '\$CONFIG{'keyid'}' could be imported from caff's GnuPGHOME (with 'export-minimal').");
 	import_keys_from_gnupghome ([$keyid], $GNUPGHOME, $keydir, 'export-clean') and
-		die "$keyid couldn't be imported from caff's GnuPGHOME (with 'export-clean').\n";
+		myerror(1, "$keyid couldn't be imported from caff's GnuPGHOME (with 'export-clean').");
 
 	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
 	my @uids = @{$KEYS{$keyid}->{uids}};
@@ -1686,13 +1683,13 @@ for my $keyid (@keyids_ok) {
 
 		readwrite_gpg("save\n", $handles);
 		waitpid $pid, 0;
-		die "Couldn't prune $keyid: $?.\n" if $?;
+		myerror(1, "Couldn't prune $keyid: $?.") if $?;
 
 		my $asciikey = export_keys($uiddir, [$keyid]);
 		undef $uiddir; # delete dir
 
 		unless ($asciikey) {
-			warn ("No data from gpg for export $keyid\n");
+			mywarn "No data from gpg for export $keyid";
 			next;
 		};
 
@@ -1789,7 +1786,7 @@ for my $keyid (@keyids_ok) {
 
 				readwrite_gpg("save\n", $handles);
 				waitpid $pid, 0;
-				die "Couldn't auto lsign $keyid: $?.\n" if $?;
+				myerror(1, "Couldn't auto lsign $keyid: $?.") if $?;
 			}
 		}
 	}
@@ -1834,10 +1831,10 @@ for my $keyid (@keyids_ok) {
 
 		# save the armored key
 		my $keydir = "$KEYSBASE/$DATE_STRING";
-		-d $keydir || make_path($keydir , {mode => 0700}) or die ("Cannot create $keydir: $!\n");
+		-d $keydir || make_path($keydir , {mode => 0700}) or myerror(1, "Cannot mkdir $keydir: $!");
 
 		my $keyfile = "$keydir/$longkeyid.key.$uid->{serial}.".sanitize_uid($text).".asc";
-		open my $KEY, '>', $keyfile or die "Cannot open $keyfile: $!\n";
+		open my $KEY, '>', $keyfile or myerror(1, "Cannot open $keyfile: $!");
 		print $KEY $uid->{key};
 		close $KEY;
 
@@ -1872,11 +1869,11 @@ for my $keyid (@keyids_ok) {
 
 			my $keydir = "$KEYSBASE/$DATE_STRING";
 			my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($text);
-			open my $MAILFILE, '>', $mailfile or die "Cannot open $mailfile: $!\n";
+			open my $MAILFILE, '>', $mailfile or myerror(1, "Cannot open $mailfile: $!");
 			$mail->print($MAILFILE);
 			close $MAILFILE;
 		} else {
-			warn "Generating mail failed.\n";
+			mywarn "Generating mail failed.";
 		};
 	};
 };
