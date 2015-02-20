@@ -13,6 +13,7 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       the public part of *all* keys found in the secret keyring.  (When not
       pruning the good keys with -u, gpg(1) croaks with exit status 2 when
       there are secret keys without public part.)
+    + Print {error,warnings,notice,info} lines on STDERR.
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and

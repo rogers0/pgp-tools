@@ -425,33 +425,33 @@ my $params;
 #
 sub myerror($$) {
 	my ($exitcode, $line) = @_;
-	print "[ERROR] $line\n";	
+	print STDERR "[ERROR] $line\n";
 	exit $exitcode;
 };
 
 sub mywarn($) {
 	my ($line) = @_;
-	print "[WARN] $line\n";
+	print STDERR "[WARN] $line\n";
 };
 sub notice($) {
 	my ($line) = @_;
-	print "[NOTICE] $line\n";
+	print STDERR "[NOTICE] $line\n";
 };
 sub info($) {
 	my ($line) = @_;
-	print "[INFO] $line\n";
+	print STDERR "[INFO] $line\n";
 };
 sub debug($) {
 	my ($line) = @_;
-	#print "[DEBUG] $line\n";
+	#print STDERR "[DEBUG] $line\n";
 };
 sub trace($) {
 	my ($line) = @_;
-	#print "[trace] $line\n";
+	#print STDERR "[trace] $line\n";
 };
 sub trace2($) {
 	my ($line) = @_;
-	#print "[trace2] $line\n";
+	#print STDERR "[trace2] $line\n";
 };
 
 
