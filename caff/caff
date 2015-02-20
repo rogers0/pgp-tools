@@ -484,22 +484,22 @@ sub generate_config() {
 
 		$CONFIG{'gpg'} = $ENV{GNUPGBIN} // 'gpg';
 		my $gpg = mkGnuPG( extra_args => ['--with-colons'] );
-		my $handles = mkGnuPG_fds ( stdout => undef, status => undef );
+		my $handles = mkGnuPG_fds ( stdout => undef );
 		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
-		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles);
+		my %output = readwrite_gpg($handles);
 		done_gpg($pid, $handles);
 
-		if ($stdout eq '') {
+		if ($output{stdout} eq '') {
 			mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
 		};
 
-		@keys = ($stdout =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
+		@keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
 		unless (scalar @keys) {
 			info("Error: No keys were found using \"gpg --list-public-keys '$gecos'\".");
 			@keys = qw{0123456789abcdef 89abcdef76543210};
 			$Ckeys = '#';
 		}
-		($email) = ($stdout =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
+		($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
 		unless (defined $email) {
 			info("Error: No email address was found using \"gpg --list-public-keys '$gecos'\".");
 			$email = $ENV{'LOGNAME'}.'@'.$hostname;
@@ -664,103 +664,90 @@ sub done_gpg($;$) {
 	}
 }
 
-sub readwrite_gpg($$%) {
-	my ($in, $handles, %options) = @_;
 
-	my ($inputfd, $stdoutfd, $stderrfd, $statusfd) = @$handles{qw/stdin stdout stderr status/};
-	trace("Entering readwrite_gpg.");
+# Send some data on GnuPG handles, and retrieve output from all handles
+# at once using select(2) syscalls.  Stop when some output matches a
+# given regex, or when there nothing more to read or write.  A newline
+# '\n' character is automatically appended to the text to be send to the
+# 'command' handle; the prefix "[GNUPG:] " to the 'status' handle is
+# added as well.
+sub readwrite_gpg($%) {
+	my $handles = shift;
+	my %opts = @_;
 
-	my ($first_line, undef) = split /\n/, $in;
-	debug("readwrite_gpg sends ".(defined $first_line ? $first_line : "<nothing>"));
+	# ignore direct and dup handles
+	my @infhs  = grep {defined $opts{$_}	  and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdin passphrase command/;
+	my @outfhs = grep {defined $handles->{$_} and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdout stderr status logger/;
+	my %fh = reverse %$handles{@infhs, @outfhs};
 
-	local $/ = undef;
-	my $sout = IO::Select->new();
-	my $sin = IO::Select->new();
-	my $offset = 0;
+	my %offset = map {$_ => 0}  @infhs;
+	my %output = map {$_ => ''} @outfhs;
 
-	trace("input is $inputfd; output is $stdoutfd; err is $stderrfd; status is ".($statusfd // 'undef').".");
+	if (defined $opts{command}) {
+		# automatically send the command
+		chomp $opts{command};
+		$opts{command} .= "\n";
+	}
+	$opts{status} = qr/^\[GNUPG:\] $opts{status}$/m if defined $opts{status};
 
-	$inputfd->blocking(0);
-	$stdoutfd->blocking(0);
-	$statusfd->blocking(0) if defined $statusfd;
-	$stderrfd->blocking(0);
-	$sout->add($stdoutfd);
-	$sout->add($stderrfd);
-	$sout->add($statusfd) if defined $statusfd;
-	$sin->add($inputfd);
+	$handles->{$_}->blocking(0) foreach (@infhs, @outfhs);
+	my $sin  = IO::Select::->new(map {$handles->{$_}} @infhs);
+	my $sout = IO::Select::->new(map {$handles->{$_}} @outfhs);
 
-	my ($stdout, $stderr, $status) = ("", "", "");
-	my $exitwhenstatusmatches = $options{'exitwhenstatusmatches'};
-	trace("doing stuff until we find $exitwhenstatusmatches") if defined $exitwhenstatusmatches;
+	trace("entering readwrite_gpg.");
+	trace("doing stuff until one of: ". join(', ', map {"$_ =~ $opts{$_}"} grep {defined $opts{$_}} @outfhs))
+		if grep {defined $opts{$_}} @outfhs;
 
 	my $readwrote_stuff_this_time = 0;
 	my $do_not_wait_on_select = 0;
-	my ($readyr, $readyw, $written);
-	while ($sout->count() > 0 || (defined($sin) && ($sin->count() > 0))) {
-		if (defined $exitwhenstatusmatches and $status =~ /^\[GNUPG:\] $exitwhenstatusmatches$/m) {
-			trace("readwrite_gpg found match on $exitwhenstatusmatches");
+	while ($sin->count() + $sout->count() > 0) {
+		if (!$sin->count() and grep {defined $opts{$_} and $output{$_} =~ $opts{$_}} @outfhs) {
 			if ($readwrote_stuff_this_time) {
-				trace("read/write some more\n");
+				trace("read/write some more.");
 				$do_not_wait_on_select = 1;
 			} else {
-				trace("that's it in our while loop.\n");
+				trace("that's it in our while loop.");
 				last;
 			}
 		};
 
+		trace("select waiting for ".($sin->count()+$sout->count())." fds.");
+		my ($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
+		trace("ready: write: ". join (',', map {$fh{$_}} @{$readyw // []}).
+					"; read: ". join (',', map {$fh{$_}} @{$readyr // []}));
 		$readwrote_stuff_this_time = 0;
-		trace("select waiting for ".($sout->count())." fds.");
-		($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
-		trace("ready: write: ".(defined $readyw ? scalar @$readyw : 0 )."; read: ".(defined $readyr ? scalar @$readyr : 0));
-		for my $wfd (@$readyw) {
+
+		for my $fd (@{$readyw // []}) {
 			$readwrote_stuff_this_time = 1;
-			if (length($in) != $offset) {
-				trace("writing to $wfd.");
-				$written = $wfd->syswrite($in, length($in) - $offset, $offset);
-				$offset += $written;
-			};
-			if ($offset == length($in)) {
-				trace("writing to $wfd done.");
-				unless ($options{'nocloseinput'}) {
-					close $wfd;
-					trace("$wfd closed.");
-				};
-				$sin->remove($wfd);
-				$sin = undef;
+			my $fh = $fh{$fd};
+			if ($offset{$fh} != length $opts{$fh}) {
+				trace ("writing to '$fh'". ($offset{$fh} ? "" : ": ".(split /\n/, $opts{$fh}, 2)[0]));
+				my $written = $fd->syswrite($opts{$fh}, length($opts{$fh}) - $offset{$fh}, $offset{$fh});
+				$offset{$fh} += $written;
+			}
+			if ($offset{$fh} == length $opts{$fh}) {
+				trace "done writing to '$fh'.";
+				$sin->remove($fd);
+				$fd->close && trace "closed '$fh'." if $opts{autoclose};
 			}
 		}
-
-		next unless ($readyr); # Wait some more.
-
-		for my $rfd (@$readyr) {
+		for my $fd (@{$readyr // []}) {
 			$readwrote_stuff_this_time = 1;
-			if ($rfd->eof) {
-				trace("reading from $rfd done.");
-				$sout->remove($rfd);
-				close($rfd);
+			my $fh = $fh{$fd};
+			if ($fd->eof) {
+				trace "done reading from '$fh'.";
+				$sout->remove($fd);
 				next;
 			}
-			trace("reading from $rfd.");
-			if ($rfd == $stdoutfd) {
-				$stdout .= <$rfd>;
-				trace2("stdout is now $stdout\n================");
-				next;
-			}
-			if (defined $statusfd && $rfd == $statusfd) {
-				$status .= <$rfd>;
-				trace2("status is now $status\n================");
-				next;
-			}
-			if ($rfd == $stderrfd) {
-				$stderr .= <$rfd>;
-				trace2("stderr is now $stderr\n================");
-				next;
-			}
+			trace "reading from '$fh'.";
+			$output{$fh} .= do { local $/; <$fd> };
+			trace2 "$fh is now:\n$output{$fh}\n================";
 		}
 	}
 	trace("readwrite_gpg done.");
-	return ($stdout, $stderr, $status);
-};
+	return %output;
+}
+
 
 sub ask($$;$$) {
 	my ($question, $default, $forceyes, $forceno) = @_;
@@ -895,17 +882,17 @@ sub create_mail($$$@) {
 	};
 
 	if ($can_encrypt) {
-		my $message = $message_entity->stringify();
 		my $gpg = mkGnuPG( homedir => $GNUPGHOME, armor => 1, textmode => 1 );
 		$gpg->options->push_recipients($key_id);
 		$gpg->options->push_recipients(@{$CONFIG{'also-encrypt-to'}}) if defined $CONFIG{'also-encrypt-to'};
 		my $handles = mkGnuPG_fds( stdin => undef, stdout => undef, status => undef );
 		my $pid = $gpg->encrypt(handles => $handles);
-		my ($stdout, $status) = readwrite_gpg($message, $handles);
+		my %output = readwrite_gpg($handles, stdin => $message_entity->stringify(), autoclose => 1);
 		done_gpg($pid, $handles);
-		if ($stdout eq '') {
-			if (($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m) and
-			    (defined $CONFIG{'also-encrypt-to'})) {
+		my ($message, $status) = @output{qw/stdout status/};
+
+		if ($message eq '') {
+			if ($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m and defined $CONFIG{'also-encrypt-to'}) {
 				my $reason = $1;
 				my $keyid = $2;
 				if (grep { $_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
@@ -916,10 +903,9 @@ sub create_mail($$$@) {
 					return;
 				};
 			};
-			mywarn "No data from gpg for encrypting mail.  STDERR was:\n$stderr\nstatus output was:\n$status\n";
+			mywarn "No data from gpg for encrypting mail. status output was:\n$status";
 			return;
 		};
-		$message = $stdout;
 
 		$message_entity = MIME::Entity->build(
 			Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"',
@@ -995,21 +981,20 @@ sub sanitize_uid($) {
 sub delete_signatures($$$$) {
 	my ($handles, $longkeyid, $uid, $keyids) = @_;
 
-	readwrite_gpg("uid 0\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # unmark all uids from delsig
-	readwrite_gpg("uid $uid\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1); # mark $uid for delsig
+	readwrite_gpg($handles, command => "uid 0",    status => $KEYEDIT_PROMPT); # unmark all uids from delsig
+	readwrite_gpg($handles, command => "uid $uid", status => $KEYEDIT_PROMPT); # mark $uid for delsig
 
 	my $last_signed_on = 0;
 	my %signers;
 
-	my ($stdout, $stderr, $status) =
-		readwrite_gpg("delsig\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELSIG_PROMPT, nocloseinput => 1);
+	my %output = readwrite_gpg($handles, command => "delsig", status => $KEYEDIT_DELSIG_PROMPT);
 
-	while($status =~ /$KEYEDIT_DELSIG_PROMPT/m) {
+	while($output{status} =~ /$KEYEDIT_DELSIG_PROMPT/m) {
 		# sig:?::17:EA2199412477CAF8:1058095214:::::13x
-		my @sigline = grep /^sig:/, (split /\n/, $stdout);
+		my @sigline = grep /^sig:/, (split /\n/, $output{stdout});
 		my $answer = "no";
 		if (!@sigline) {
-			debug("[sigremoval] no sig line here, only got:\n".$stdout);
+			debug("[sigremoval] no sig line here, only got:\n".$output{stdout});
 		}
 		else { # only if we found a sig here - we never remove revocation packets for instance
 			my $sig = pop @sigline;
@@ -1028,10 +1013,9 @@ sub delete_signatures($$$$) {
 				debug("[sigremoval] not interested in that sig ($1).");
 				$answer = "yes";
 			};
-			mywarn("I hit a bug, please report. Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$stdout) if @sigline;
+			mywarn("I hit a bug, please report. Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$output{stdout}) if @sigline;
 		}
-		($stdout, $stderr, $status) =
-			readwrite_gpg($answer."\n", $handles, exitwhenstatusmatches => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT, nocloseinput => 1);
+		%output = readwrite_gpg($handles, command => $answer, status => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT);
 	};
 
 	return ($last_signed_on, \%signers);
@@ -1588,7 +1572,7 @@ for my $keyid (@keyids_ok) {
 			handles      => $handles );
 
 		debug("Starting edit session");
-		my ($stdout, $stderr, $status) = readwrite_gpg('', $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+		my %output = readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
 
 		# delete other uids
 		###################
@@ -1599,14 +1583,14 @@ for my $keyid (@keyids_ok) {
 			next if $uid->{type} ne 'uid' and $uids[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
 
 			debug("Marking UID $i ($uids[$i-1]->{hash}) for deletion.");
-			readwrite_gpg("uid $i\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg($handles, command => "uid $i", status => $KEYEDIT_PROMPT);
 			$delete_some++;
 		}
 
 		if ($delete_some) {
 			debug("Need to delete $delete_some uids.");
-			readwrite_gpg("deluid\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELUID_PROMPT, nocloseinput => 1);
-			readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg($handles, command => "deluid", status => $KEYEDIT_DELUID_PROMPT);
+			readwrite_gpg($handles, command => "yes",    status => $KEYEDIT_PROMPT);
 		};
 
 		# delete all subkeys
@@ -1614,10 +1598,10 @@ for my $keyid (@keyids_ok) {
 		if (@{$KEYS{$keyid}->{subkeys}}) {
 			for (my $i = 1; $i <= $#{$KEYS{$keyid}->{subkeys}} + 1; $i++) {
 				debug("Marking subkey $i ($KEYS{$keyid}->{subkeys}->[$i-1]) for deletion.");
-				readwrite_gpg("key $i\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				readwrite_gpg($handles, command => "key $i", status => $KEYEDIT_PROMPT);
 			};
-			readwrite_gpg("delkey\n", $handles, exitwhenstatusmatches => $KEYEDIT_DELSUBKEY_PROMPT, nocloseinput => 1);
-			readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+			readwrite_gpg($handles, command => "delkey", status => $KEYEDIT_DELSUBKEY_PROMPT);
+			readwrite_gpg($handles, command => "yes", status => $KEYEDIT_PROMPT);
 		};
 
 		# delete signatures
@@ -1629,7 +1613,7 @@ for my $keyid (@keyids_ok) {
 			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
 
 
-		readwrite_gpg("save\n", $handles);
+		readwrite_gpg($handles, command => "save");
 		done_gpg($pid, $handles);
 
 		my $asciikey = export_keys($uiddir, [$keyid]);
@@ -1708,23 +1692,22 @@ for my $keyid (@keyids_ok) {
 					handles      => $handles );
 
 				debug("Starting edit session on $keyid, signer $u");
-				readwrite_gpg('', $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+				readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
 
 				foreach my $level (0..3) {
 					my @signeduids_with_level = grep {$_->{signers}->{$u} eq $level} @signeduids;
 					next unless @signeduids_with_level;
 
 					info("lsign-ing (by $u) with cert level $level uid(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level))." of $longkeyid.");
-					readwrite_gpg("uid 0\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
-					readwrite_gpg("uid $_->{hash}\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1)
-						for @signeduids_with_level;
-					my ($stdout, $stderr, $status) = readwrite_gpg("lsign\n", $handles, exitwhenstatusmatches => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/, nocloseinput => 1);
-					next if $status =~ /^\[GNUPG:\] $KEYEDIT_PROMPT/m; # already signed
-					readwrite_gpg("$level\n", $handles, exitwhenstatusmatches => $KEYEDIT_SIGNUID_PROMPT, nocloseinput => 1);
-					readwrite_gpg("yes\n", $handles, exitwhenstatusmatches => $KEYEDIT_PROMPT, nocloseinput => 1);
+					readwrite_gpg($handles, command => "uid 0",          status => $KEYEDIT_PROMPT);
+					readwrite_gpg($handles, command => "uid $_->{hash}", status => $KEYEDIT_PROMPT) for @signeduids_with_level;
+					my %output = readwrite_gpg($handles, command => "lsign", statusmatches => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/);
+					next if $output{status} =~ /^\[GNUPG:\] $KEYEDIT_PROMPT/m; # already signed
+					readwrite_gpg($handles, command => $level, status => $KEYEDIT_SIGNUID_PROMPT);
+					readwrite_gpg($handles, command => "yes",  status => $KEYEDIT_PROMPT);
 				}
 
-				readwrite_gpg("save\n", $handles);
+				readwrite_gpg($handles, command => "save");
 				done_gpg($pid, $handles);
 				myerror(1, "Couldn't auto lsign $keyid: $?.") if $?;
 			}
