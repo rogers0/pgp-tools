@@ -5,7 +5,7 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       ignored by the most recent gpg(1).  On those we automaticalyl symlink
       the S.gpg-agent (unless 'no-sign') and S.dirmngr (unless 'no-download')
       sockets to avoid spawning new agents in caff's GNUPGHOME.  This require
-      an extra call to gpg(1) at the begining to determine the version.
+      an extra call to gpg(1) at the beginning to determine the version.
       (Closes: #771857)
     + Default $CONFIG{'local-user'} to $CONFIG{'keyid'} rather than importing
       the public part of *all* keys found in the secret keyring.  (When not
