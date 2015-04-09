@@ -25,6 +25,8 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       imported from caff's GNUPGHOME to our own; in auto-lsign'ing mode, lsign
       UID for which we have an exportable signature (preserving the signer and
       cert level).
+    + Pass the 'keyserver-options' specified in ~/.gnupg/gpg.conf to
+      $CONFIG{keyserver} when it is left unset.  (Closes: #780836)
   * gpgsigs:
     + Add a legend with the different signature types.
     + Mark local signatures as 'L' (formerly they were marked as 'S'), and

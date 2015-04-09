@@ -5,7 +5,7 @@
 #
 # Copyright (c) 2004, 2005, 2006 Peter Palfrader <peter@palfrader.org>
 # Copyright (c) 2005, 2006 Christoph Berg <cb@df7cb.de>
-# Copyright (c) 2014 Guilhem Moulin <guilhem@guilhem.org>
+# Copyright (c) 2014, 2015 Guilhem Moulin <guilhem@guilhem.org>
 #
 # All rights reserved.
 #
@@ -226,7 +226,10 @@ Default: none.
 
 =item B<keyserver> [string]
 
-Keyserver to download keys from.  Default: the keyserver defined in
+Keyserver to download keys from, passed to gpg(1) as argument to the
+"--keyserver" option.  (Optional keyserver configuration options may be
+provided after the keyserver name.)
+Default: the keyserver and keyserver-options defined in
 ~/.gnupg/gpg.conf if found, otherwise B<pool.sks-keyservers.net>.
 
 =item B<no-download> [boolean]
@@ -1370,13 +1373,18 @@ if ($CONFIG{'no-download'}) {
 	unless (defined $CONFIG{'keyserver'}) {
 		my $gpgconf = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/gpg.conf';
 		if (-e $gpgconf and open my $fh, $gpgconf) {
-			my @keyservers = map { chomp; s/^\s*keyserver\s+//r } (grep /^\s*keyserver\s/, <$fh>);
-			$CONFIG{'keyserver'} = $keyservers[$#keyservers] if @keyservers;
+			my @keyservers = grep defined, map { /^\s*keyserver\s+(.+)/ ? $1 : undef } <$fh>;
+			if (@keyservers) {
+				$CONFIG{'keyserver'} = $keyservers[$#keyservers]; # take the last one found
+				seek $fh, 0, 0;
+				my @keyserver_options = grep defined, map { /^\s*keyserver-options\s+(.+)/ ? $1 : undef } <$fh>;
+				$CONFIG{'keyserver'} .= ' '. join (' ', @keyserver_options) if @keyserver_options;
+			}
 			close $fh;
 		}
 	}
 	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
-	notice("Fetching keys from $CONFIG{keyserver}, this may take a while...");
+	notice("Fetching keys from ".($CONFIG{keyserver} =~ s/\s.*//r).", this may take a while...");
 
 	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
 	# logger: requesting key ... from hkp
