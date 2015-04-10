@@ -420,7 +420,7 @@ my $USER_AGENT = "caff $VERSION - http://pgp-tools.alioth.debian.org/";
 # Global variables
 my @KEYIDS;
 my @LOCAL_USER;
-my $params;
+my $PARAMS;
 
 my $GNUPG_VERSION;
 my $KEYSBASE;
@@ -454,7 +454,7 @@ sub info($$) {
 };
 sub debug($) {
 	my ($line) = @_;
-	print STDERR "[DEBUG] $line\n" if $params->{debug};
+	print STDERR "[DEBUG] $line\n" if $PARAMS->{debug};
 };
 sub trace($) {
 	my ($line) = @_;
@@ -649,7 +649,7 @@ sub mkGnuPG_fds(%) {
 	# but NEVER redirect STDERR!
 	$fd{stdin}  = "<&=$NULL" unless exists $fd{stdin};
 	$fd{stdout} = ">&=$NULL" unless exists $fd{stdout};
-	$fd{logger} = ">&=$NULL" unless exists $fd{logger} or $params->{debug};
+	$fd{logger} = ">&=$NULL" unless exists $fd{logger} or $PARAMS->{debug};
 
 	my $handles = GnuPG::Handles::->new(%fd);
 	$handles->options($_)->{direct} = 1 foreach @direct;
@@ -1185,34 +1185,34 @@ sub strfCtime($@) {
 ###################
 Getopt::Long::config('bundling');
 if (!GetOptions (
-	'-h'                =>  \$params->{'help'},
-	'--help'            =>  \$params->{'help'},
-	'--version'         =>  \$params->{'version'},
-	'-V'                =>  \$params->{'version'},
-	'-u=s'              =>  \$params->{'local-user'},
-	'--local-user=s'    =>  \$params->{'local-user'},
-	'-e'                =>  \$params->{'export-old'},
-	'--export-old'      =>  \$params->{'export-old'},
-	'-E'                =>  \$params->{'no-export-old'},
-	'--no-export-old'   =>  \$params->{'no-export-old'},
-	'-m:s'              =>  \$params->{'mail'},
-	'--mail:s'          =>  \$params->{'mail'},
-	'-M'                =>  \$params->{'no-mail'},
-	'--no-mail'         =>  \$params->{'no-mail'},
-	'-R'                =>  \$params->{'no-download'},
-	'--no-download'     =>  \$params->{'no-download'},
-	'-S'                =>  \$params->{'no-sign'},
-	'--no-sign'         =>  \$params->{'no-sign'},
-	'--key-file=s@'     =>  \$params->{'key-files'},
-	'--keys-from-gnupg' =>  \$params->{'keys-from-gnupg'},
-	'--debug'			=>  \$params->{'debug'},
+	'-h'                =>  \$PARAMS->{'help'},
+	'--help'            =>  \$PARAMS->{'help'},
+	'--version'         =>  \$PARAMS->{'version'},
+	'-V'                =>  \$PARAMS->{'version'},
+	'-u=s'              =>  \$PARAMS->{'local-user'},
+	'--local-user=s'    =>  \$PARAMS->{'local-user'},
+	'-e'                =>  \$PARAMS->{'export-old'},
+	'--export-old'      =>  \$PARAMS->{'export-old'},
+	'-E'                =>  \$PARAMS->{'no-export-old'},
+	'--no-export-old'   =>  \$PARAMS->{'no-export-old'},
+	'-m:s'              =>  \$PARAMS->{'mail'},
+	'--mail:s'          =>  \$PARAMS->{'mail'},
+	'-M'                =>  \$PARAMS->{'no-mail'},
+	'--no-mail'         =>  \$PARAMS->{'no-mail'},
+	'-R'                =>  \$PARAMS->{'no-download'},
+	'--no-download'     =>  \$PARAMS->{'no-download'},
+	'-S'                =>  \$PARAMS->{'no-sign'},
+	'--no-sign'         =>  \$PARAMS->{'no-sign'},
+	'--key-file=s@'     =>  \$PARAMS->{'key-files'},
+	'--keys-from-gnupg' =>  \$PARAMS->{'keys-from-gnupg'},
+	'--debug'			=>  \$PARAMS->{'debug'},
 	)) {
 	usage(\*STDERR, 1);
 };
-if ($params->{'help'}) {
+if ($PARAMS->{'help'}) {
 	usage(\*STDOUT, 0);
 };
-if ($params->{'version'}) {
+if ($PARAMS->{'version'}) {
 	version(\*STDOUT);
 	exit(0);
 };
@@ -1280,7 +1280,7 @@ if (-t \*STDIN) {
 }
 
 for my $hashkey (qw{local-user no-download no-sign no-mail mail keys-from-gnupg}) {
-	$CONFIG{$hashkey} = $params->{$hashkey}  if defined $params->{$hashkey};
+	$CONFIG{$hashkey} = $PARAMS->{$hashkey}  if defined $PARAMS->{$hashkey};
 };
 
 # If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
@@ -1293,7 +1293,7 @@ if ( defined $CONFIG{'no-mail'} ||
 }
 $CONFIG{'mail-cant-encrypt'} //= $CONFIG{'mail'};
 
-push @{$CONFIG{'key-files'}}, @{$params->{'key-files'}} if defined $params->{'key-files'};
+push @{$CONFIG{'key-files'}}, @{$PARAMS->{'key-files'}} if defined $PARAMS->{'key-files'};
 
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
 	if ($keyid =~ /^(\p{AHex}{32}|(?:\p{AHex}{2} ){8}(?: \p{AHex}{2}){8})$/) {
@@ -1762,7 +1762,7 @@ for my $keyid (@keyids_ok) {
 		}
 
 		if ($NOW - $uid->{last_signed_on} > $CONFIG{'export-sig-age'} and
-				!ask("Signature on $text is old.  Export?", 0, $params->{'export-old'}, $params->{'no-export-old'})) {
+				!ask("Signature on $text is old.  Export?", 0, $PARAMS->{'export-old'}, $PARAMS->{'no-export-old'})) {
 			next;
 		}
 
