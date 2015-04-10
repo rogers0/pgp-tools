@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 # caff  --  CA - Fire and Forget
 # $Id$
@@ -407,6 +407,7 @@ gpg(1), pgp-clean(1), /usr/share/doc/signing-party/caff/
 =cut
 
 use strict;
+use warnings;
 use IO::Handle;
 use File::Copy qw{copy};
 use File::Temp;
