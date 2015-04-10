@@ -21,7 +21,9 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
       only those for which the UID is exported.  This is useful when the
       signee has some already signed RFC 2822 UIDs and a freshly added
       attribute, for instance.
-    + Use Term::ANSIColor to produce colored output.
+    + Use Term::ANSIColor to produce fancy colored output.  Can be configured
+      by setting $CONFIG{colors} to a suitable hash; in particular setting
+      $CONFIG{colors} = {} reverts to the old uncolored output.
     + Prune keys with import-{clean,minimal} not export-{clean,minimal}.
     + Fix $CONFIG{'also-lsign-in-gnupghome'}: local signatures are directly
       imported from caff's GNUPGHOME to our own; in auto-lsign'ing mode, lsign

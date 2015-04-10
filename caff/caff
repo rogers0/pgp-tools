@@ -183,6 +183,19 @@ this list.  B<REQUIRED>.
 
 Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
+=item B<colors> [hash]
+
+How to color output messages.  Colored output can be disabled by setting
+this option to an empty hash B<{}>.  Default:
+
+	{ error => 'bold bright_red'
+	, warn => 'bright_red'
+	, notice => 'bold'
+	, info => ''
+	, success => 'green' # used in combination with 'notice' and 'info'
+	, fail => 'yellow'   # used in combination with 'notice' and 'info'
+	}
+
 =back
 
 =head2 GnuPG settings
@@ -433,24 +446,31 @@ my $GNUPGHOME;
 # @param $exitcode exit code status to use to end the program
 # @param $line     error message to display on STDERR
 #
+sub mycolored($@) {
+	my $msg = shift;
+	my $color = join (' ', grep defined, map { defined $_ ? $CONFIG{colors}->{$_} : undef } @_) if defined $CONFIG{colors};
+	$msg = colored($msg, $color) if defined $color and $color !~ /^\s*$/;
+	return $msg;
+}
 sub myerror($$) {
 	my ($exitcode, $line) = @_;
-	print STDERR colored("[ERROR] $line", 'bold bright_red'), "\n";
+	print STDERR mycolored("[ERROR] $line", 'error'), "\n";
 	exit $exitcode;
 };
 
 sub mywarn($) {
 	my ($line) = @_;
-	print STDERR colored("[WARN] $line", 'bright_red'), "\n";
+	print STDERR mycolored("[WARN] $line", 'warn'), "\n";
 };
 sub notice($;$) {
 	my ($line,$color) = @_;
-	$color = !defined $color ? 'bold' : $color ? 'bold green' : 'bold yellow';
-	print STDERR colored("[NOTICE] $line", $color), "\n";
+	$color = $color ? 'success' : 'fail' if defined $color;
+	print STDERR mycolored("[NOTICE] $line", 'notice', $color), "\n";
 };
 sub info($$) {
 	my ($line,$color) = @_;
-	print STDERR colored("[INFO] $line", $color ? 'green' : 'yellow'), "\n";
+	$color = $color ? 'success' : 'fail' if defined $color;
+	print STDERR mycolored("[INFO] $line", 'info', $color), "\n";
 };
 sub debug($) {
 	my ($line) = @_;
@@ -609,6 +629,15 @@ sub load_config() {
 	myerror(1, "$0: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}")
 		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
 	$CONFIG{'show-photos'} //= 0;
+
+	$CONFIG{colors} //= {
+		error => 'bold bright_red',
+		warn => 'bright_red',
+		notice => 'bold',
+		info => '',
+		success => 'green',
+		fail => 'yellow'
+  };
 };
 
 # Create a new GnuPG::Interface object with common options
