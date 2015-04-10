@@ -448,97 +448,97 @@ my $GNUPGHOME;
 # @param $line     error message to display on STDERR
 #
 sub mycolored($@) {
-	my $msg = shift;
-	my $color = join (' ', grep defined, map { defined $_ ? $CONFIG{colors}->{$_} : undef } @_) if defined $CONFIG{colors};
-	$msg = colored($msg, $color) if defined $color and $color !~ /^\s*$/;
-	return $msg;
+    my $msg = shift;
+    my $color = join (' ', grep defined, map { defined $_ ? $CONFIG{colors}->{$_} : undef } @_) if defined $CONFIG{colors};
+    $msg = colored($msg, $color) if defined $color and $color !~ /^\s*$/;
+    return $msg;
 }
 sub myerror($$) {
-	my ($exitcode, $line) = @_;
-	print STDERR mycolored("[ERROR] $line", 'error'), "\n";
-	exit $exitcode;
+    my ($exitcode, $line) = @_;
+    print STDERR mycolored("[ERROR] $line", 'error'), "\n";
+    exit $exitcode;
 };
 
 sub mywarn($) {
-	my ($line) = @_;
-	print STDERR mycolored("[WARN] $line", 'warn'), "\n";
+    my ($line) = @_;
+    print STDERR mycolored("[WARN] $line", 'warn'), "\n";
 };
 sub notice($;$) {
-	my ($line,$color) = @_;
-	$color = $color ? 'success' : 'fail' if defined $color;
-	print STDERR mycolored("[NOTICE] $line", 'notice', $color), "\n";
+    my ($line,$color) = @_;
+    $color = $color ? 'success' : 'fail' if defined $color;
+    print STDERR mycolored("[NOTICE] $line", 'notice', $color), "\n";
 };
 sub info($$) {
-	my ($line,$color) = @_;
-	$color = $color ? 'success' : 'fail' if defined $color;
-	print STDERR mycolored("[INFO] $line", 'info', $color), "\n";
+    my ($line,$color) = @_;
+    $color = $color ? 'success' : 'fail' if defined $color;
+    print STDERR mycolored("[INFO] $line", 'info', $color), "\n";
 };
 sub debug($) {
-	my ($line) = @_;
-	print STDERR "[DEBUG] $line\n" if $PARAMS->{debug};
+    my ($line) = @_;
+    print STDERR "[DEBUG] $line\n" if $PARAMS->{debug};
 };
 sub trace($) {
-	my ($line) = @_;
-	#print STDERR "[trace] $line\n";
+    my ($line) = @_;
+    #print STDERR "[trace] $line\n";
 };
 sub trace2($) {
-	my ($line) = @_;
-	#print STDERR "[trace2] $line\n";
+    my ($line) = @_;
+    #print STDERR "[trace2] $line\n";
 };
 
 sub mysystem(@) {
-	system { $_[0] } @_;
-	myerror($?, "$_[0] exited with value ".($? >> 8)) if $?;
+    system { $_[0] } @_;
+    myerror($?, "$_[0] exited with value ".($? >> 8)) if $?;
 }
 
 
 open NULL, '+<', '/dev/null';
 my $NULL = fileno NULL;
 sub generate_config() {
-	notice("Error: \$LOGNAME is not set", 0) unless defined $ENV{'LOGNAME'};
-	my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
-	my $email;
-	my @keys;
-	# BSD does not have hostname -f, so we try without -f first
-	my $hostname = `hostname`;
-	$hostname = `hostname -f` unless $hostname =~ /\./;
-	chomp $hostname;
-	my ($Cgecos,$Cemail,$Ckeys) = ('','','');
+    notice("Error: \$LOGNAME is not set", 0) unless defined $ENV{'LOGNAME'};
+    my $gecos = defined $ENV{'LOGNAME'} ? (getpwnam($ENV{LOGNAME}))[6] : undef;
+    my $email;
+    my @keys;
+    # BSD does not have hostname -f, so we try without -f first
+    my $hostname = `hostname`;
+    $hostname = `hostname -f` unless $hostname =~ /\./;
+    chomp $hostname;
+    my ($Cgecos,$Cemail,$Ckeys) = ('','','');
 
-	if (defined $gecos) {
-		$gecos =~ s/,.*//;
+    if (defined $gecos) {
+        $gecos =~ s/,.*//;
 
-		$CONFIG{'gpg'} = $ENV{GNUPGBIN} // 'gpg';
-		my $gpg = mkGnuPG( extra_args => ['--with-colons'] );
-		my $handles = mkGnuPG_fds ( stdout => undef );
-		my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
-		my %output = readwrite_gpg($handles);
-		done_gpg($pid, $handles);
+        $CONFIG{'gpg'} = $ENV{GNUPGBIN} // 'gpg';
+        my $gpg = mkGnuPG( extra_args => ['--with-colons'] );
+        my $handles = mkGnuPG_fds ( stdout => undef );
+        my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
+        my %output = readwrite_gpg($handles);
+        done_gpg($pid, $handles);
 
-		if ($output{stdout} eq '') {
-			mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
-		};
+        if ($output{stdout} eq '') {
+            mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
+        };
 
-		@keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
-		unless (scalar @keys) {
-			notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"", 0);
-			@keys = qw{0123456789abcdef 89abcdef76543210};
-			$Ckeys = '#';
-		}
-		($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
-		unless (defined $email) {
-			notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
-			$email = $ENV{'LOGNAME'}.'@'.$hostname;
-			$Cemail = '#';
-		}
-	} else {
-		$gecos = 'Unknown Caff User';
-		$email = $ENV{'LOGNAME'}.'@'.$hostname;
-		@keys = qw{0123456789abcdef 89abcdef76543210};
-		($Cgecos,$Cemail,$Ckeys) = ('#','#','#');
-	};
+        @keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
+        unless (scalar @keys) {
+            notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"", 0);
+            @keys = qw{0123456789abcdef 89abcdef76543210};
+            $Ckeys = '#';
+        }
+        ($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
+        unless (defined $email) {
+            notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
+            $email = $ENV{'LOGNAME'}.'@'.$hostname;
+            $Cemail = '#';
+        }
+    } else {
+        $gecos = 'Unknown Caff User';
+        $email = $ENV{'LOGNAME'}.'@'.$hostname;
+        @keys = qw{0123456789abcdef 89abcdef76543210};
+        ($Cgecos,$Cemail,$Ckeys) = ('#','#','#');
+    };
 
-	my $template = <<EOT;
+    my $template = <<EOT;
 # .caffrc -- vim:ft=perl:
 # This file is in perl(1) format - see caff(1) for details.
 
@@ -568,96 +568,96 @@ $Ckeys\$CONFIG{'keyid'} = [ qw{@keys} ];
 #\$CONFIG{'mail-template'} = << 'EOM';
 EOT
 
-	$template .= "#$_" foreach <DATA>;
-	$template .= "#EOM\n";
-	return $template;
+    $template .= "#$_" foreach <DATA>;
+    $template .= "#EOM\n";
+    return $template;
 };
 
 sub load_config() {
-	my $config = $ENV{'HOME'} . '/.caffrc';
-	unless (-f $config) {
-		print "No configfile $config present, I will use this template:\n";
-		my $template = generate_config();
-		print "$template\nPlease edit $config and run caff again.\n";
-		open F, '>', $config or myerror(1, "$config: $!");
-		print F $template;
-		close F;
-		exit(1);
-	}
-	unless (scalar eval `cat $config`) {
-		myerror(1, "Couldn't parse $config: $@") if $@;
-	};
+    my $config = $ENV{'HOME'} . '/.caffrc';
+    unless (-f $config) {
+        print "No configfile $config present, I will use this template:\n";
+        my $template = generate_config();
+        print "$template\nPlease edit $config and run caff again.\n";
+        open F, '>', $config or myerror(1, "$config: $!");
+        print F $template;
+        close F;
+        exit(1);
+    }
+    unless (scalar eval `cat $config`) {
+        myerror(1, "Couldn't parse $config: $@") if $@;
+    };
 
-	myerror(1, "$0: $_ is not defined in $config") for grep {!defined $CONFIG{$_}} qw/owner email keyid/;
-	myerror(1, "$0: keyid is not an array ref in $config") unless ref $CONFIG{'keyid'} eq 'ARRAY';
-	myerror(1, "$0: key $_ is not specified as a long (16 digit) keyid or fingerprint in $config") for
-		grep !/^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/, @{$CONFIG{'keyid'}};
+    myerror(1, "$0: $_ is not defined in $config") for grep {!defined $CONFIG{$_}} qw/owner email keyid/;
+    myerror(1, "$0: keyid is not an array ref in $config") unless ref $CONFIG{'keyid'} eq 'ARRAY';
+    myerror(1, "$0: key $_ is not specified as a long (16 digit) keyid or fingerprint in $config") for
+        grep !/^((?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/, @{$CONFIG{'keyid'}};
 
-	$CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
-	$KEYSBASE  = $CONFIG{'caffhome'}.'/keys';
-	$GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
-	foreach ($KEYSBASE, $GNUPGHOME) {
-		next if -d $_;
-		debug("Creating $_");
-		mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");
-	}
+    $CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
+    $KEYSBASE  = $CONFIG{'caffhome'}.'/keys';
+    $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
+    foreach ($KEYSBASE, $GNUPGHOME) {
+        next if -d $_;
+        debug("Creating $_");
+        mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");
+    }
 
-	@{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
-	$CONFIG{'export-sig-age'} //= 24*60*60;
-	$CONFIG{'gpg'} //= $ENV{GNUPGBIN} // 'gpg';
-	mywarn("Deprecated option \$CONFIG{'$_'} = '$CONFIG{$_}'") for grep {defined $CONFIG{$_}} qw/gpg-sign gpg-delsig/;
+    @{$CONFIG{'keyid'}} = map { s/^0x//; uc (substr y/ //dr, -16) } @{$CONFIG{'keyid'}};
+    $CONFIG{'export-sig-age'} //= 24*60*60;
+    $CONFIG{'gpg'} //= $ENV{GNUPGBIN} // 'gpg';
+    mywarn("Deprecated option \$CONFIG{'$_'} = '$CONFIG{$_}'") for grep {defined $CONFIG{$_}} qw/gpg-sign gpg-delsig/;
 
-	$CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
-	$CONFIG{'no-download'} //= 0;
-	$CONFIG{'no-sign'} //= 0;
-	$CONFIG{'key-files'} //= [];
-	$CONFIG{'mailer-send'} //= [];
-	myerror(1, "$0: mailer-send is not an array ref in $config") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
-	$CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
-	$CONFIG{'mail-template'} //= do { local $/; <DATA> };
-	$CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ]
-		if defined $CONFIG{'also-encrypt-to'} and !ref $CONFIG{'also-encrypt-to'};
-	if (defined $LOCALE) {
-		$CONFIG{$_} = $LOCALE->decode($CONFIG{$_}) for qw/owner mail-template mail-subject/;
-		$CONFIG{$_} = email_to_ascii($LOCALE->decode($CONFIG{$_}))
-			for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
-	}
-	$CONFIG{'gpg-sign-type'} //= '';
-	myerror(1, "$0: $CONFIG{'gpg-sign-type'} is an invalid signature type")
-		unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
-	$CONFIG{'also-lsign-in-gnupghome'} //= 'no';
-	$CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
-	myerror(1, "$0: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}")
-		unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
-	$CONFIG{'show-photos'} //= 0;
+    $CONFIG{'secret-keyring'} //= ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/secring.gpg';
+    $CONFIG{'no-download'} //= 0;
+    $CONFIG{'no-sign'} //= 0;
+    $CONFIG{'key-files'} //= [];
+    $CONFIG{'mailer-send'} //= [];
+    myerror(1, "$0: mailer-send is not an array ref in $config") unless ref $CONFIG{'mailer-send'} eq 'ARRAY';
+    $CONFIG{'mail-subject'} //= "Your signed PGP key 0x%k";
+    $CONFIG{'mail-template'} //= do { local $/; <DATA> };
+    $CONFIG{'also-encrypt-to'} = [ $CONFIG{'also-encrypt-to'} ]
+        if defined $CONFIG{'also-encrypt-to'} and !ref $CONFIG{'also-encrypt-to'};
+    if (defined $LOCALE) {
+        $CONFIG{$_} = $LOCALE->decode($CONFIG{$_}) for qw/owner mail-template mail-subject/;
+        $CONFIG{$_} = email_to_ascii($LOCALE->decode($CONFIG{$_}))
+            for grep {defined $CONFIG{$_}} qw/email bcc reply-to/;
+    }
+    $CONFIG{'gpg-sign-type'} //= '';
+    myerror(1, "$0: $CONFIG{'gpg-sign-type'} is an invalid signature type")
+        unless $CONFIG{'gpg-sign-type'} =~ /^(?:l|nr|t)*$/;
+    $CONFIG{'also-lsign-in-gnupghome'} //= 'no';
+    $CONFIG{'also-lsign-in-gnupghome'} = 'no' if $CONFIG{'no-sign'};
+    myerror(1, "$0: invalid value for 'also-lsign-in-gnupghome': $CONFIG{'also-lsign-in-gnupghome'}")
+        unless grep { $_ eq $CONFIG{'also-lsign-in-gnupghome'} } qw/auto ask no/;
+    $CONFIG{'show-photos'} //= 0;
 
-	$CONFIG{colors} //= {
-		error => 'bold bright_red',
-		warn => 'bright_red',
-		notice => 'bold',
-		info => '',
-		success => 'green',
-		fail => 'yellow'
+    $CONFIG{colors} //= {
+        error => 'bold bright_red',
+        warn => 'bright_red',
+        notice => 'bold',
+        info => '',
+        success => 'green',
+        fail => 'yellow'
   };
 };
 
 # Create a new GnuPG::Interface object with common options
 sub mkGnuPG(%) {
-	my %h = @_;
-	my $gpg = GnuPG::Interface::->new();
-	$gpg->call( $CONFIG{'gpg'} );
+    my %h = @_;
+    my $gpg = GnuPG::Interface::->new();
+    $gpg->call( $CONFIG{'gpg'} );
 
-	$h{meta_interactive} //= 0;
-	$h{always_trust} //= 1;
-	$h{extra_args} //= [];
+    $h{meta_interactive} //= 0;
+    $h{always_trust} //= 1;
+    $h{extra_args} //= [];
 
-	push @{$h{extra_args}}, '--no-auto-check-trustdb';
-	push @{$h{extra_args}}, '--fixed-list-mode' if $GNUPG_VERSION < 2.0;
-	push @{$h{extra_args}}, '--no-autostart'    if $GNUPG_VERSION >= 2.1; # never autostart
+    push @{$h{extra_args}}, '--no-auto-check-trustdb';
+    push @{$h{extra_args}}, '--fixed-list-mode' if $GNUPG_VERSION < 2.0;
+    push @{$h{extra_args}}, '--no-autostart'    if $GNUPG_VERSION >= 2.1; # never autostart
 
-	$gpg->options->hash_init(%h);
-	debug(join (' ', $gpg->call(), $gpg->options->get_args(), "..."));
-	return $gpg;
+    $gpg->options->hash_init(%h);
+    debug(join (' ', $gpg->call(), $gpg->options->get_args(), "..."));
+    return $gpg;
 }
 
 
@@ -666,37 +666,37 @@ sub mkGnuPG(%) {
 # case the existing handle is used, or undefined, in which case a new
 # IO::Handle is created.
 sub mkGnuPG_fds(%) {
-	my %fd = @_;
-	my @direct;
+    my %fd = @_;
+    my @direct;
 
-	foreach (keys %fd) {
-		push @direct, $_ if defined $fd{$_} and $fd{$_} !~ /^[<>]&/;
-		$fd{$_} //= IO::Handle::->new();
-	}
+    foreach (keys %fd) {
+        push @direct, $_ if defined $fd{$_} and $fd{$_} !~ /^[<>]&/;
+        $fd{$_} //= IO::Handle::->new();
+    }
 
-	# Redirect the STDIN and STDOUT to /dev/null unless explicitely
-	# redirected.  Also redirect logger to /dev/null in non-debug mode,
-	# but NEVER redirect STDERR!
-	$fd{stdin}  = "<&=$NULL" unless exists $fd{stdin};
-	$fd{stdout} = ">&=$NULL" unless exists $fd{stdout};
-	$fd{logger} = ">&=$NULL" unless exists $fd{logger} or $PARAMS->{debug};
+    # Redirect the STDIN and STDOUT to /dev/null unless explicitely
+    # redirected.  Also redirect logger to /dev/null in non-debug mode,
+    # but NEVER redirect STDERR!
+    $fd{stdin}  = "<&=$NULL" unless exists $fd{stdin};
+    $fd{stdout} = ">&=$NULL" unless exists $fd{stdout};
+    $fd{logger} = ">&=$NULL" unless exists $fd{logger} or $PARAMS->{debug};
 
-	my $handles = GnuPG::Handles::->new(%fd);
-	$handles->options($_)->{direct} = 1 foreach @direct;
-	debug(join (', ', map {"$_: " . ($handles->options($_)->{direct} ? $fd{$_}->fileno : $fd{$_})} keys %fd));
+    my $handles = GnuPG::Handles::->new(%fd);
+    $handles->options($_)->{direct} = 1 foreach @direct;
+    debug(join (', ', map {"$_: " . ($handles->options($_)->{direct} ? $fd{$_}->fileno : $fd{$_})} keys %fd));
 
-	return $handles;
+    return $handles;
 };
 
 sub done_gpg($;$) {
-	my ($pid, $handles) = @_;
-	waitpid $pid, 0;
-	mywarn("$CONFIG{gpg} exited with value ".($? >> 8)) if $?;
-	return unless defined $handles;
-	foreach (GnuPG::Handles::HANDLES) {
-		next unless defined $handles->{$_} and $handles->{$_} !~ /^[<>]&/;
-		$handles->{$_}->close if $handles->{$_}->opened;
-	}
+    my ($pid, $handles) = @_;
+    waitpid $pid, 0;
+    mywarn("$CONFIG{gpg} exited with value ".($? >> 8)) if $?;
+    return unless defined $handles;
+    foreach (GnuPG::Handles::HANDLES) {
+        next unless defined $handles->{$_} and $handles->{$_} !~ /^[<>]&/;
+        $handles->{$_}->close if $handles->{$_}->opened;
+    }
 }
 
 
@@ -707,112 +707,112 @@ sub done_gpg($;$) {
 # 'command' handle; the prefix "[GNUPG:] " to the 'status' handle is
 # added as well.
 sub readwrite_gpg($%) {
-	my $handles = shift;
-	my %opts = @_;
+    my $handles = shift;
+    my %opts = @_;
 
-	# ignore direct and dup handles
-	my @infhs  = grep {defined $opts{$_}	  and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdin passphrase command/;
-	my @outfhs = grep {defined $handles->{$_} and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdout stderr status logger/;
-	my %fh = reverse %$handles{@infhs, @outfhs};
+    # ignore direct and dup handles
+    my @infhs  = grep {defined $opts{$_}      and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdin passphrase command/;
+    my @outfhs = grep {defined $handles->{$_} and !$handles->options($_)->{direct} and $handles->{$_} !~ /^[<>]&/} qw/stdout stderr status logger/;
+    my %fh = reverse %$handles{@infhs, @outfhs};
 
-	my %offset = map {$_ => 0}  @infhs;
-	my %output = map {$_ => ''} @outfhs;
+    my %offset = map {$_ => 0}  @infhs;
+    my %output = map {$_ => ''} @outfhs;
 
-	if (defined $opts{command}) {
-		# automatically send the command
-		chomp $opts{command};
-		$opts{command} .= "\n";
-	}
-	$opts{status} = qr/^\[GNUPG:\] $opts{status}$/m if defined $opts{status};
+    if (defined $opts{command}) {
+        # automatically send the command
+        chomp $opts{command};
+        $opts{command} .= "\n";
+    }
+    $opts{status} = qr/^\[GNUPG:\] $opts{status}$/m if defined $opts{status};
 
-	$handles->{$_}->blocking(0) foreach (@infhs, @outfhs);
-	my $sin  = IO::Select::->new(map {$handles->{$_}} @infhs);
-	my $sout = IO::Select::->new(map {$handles->{$_}} @outfhs);
+    $handles->{$_}->blocking(0) foreach (@infhs, @outfhs);
+    my $sin  = IO::Select::->new(map {$handles->{$_}} @infhs);
+    my $sout = IO::Select::->new(map {$handles->{$_}} @outfhs);
 
-	trace("entering readwrite_gpg.");
-	trace("doing stuff until one of: ". join(', ', map {"$_ =~ $opts{$_}"} grep {defined $opts{$_}} @outfhs))
-		if grep {defined $opts{$_}} @outfhs;
+    trace("entering readwrite_gpg.");
+    trace("doing stuff until one of: ". join(', ', map {"$_ =~ $opts{$_}"} grep {defined $opts{$_}} @outfhs))
+        if grep {defined $opts{$_}} @outfhs;
 
-	my $readwrote_stuff_this_time = 0;
-	my $do_not_wait_on_select = 0;
-	while ($sin->count() + $sout->count() > 0) {
-		if (!$sin->count() and grep {defined $opts{$_} and $output{$_} =~ $opts{$_}} @outfhs) {
-			if ($readwrote_stuff_this_time) {
-				trace("read/write some more.");
-				$do_not_wait_on_select = 1;
-			} else {
-				trace("that's it in our while loop.");
-				last;
-			}
-		};
+    my $readwrote_stuff_this_time = 0;
+    my $do_not_wait_on_select = 0;
+    while ($sin->count() + $sout->count() > 0) {
+        if (!$sin->count() and grep {defined $opts{$_} and $output{$_} =~ $opts{$_}} @outfhs) {
+            if ($readwrote_stuff_this_time) {
+                trace("read/write some more.");
+                $do_not_wait_on_select = 1;
+            } else {
+                trace("that's it in our while loop.");
+                last;
+            }
+        };
 
-		trace("select waiting for ".($sin->count()+$sout->count())." fds.");
-		my ($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
-		trace("ready: write: ". join (',', map {$fh{$_}} @{$readyw // []}).
-					"; read: ". join (',', map {$fh{$_}} @{$readyr // []}));
-		$readwrote_stuff_this_time = 0;
+        trace("select waiting for ".($sin->count()+$sout->count())." fds.");
+        my ($readyr, $readyw, undef) = IO::Select::select($sout, $sin, undef, $do_not_wait_on_select ? 0 : 1);
+        trace("ready: write: ". join (',', map {$fh{$_}} @{$readyw // []}).
+                    "; read: ". join (',', map {$fh{$_}} @{$readyr // []}));
+        $readwrote_stuff_this_time = 0;
 
-		for my $fd (@{$readyw // []}) {
-			$readwrote_stuff_this_time = 1;
-			my $fh = $fh{$fd};
-			if ($offset{$fh} != length $opts{$fh}) {
-				trace ("writing to '$fh'". ($offset{$fh} ? "" : ": ".(split /\n/, $opts{$fh}, 2)[0]));
-				my $written = $fd->syswrite($opts{$fh}, length($opts{$fh}) - $offset{$fh}, $offset{$fh});
-				$offset{$fh} += $written;
-			}
-			if ($offset{$fh} == length $opts{$fh}) {
-				trace "done writing to '$fh'.";
-				$sin->remove($fd);
-				$fd->close && trace "closed '$fh'." if $opts{autoclose};
-			}
-		}
-		for my $fd (@{$readyr // []}) {
-			$readwrote_stuff_this_time = 1;
-			my $fh = $fh{$fd};
-			if ($fd->eof) {
-				trace "done reading from '$fh'.";
-				$sout->remove($fd);
-				next;
-			}
-			trace "reading from '$fh'.";
-			$output{$fh} .= do { local $/; <$fd> };
-			trace2 "$fh is now:\n$output{$fh}\n================";
-		}
-	}
-	trace("readwrite_gpg done.");
-	return %output;
+        for my $fd (@{$readyw // []}) {
+            $readwrote_stuff_this_time = 1;
+            my $fh = $fh{$fd};
+            if ($offset{$fh} != length $opts{$fh}) {
+                trace ("writing to '$fh'". ($offset{$fh} ? "" : ": ".(split /\n/, $opts{$fh}, 2)[0]));
+                my $written = $fd->syswrite($opts{$fh}, length($opts{$fh}) - $offset{$fh}, $offset{$fh});
+                $offset{$fh} += $written;
+            }
+            if ($offset{$fh} == length $opts{$fh}) {
+                trace "done writing to '$fh'.";
+                $sin->remove($fd);
+                $fd->close && trace "closed '$fh'." if $opts{autoclose};
+            }
+        }
+        for my $fd (@{$readyr // []}) {
+            $readwrote_stuff_this_time = 1;
+            my $fh = $fh{$fd};
+            if ($fd->eof) {
+                trace "done reading from '$fh'.";
+                $sout->remove($fd);
+                next;
+            }
+            trace "reading from '$fh'.";
+            $output{$fh} .= do { local $/; <$fd> };
+            trace2 "$fh is now:\n$output{$fh}\n================";
+        }
+    }
+    trace("readwrite_gpg done.");
+    return %output;
 }
 
 
 sub ask($$;$$) {
-	my ($question, $default, $forceyes, $forceno) = @_;
-	my $answer;
-	my $yn = $default ? '[Y/n]' : '[y/N]';
-	while (1) {
-		print $question,' ',$yn, ' ';
-		if ($forceyes && $forceno) {
-			print "$default (from config/command line)\n";
-			return $default;
-		};
-		if ($forceyes) {
-			print "YES (from config/command line)\n";
-			return 1;
-		};
-		if ($forceno) {
-			print "NO (from config/command line)\n";
-			return 0;
-		};
+    my ($question, $default, $forceyes, $forceno) = @_;
+    my $answer;
+    my $yn = $default ? '[Y/n]' : '[y/N]';
+    while (1) {
+        print $question,' ',$yn, ' ';
+        if ($forceyes && $forceno) {
+            print "$default (from config/command line)\n";
+            return $default;
+        };
+        if ($forceyes) {
+            print "YES (from config/command line)\n";
+            return 1;
+        };
+        if ($forceno) {
+            print "NO (from config/command line)\n";
+            return 0;
+        };
 
-		$answer = <TTY>;
-		chomp $answer;
-		last if ((length $answer == 0) || ($answer =~ m/^[yYnN]$/) );
-		print "What about $yn is so hard to understand?\nAnswer with either 'n' or 'y' or just press enter for the default.\n";
-		sleep 1;
-	};
-	my $result = $default;
-	$result = 1 if $answer =~ /y/i;
-	$result = 0 if $answer =~ /n/i;
-	return $result;
+        $answer = <TTY>;
+        chomp $answer;
+        last if ((length $answer == 0) || ($answer =~ m/^[yYnN]$/) );
+        print "What about $yn is so hard to understand?\nAnswer with either 'n' or 'y' or just press enter for the default.\n";
+        sleep 1;
+    };
+    my $result = $default;
+    $result = 1 if $answer =~ /y/i;
+    $result = 0 if $answer =~ /n/i;
+    return $result;
 };
 
 
@@ -835,16 +835,16 @@ my $DATE_STRING = sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
 
 
 sub version($) {
-	my ($fd) = @_;
-	print $fd "$0 $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
+    my ($fd) = @_;
+    print $fd "$0 $VERSION - (c) 2004, 2005, 2006 Peter Palfrader et al.\n";
 };
 
 sub usage($$) {
-	my ($fd, $exitcode) = @_;
-	version($fd);
-	print $fd "Usage: $0 [-eERS] [-m <yes|ask-yes|ask-no|no>] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
-	print $fd "Consult the manual page for more information.\n";
-	exit $exitcode;
+    my ($fd, $exitcode) = @_;
+    version($fd);
+    print $fd "Usage: $0 [-eERS] [-m <yes|ask-yes|ask-no|no>] [-u <yourkeyid>] <keyid> [<keyid> ...]\n";
+    print $fd "Consult the manual page for more information.\n";
+    exit $exitcode;
 };
 
 ######
@@ -853,26 +853,26 @@ sub usage($$) {
 # otherwise, wait until the export is done and return the ASCII key.
 #
 # /!\ Failure to export a key will not be detected, unless *all* keys
-# 	  couldn't be exported.  Therefore for safe export/import, you need
-# 	  to inspect '$asciikey' or the status FD on the import side.
+#       couldn't be exported.  Therefore for safe export/import, you need
+#       to inspect '$asciikey' or the status FD on the import side.
 ######
 sub export_keys($$@) {
-	my ($gnupghome, $keyids, @export_options) = @_;
-	myerror(1, "Nothing to export") unless defined $keyids and @$keyids;
-	my @extra_args = ('--export-options', join (',', @export_options)) if @export_options;
+    my ($gnupghome, $keyids, @export_options) = @_;
+    myerror(1, "Nothing to export") unless defined $keyids and @$keyids;
+    my @extra_args = ('--export-options', join (',', @export_options)) if @export_options;
 
-	# don't armor when piping since it's faster
-	my $gpg = mkGnuPG( homedir => $gnupghome, armor => (wantarray ? 0 : 1), extra_args => \@extra_args );
-	my $handles = mkGnuPG_fds( stdout => undef );
-	my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
+    # don't armor when piping since it's faster
+    my $gpg = mkGnuPG( homedir => $gnupghome, armor => (wantarray ? 0 : 1), extra_args => \@extra_args );
+    my $handles = mkGnuPG_fds( stdout => undef );
+    my $pid = $gpg->export_keys( handles => $handles, command_args => $keyids );
 
-	if (wantarray) {
-		return ($pid, $handles->{stdout});
-	} else {
-		my $asciikey = do { local $/; readline $handles->{stdout} };
-		done_gpg($pid, $handles);
-		return $asciikey;
-	}
+    if (wantarray) {
+        return ($pid, $handles->{stdout});
+    } else {
+        my $asciikey = do { local $/; readline $handles->{stdout} };
+        done_gpg($pid, $handles);
+        return $asciikey;
+    }
 };
 
 
@@ -884,88 +884,88 @@ sub export_keys($$@) {
 ######
 # create_mail($address, $can_encrypt, $longkeyid, $uid, @attached);
 sub create_mail($$$@) {
-	my ($address, $can_encrypt, $key_id, @keys) = @_;
+    my ($address, $can_encrypt, $key_id, @keys) = @_;
 
-	my $template = Text::Template::->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'});
-	myerror(1, "Cannot create template: $Text::Template::ERROR") unless defined $template;
+    my $template = Text::Template::->new(TYPE => 'STRING', SOURCE => $CONFIG{'mail-template'});
+    myerror(1, "Cannot create template: $Text::Template::ERROR") unless defined $template;
 
-	my $message = $template->fill_in(HASH => { key => $key_id,
-						   uids => [ map {$_->{'text'}} @keys ],
-						   owner => $CONFIG{'owner'}});
-	myerror(1, "Cannot fill in template: $Text::Template::ERROR") unless defined $message;
+    my $message = $template->fill_in(HASH => { key => $key_id,
+                           uids => [ map {$_->{'text'}} @keys ],
+                           owner => $CONFIG{'owner'}});
+    myerror(1, "Cannot fill in template: $Text::Template::ERROR") unless defined $message;
 
-	my $message_entity = MIME::Entity->build(
-		Type        => "text/plain",
-		Charset     => "utf-8",
-		Disposition => 'inline',
-		Data        => Encode::encode_utf8($message));
+    my $message_entity = MIME::Entity->build(
+        Type        => "text/plain",
+        Charset     => "utf-8",
+        Disposition => 'inline',
+        Data        => Encode::encode_utf8($message));
 
-	my @key_entities;
-	for my $key (@keys) {
-		$message_entity->attach(
-			Type        => "application/pgp-keys",
-			Disposition => 'attachment',
-			Encoding    => "7bit",
-			Description => "PGP Key 0x$key_id, uid ".Encode::encode_utf8($key->{text})." ($key->{serial}), signed by 0x$CONFIG{keyid}[0]",
-			Data        => $key->{key},
-			Filename    => "0x$key_id.$key->{serial}.signed-by-0x$CONFIG{keyid}[0].asc");
-	};
+    my @key_entities;
+    for my $key (@keys) {
+        $message_entity->attach(
+            Type        => "application/pgp-keys",
+            Disposition => 'attachment',
+            Encoding    => "7bit",
+            Description => "PGP Key 0x$key_id, uid ".Encode::encode_utf8($key->{text})." ($key->{serial}), signed by 0x$CONFIG{keyid}[0]",
+            Data        => $key->{key},
+            Filename    => "0x$key_id.$key->{serial}.signed-by-0x$CONFIG{keyid}[0].asc");
+    };
 
-	if ($can_encrypt) {
-		my $gpg = mkGnuPG( homedir => $GNUPGHOME, armor => 1, textmode => 1 );
-		$gpg->options->push_recipients($key_id);
-		$gpg->options->push_recipients(@{$CONFIG{'also-encrypt-to'}}) if defined $CONFIG{'also-encrypt-to'};
-		my $handles = mkGnuPG_fds( stdin => undef, stdout => undef, status => undef );
-		my $pid = $gpg->encrypt(handles => $handles);
-		my %output = readwrite_gpg($handles, stdin => $message_entity->stringify(), autoclose => 1);
-		done_gpg($pid, $handles);
-		my ($message, $status) = @output{qw/stdout status/};
+    if ($can_encrypt) {
+        my $gpg = mkGnuPG( homedir => $GNUPGHOME, armor => 1, textmode => 1 );
+        $gpg->options->push_recipients($key_id);
+        $gpg->options->push_recipients(@{$CONFIG{'also-encrypt-to'}}) if defined $CONFIG{'also-encrypt-to'};
+        my $handles = mkGnuPG_fds( stdin => undef, stdout => undef, status => undef );
+        my $pid = $gpg->encrypt(handles => $handles);
+        my %output = readwrite_gpg($handles, stdin => $message_entity->stringify(), autoclose => 1);
+        done_gpg($pid, $handles);
+        my ($message, $status) = @output{qw/stdout status/};
 
-		if ($message eq '') {
-			if ($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m and defined $CONFIG{'also-encrypt-to'}) {
-				my $reason = $1;
-				my $keyid = $2;
-				if (grep { $_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
-					mywarn "Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}";
-					mywarn "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>";
-					mywarn "or try the following if you are slightly more daring:";
-					mywarn "  gpg --export $keyid | gpg --homedir=$GNUPGHOME --import";
-					return;
-				};
-			};
-			mywarn "No data from gpg for encrypting mail; status output was:\n$status";
-			return;
-		};
+        if ($message eq '') {
+            if ($status =~ /^\[GNUPG:\] INV_RECP ([0-9]+) ([0-9A-F]+)$/m and defined $CONFIG{'also-encrypt-to'}) {
+                my $reason = $1;
+                my $keyid = $2;
+                if (grep { $_ eq $keyid } @{$CONFIG{'also-encrypt-to'}}) {
+                    mywarn "Could not encrypt to $keyid, specified in CONFIG{'also-encrypt-to'}";
+                    mywarn "Try to update the key using gpg --homedir=$GNUPGHOME --import <exported key>";
+                    mywarn "or try the following if you are slightly more daring:";
+                    mywarn "  gpg --export $keyid | gpg --homedir=$GNUPGHOME --import";
+                    return;
+                };
+            };
+            mywarn "No data from gpg for encrypting mail; status output was:\n$status";
+            return;
+        };
 
-		$message_entity = MIME::Entity->build(
-			Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"',
-			Encoding    => '7bit');
+        $message_entity = MIME::Entity->build(
+            Type        => 'multipart/encrypted; protocol="application/pgp-encrypted"',
+            Encoding    => '7bit' );
 
-		$message_entity->attach(
-			Type        => "application/pgp-encrypted",
-			Filename    => "signedkey.msg",
-			Disposition => 'attachment',
-			Encoding    => "7bit",
-			Data        => "Version: 1\n");
+        $message_entity->attach(
+            Type        => "application/pgp-encrypted",
+            Filename    => "signedkey.msg",
+            Disposition => 'attachment',
+            Encoding    => "7bit",
+            Data        => "Version: 1\n" );
 
-		$message_entity->attach(
-			Type        => "application/octet-stream",
-			Filename    => 'msg.asc',
-			Disposition => 'inline',
-			Encoding    => "7bit",
-			Data        => $message);
-	};
+        $message_entity->attach(
+            Type        => "application/octet-stream",
+            Filename    => 'msg.asc',
+            Disposition => 'inline',
+            Encoding    => "7bit",
+            Data        => $message );
+    };
 
-	my $from = Encode::encode('MIME-Q', $CONFIG{owner})." <$CONFIG{email}>";
-	$message_entity->head->add("From", $from);
-	$message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
-	$message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/gr));
-	$message_entity->head->add("To", email_to_ascii($address));
-	$message_entity->head->add("Sender", $from);
-	$message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
-	$message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
-	$message_entity->head->add("User-Agent", $USER_AGENT);
-	return $message_entity;
+    my $from = Encode::encode('MIME-Q', $CONFIG{owner})." <$CONFIG{email}>";
+    $message_entity->head->add("From", $from);
+    $message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
+    $message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/gr));
+    $message_entity->head->add("To", email_to_ascii($address));
+    $message_entity->head->add("Sender", $from);
+    $message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
+    $message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
+    $message_entity->head->add("User-Agent", $USER_AGENT);
+    return $message_entity;
 };
 
 ######
@@ -973,13 +973,13 @@ sub create_mail($$$@) {
 ######
 my $warned_about_broken_mailer_send = 0;
 sub send_message($) {
-	my ($message_entity) = @_;
+    my ($message_entity) = @_;
 
-	if ( (scalar @{$CONFIG{'mailer-send'}} > 0) && !$warned_about_broken_mailer_send) {
-		mywarn("You have set arguments to pass to Mail::Mailer.  Better fix your MTA.  (Also, Mail::Mailer's error reporting is non existant, so it won't tell you when it doesn't work.)");
-		$warned_about_broken_mailer_send = 1;
-	};
-	$message_entity->send(@{$CONFIG{'mailer-send'}});
+    if ((scalar @{$CONFIG{'mailer-send'}} > 0) && !$warned_about_broken_mailer_send) {
+        mywarn("You have set arguments to pass to Mail::Mailer.  Better fix your MTA.  (Also, Mail::Mailer's error reporting is non existant, so it won't tell you when it doesn't work.)");
+        $warned_about_broken_mailer_send = 1;
+    };
+    $message_entity->send(@{$CONFIG{'mailer-send'}});
 };
 
 # Net::IDN::Encode::email_to_ascii crashes upon punycode conversion failure:
@@ -1001,12 +1001,12 @@ sub email_to_ascii($) {
 # clean up a UID so that it can be used on the FS.
 ######
 sub sanitize_uid($) {
-	my ($uid) = @_;
+    my ($uid) = @_;
 
-	my $good_uid = $uid;
-	$good_uid =~ tr#/:\\#_#;
-	trace2("[sanitize_uid] changed UID from $uid to $good_uid.\n") if $good_uid ne $uid;
-	return $good_uid;
+    my $good_uid = $uid;
+    $good_uid =~ tr#/:\\#_#;
+    trace2("[sanitize_uid] changed UID from $uid to $good_uid.\n") if $good_uid ne $uid;
+    return $good_uid;
 };
 
 # Delete all non self-sigs that are not made by one of the @$keyids, and
@@ -1015,46 +1015,46 @@ sub sanitize_uid($) {
 # signature on that $uid.  If $keep_lsigs_only, our exportable
 # signatures are removed as well.
 sub delete_signatures($$$$;$) {
-	my ($handles, $longkeyid, $uid, $keyids, $keep_lsigs_only) = @_;
+    my ($handles, $longkeyid, $uid, $keyids, $keep_lsigs_only) = @_;
 
-	readwrite_gpg($handles, command => "uid 0",    status => $KEYEDIT_PROMPT); # unmark all uids from delsig
-	readwrite_gpg($handles, command => "uid $uid", status => $KEYEDIT_PROMPT); # mark $uid for delsig
+    readwrite_gpg($handles, command => "uid 0",    status => $KEYEDIT_PROMPT); # unmark all uids from delsig
+    readwrite_gpg($handles, command => "uid $uid", status => $KEYEDIT_PROMPT); # mark $uid for delsig
 
-	my $last_signed_on = 0;
-	my %xsigners;
+    my $last_signed_on = 0;
+    my %xsigners;
 
-	my %output = readwrite_gpg($handles, command => "delsig", status => $KEYEDIT_DELSIG_PROMPT);
+    my %output = readwrite_gpg($handles, command => "delsig", status => $KEYEDIT_DELSIG_PROMPT);
 
-	while($output{status} =~ /$KEYEDIT_DELSIG_PROMPT/m) {
-		# sig:?::17:EA2199412477CAF8:1058095214:::::13x
-		my @sigline = grep /^sig:/, (split /\n/, $output{stdout});
-		my $answer = "no";
-		if (!@sigline) {
-			debug("[sigremoval] no sig line here, only got:\n".$output{stdout});
-		}
-		else { # only if we found a sig here - we never remove revocation packets for instance
-			my $sig = pop @sigline;
-			$sig =~ /^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(?:[^:]*:){4}(1[0-3]|30)([lx])(?::.*)?$/ or
-				mywarn("I hit a bug, please report: Couldn't parse sigline $sig");
-			debug("[sigremoval] doing sigline $sig");
-			if ($1 eq $longkeyid) {
-				debug("[sigremoval] selfsig ($1)");
-				$answer = "no";
-			} elsif (grep { $1 eq $_ } @$keyids and $3 != 30) {
-				debug("[sigremoval] signed by us ($1)");
-				$answer = ($keep_lsigs_only and $4 eq 'x') ? "yes" : "no";
-				$last_signed_on = $2 if $last_signed_on < $2;
-				$xsigners{$1} = $3-10 if $4 eq 'x';
-			} else {
-				debug("[sigremoval] not interested in that sig ($1)");
-				$answer = "yes";
-			};
-			mywarn("I hit a bug, please report: Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$output{stdout}) if @sigline;
-		}
-		%output = readwrite_gpg($handles, command => $answer, status => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT);
-	}
+    while($output{status} =~ /$KEYEDIT_DELSIG_PROMPT/m) {
+        # sig:?::17:EA2199412477CAF8:1058095214:::::13x
+        my @sigline = grep /^sig:/, (split /\n/, $output{stdout});
+        my $answer = "no";
+        if (!@sigline) {
+            debug("[sigremoval] no sig line here, only got:\n".$output{stdout});
+        }
+        else { # only if we found a sig here - we never remove revocation packets for instance
+            my $sig = pop @sigline;
+            $sig =~ /^sig:(?:[^:]*:){3}([0-9A-F]{16}):(\d+):(?:[^:]*:){4}(1[0-3]|30)([lx])(?::.*)?$/ or
+                mywarn("I hit a bug, please report: Couldn't parse sigline $sig");
+            debug("[sigremoval] doing sigline $sig");
+            if ($1 eq $longkeyid) {
+                debug("[sigremoval] selfsig ($1)");
+                $answer = "no";
+            } elsif (grep { $1 eq $_ } @$keyids and $3 != 30) {
+                debug("[sigremoval] signed by us ($1)");
+                $answer = ($keep_lsigs_only and $4 eq 'x') ? "yes" : "no";
+                $last_signed_on = $2 if $last_signed_on < $2;
+                $xsigners{$1} = $3-10 if $4 eq 'x';
+            } else {
+                debug("[sigremoval] not interested in that sig ($1)");
+                $answer = "yes";
+            };
+            mywarn("I hit a bug, please report: Found the following ".($#sigline+2)." siglines in that part of the dialog:\n".$output{stdout}) if @sigline;
+        }
+        %output = readwrite_gpg($handles, command => $answer, status => $KEYEDIT_KEYEDIT_OR_DELSIG_PROMPT);
+    }
 
-	return ($last_signed_on, \%xsigners);
+    return ($last_signed_on, \%xsigners);
 }
 
 ##
@@ -1068,36 +1068,36 @@ sub delete_signatures($$$$;$) {
 #         (undef) if no valid key has been found
 #
 sub get_local_user_keys() {
-	# No user-defined key id has been specified by the user, no need for
-	# further checks
-	return @{$CONFIG{'keyid'}} unless $CONFIG{'local-user'};
+    # No user-defined key id has been specified by the user, no need for
+    # further checks
+    return @{$CONFIG{'keyid'}} unless $CONFIG{'local-user'};
 
-	# Parse the list of keys
-	my @key_list = ref $CONFIG{'local-user'} ?  @{$CONFIG{'local-user'}} : split /\s*,\s*/, $CONFIG{'local-user'};
-	my @local_user;
+    # Parse the list of keys
+    my @key_list = ref $CONFIG{'local-user'} ?  @{$CONFIG{'local-user'}} : split /\s*,\s*/, $CONFIG{'local-user'};
+    my @local_user;
 
-	# Check every key defined by the user...
-	for my $user_key (@key_list) {
-		unless ($user_key =~ m/^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
-			mywarn "Local-user $user_key is not a valid keyid";
-			next;
-		}
+    # Check every key defined by the user...
+    for my $user_key (@key_list) {
+        unless ($user_key =~ m/^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
+            mywarn "Local-user $user_key is not a valid keyid";
+            next;
+        }
 
-		$user_key =~ s/^0x//;
-		$user_key =~ y/ //d;
-		$user_key = uc $user_key;
+        $user_key =~ s/^0x//;
+        $user_key =~ y/ //d;
+        $user_key = uc $user_key;
 
-		unless (grep {$user_key =~ /$_$/} @{$CONFIG{'keyid'}}) {
-			mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used)";
-			next;
-		}
+        unless (grep {$user_key =~ /$_$/} @{$CONFIG{'keyid'}}) {
+            mywarn "Local-user $user_key is not defined as one of your keyid in ~/.caffrc (it will not be used)";
+            next;
+        }
 
-		push @local_user, $user_key;
-	}
+        push @local_user, $user_key;
+    }
 
-	# If no local-user key are valid, there is no need to go further
-	myerror(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc") unless @local_user;
-	return @local_user;
+    # If no local-user key are valid, there is no need to go further
+    myerror(1, "None of the local-user keys seem to be known as a keyid listed in ~/.caffrc") unless @local_user;
+    return @local_user;
 }
 
 ##
@@ -1112,40 +1112,40 @@ sub get_local_user_keys() {
 # imported.  Otherwise, croak if any key couldn't be imported.
 #
 sub import_keys_from_gnupghome($$$@) {
-	my ($keyids, $src_gpghome, $dst_gpghome, @import_options) = @_;
-	my %keyids = map {$_ => 1} @$keyids;
-	my $src = $src_gpghome // "your normal GnuPGHOME";
-	my $dst = $dst_gpghome // "your normal GnuPGHOME";
+    my ($keyids, $src_gpghome, $dst_gpghome, @import_options) = @_;
+    my %keyids = map {$_ => 1} @$keyids;
+    my $src = $src_gpghome // "your normal GnuPGHOME";
+    my $dst = $dst_gpghome // "your normal GnuPGHOME";
 
-	my @extra_args;
-	push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/ and !grep /import-local-sigs$/, @import_options;
-	push @import_options, 'keep-ownertrust' unless defined $dst_gpghome or $GNUPG_VERSION >= 2.1; # don't modify our own trustdb
-	push @extra_args, '--min-cert-level=1' if grep { $_ eq 'import-clean' } @import_options;
-	push @extra_args, '--import-options', join (',', @import_options) if @import_options;
+    my @extra_args;
+    push @import_options, 'import-local-sigs' if $CONFIG{'gpg-sign-type'} =~ /l/ and !grep /import-local-sigs$/, @import_options;
+    push @import_options, 'keep-ownertrust' unless defined $dst_gpghome or $GNUPG_VERSION >= 2.1; # don't modify our own trustdb
+    push @extra_args, '--min-cert-level=1' if grep { $_ eq 'import-clean' } @import_options;
+    push @extra_args, '--import-options', join (',', @import_options) if @import_options;
 
-	# export the (non-armored) keys to $pipe
-	debug("Exporting key(s) ".(join ',', @$keyids)." from $src to $dst");
-	my @export_options = ('export-local-sigs') if grep {$_ eq 'import-local-sigs'} @import_options;
-	my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
+    # export the (non-armored) keys to $pipe
+    debug("Exporting key(s) ".(join ',', @$keyids)." from $src to $dst");
+    my @export_options = ('export-local-sigs') if grep {$_ eq 'import-local-sigs'} @import_options;
+    my ($ePid, $pipe) = export_keys($src_gpghome, $keyids, @export_options);
 
-	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1, extra_args => \@extra_args );
-	my $handles = mkGnuPG_fds( stdin  => $pipe, status => undef ); # import keys from $pipe
-	my $iPid = $gpg->import_keys( handles => $handles );
+    my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1, extra_args => \@extra_args );
+    my $handles = mkGnuPG_fds( stdin  => $pipe, status => undef ); # import keys from $pipe
+    my $iPid = $gpg->import_keys( handles => $handles );
 
-	# inspect the $status FD as data gets out.
-	while (readline $handles->{status}) {
-		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
-			my $fpr = $1;
-			my @keys = grep { $fpr =~ /$_$/ } @$keyids;
-			mywarn("Multiple (".($#keys+1).") keys matched $fpr in $src") if $#keys > 0;
-			delete @keyids{@keys};
-		}
-	}
-	done_gpg($iPid, $handles);	# import done
-	done_gpg($ePid);			# export done
+    # inspect the $status FD as data gets out.
+    while (readline $handles->{status}) {
+        if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+            my $fpr = $1;
+            my @keys = grep { $fpr =~ /$_$/ } @$keyids;
+            mywarn("Multiple (".($#keys+1).") keys matched $fpr in $src") if $#keys > 0;
+            delete @keyids{@keys};
+        }
+    }
+    done_gpg($iPid, $handles);  # import done
+    done_gpg($ePid);            # export done
 
-	return (keys %keyids) if wantarray; # list context
-	myerror(1, "Couldn't import key(s) ".(join ',', keys %keyids)." from $src") if %keyids;
+    return (keys %keyids) if wantarray; # list context
+    myerror(1, "Couldn't import key(s) ".(join ',', keys %keyids)." from $src") if %keyids;
 }
 
 ##
@@ -1158,21 +1158,21 @@ sub import_keys_from_gnupghome($$$@) {
 #         1 if an error occured.
 #
 sub import_key_files($$) {
-	my ($keyfile, $dst_gpghome) = @_;
-	my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1 );
-	$gpg->options->push_extra_args(qw/--import-options import-local-sigs/) if $CONFIG{'gpg-sign-type'} =~ /l/;
-	my $handles = mkGnuPG_fds( status => undef );
-	my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
+    my ($keyfile, $dst_gpghome) = @_;
+    my $gpg = mkGnuPG( homedir => $dst_gpghome, quiet => 1 );
+    $gpg->options->push_extra_args(qw/--import-options import-local-sigs/) if $CONFIG{'gpg-sign-type'} =~ /l/;
+    my $handles = mkGnuPG_fds( status => undef );
+    my $pid = $gpg->import_keys( handles => $handles, command_args => $keyfile );
 
-	my $err = 1;
-	while (readline $handles->{status}) {
-		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
-			info("Key $1 imported from $keyfile", 1);
-			$err = 0;
-		}
-	}
-	done_gpg($pid, $handles);
-	return $err;
+    my $err = 1;
+    while (readline $handles->{status}) {
+        if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+            info("Key $1 imported from $keyfile", 1);
+            $err = 0;
+        }
+    }
+    done_gpg($pid, $handles);
+    return $err;
 }
 
 ##
@@ -1184,18 +1184,18 @@ sub import_key_files($$) {
 # found.
 #
 sub import_keys_to_sign() {
-	# Check if we can find the gpg key from our normal gnupghome, and then
-	# try to import it into our working gnupghome directory
-	if ($CONFIG{'keys-from-gnupg'}) {
-		my @failed = import_keys_from_gnupghome(\@KEYIDS, undef, $GNUPGHOME);
-		foreach my $keyid (@KEYIDS) {
-			info("Key $keyid imported from your normal GnuPGHOME", 1)
-				unless grep { $keyid eq $_ } @failed;
-		}
-	};
+    # Check if we can find the gpg key from our normal gnupghome, and then
+    # try to import it into our working gnupghome directory
+    if ($CONFIG{'keys-from-gnupg'}) {
+        my @failed = import_keys_from_gnupghome(\@KEYIDS, undef, $GNUPGHOME);
+        foreach my $keyid (@KEYIDS) {
+            info("Key $keyid imported from your normal GnuPGHOME", 1)
+                unless grep { $keyid eq $_ } @failed;
+        }
+    };
 
-	# Import user specified key files
-	import_key_files($_, $GNUPGHOME) foreach @{$CONFIG{'key-files'}};
+    # Import user specified key files
+    import_key_files($_, $GNUPGHOME) foreach @{$CONFIG{'key-files'}};
 }
 
 ##
@@ -1215,129 +1215,129 @@ sub strfCtime($@) {
 ###################
 Getopt::Long::config('bundling');
 if (!GetOptions (
-	'-h'                =>  \$PARAMS->{'help'},
-	'--help'            =>  \$PARAMS->{'help'},
-	'--version'         =>  \$PARAMS->{'version'},
-	'-V'                =>  \$PARAMS->{'version'},
-	'-u=s'              =>  \$PARAMS->{'local-user'},
-	'--local-user=s'    =>  \$PARAMS->{'local-user'},
-	'-e'                =>  \$PARAMS->{'export-old'},
-	'--export-old'      =>  \$PARAMS->{'export-old'},
-	'-E'                =>  \$PARAMS->{'no-export-old'},
-	'--no-export-old'   =>  \$PARAMS->{'no-export-old'},
-	'-m:s'              =>  \$PARAMS->{'mail'},
-	'--mail:s'          =>  \$PARAMS->{'mail'},
-	'-M'                =>  \$PARAMS->{'no-mail'},
-	'--no-mail'         =>  \$PARAMS->{'no-mail'},
-	'-R'                =>  \$PARAMS->{'no-download'},
-	'--no-download'     =>  \$PARAMS->{'no-download'},
-	'-S'                =>  \$PARAMS->{'no-sign'},
-	'--no-sign'         =>  \$PARAMS->{'no-sign'},
-	'--key-file=s@'     =>  \$PARAMS->{'key-files'},
-	'--keys-from-gnupg' =>  \$PARAMS->{'keys-from-gnupg'},
-	'--debug'			=>  \$PARAMS->{'debug'},
-	)) {
-	usage(\*STDERR, 1);
+    '-h'                =>  \$PARAMS->{'help'},
+    '--help'            =>  \$PARAMS->{'help'},
+    '--version'         =>  \$PARAMS->{'version'},
+    '-V'                =>  \$PARAMS->{'version'},
+    '-u=s'              =>  \$PARAMS->{'local-user'},
+    '--local-user=s'    =>  \$PARAMS->{'local-user'},
+    '-e'                =>  \$PARAMS->{'export-old'},
+    '--export-old'      =>  \$PARAMS->{'export-old'},
+    '-E'                =>  \$PARAMS->{'no-export-old'},
+    '--no-export-old'   =>  \$PARAMS->{'no-export-old'},
+    '-m:s'              =>  \$PARAMS->{'mail'},
+    '--mail:s'          =>  \$PARAMS->{'mail'},
+    '-M'                =>  \$PARAMS->{'no-mail'},
+    '--no-mail'         =>  \$PARAMS->{'no-mail'},
+    '-R'                =>  \$PARAMS->{'no-download'},
+    '--no-download'     =>  \$PARAMS->{'no-download'},
+    '-S'                =>  \$PARAMS->{'no-sign'},
+    '--no-sign'         =>  \$PARAMS->{'no-sign'},
+    '--key-file=s@'     =>  \$PARAMS->{'key-files'},
+    '--keys-from-gnupg' =>  \$PARAMS->{'keys-from-gnupg'},
+    '--debug'           =>  \$PARAMS->{'debug'},
+    )) {
+    usage(\*STDERR, 1);
 };
 if ($PARAMS->{'help'}) {
-	usage(\*STDOUT, 0);
+    usage(\*STDOUT, 0);
 };
 if ($PARAMS->{'version'}) {
-	version(\*STDOUT);
-	exit(0);
+    version(\*STDOUT);
+    exit(0);
 };
 
 if (-t \*STDIN) {
-	# we're already talking to a TTY
-	usage(\*STDERR, 1) unless @ARGV;
-	*TTY = *STDIN;
+    # we're already talking to a TTY
+    usage(\*STDERR, 1) unless @ARGV;
+    *TTY = *STDIN;
 } else {
-	my @checksums;
-	my $goodblock;
-	my $got_input; # detect xargs, /dev/null, ...
-	while (<STDIN>) {
-		unless ($got_input) {
-			notice("Reading gpgparticipants formatted input on STDIN");
-			$got_input = 1;
-		}
+    my @checksums;
+    my $goodblock;
+    my $got_input; # detect xargs, /dev/null, ...
+    while (<STDIN>) {
+        unless ($got_input) {
+            notice("Reading gpgparticipants formatted input on STDIN");
+            $got_input = 1;
+        }
 
-		if (/^(\S+)\s+Checksum:\s+[_ 0-9A-F]+(?:\s+\[(.)\])?$/i) {
-			# ensure the checksum is (claimed to be) verified
-			my ($md, $r) = ($1, $2);
-			while (!defined $r) {
-				$_ = <STDIN>;
-				if (/^\s+[_ 0-9A-F]+\s+\[(.)\]$/i) {
-					$r = $1;
-				}
-				elsif (!/^(:?\s+[_ 0-9A-F]+)?$/i) {
-					myerror(1, "Unexpected input line: $_");
-				}
-			}
-			myerror(1, "$md checksum wasn't marked as verified!") unless lc $r eq 'x';
-			notice "Found $md checksum (marked as verified, assumed good)";
-			push @checksums, uc $md;
-		}
-		elsif (/^(?:-+|_+)$/) {
-			$goodblock = 0;
-		}
-		elsif (/^(#*)(?:\d+)\s+\[(.)\] Fingerprint(?:\(s\)|s)? OK\s+\[(.)\] ID OK\s*$/) {
-			$goodblock = (!$1 and lc $2 eq 'x' and lc $3 eq 'x') ? 1 : 0;
-		}
-		elsif (/^\s+Key fingerprint = ([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/) {
-			mywarn("Ignoring v3 fingerprint ".($1 =~ y/ //dr).".  v3 keys are obsolete.");
-		}
-		elsif (/^\s+Key fingerprint = ([A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
-			my $fpr = ($1 =~ y/ //dr);
-			if ($goodblock) {
-				info("Adding fingerprint $fpr", 1);
-				push @KEYIDS, $fpr;
-			} else {
-				info("Ignoring fingerprint $fpr", 0);
-			}
-		}
-	}
+        if (/^(\S+)\s+Checksum:\s+[_ 0-9A-F]+(?:\s+\[(.)\])?$/i) {
+            # ensure the checksum is (claimed to be) verified
+            my ($md, $r) = ($1, $2);
+            while (!defined $r) {
+                $_ = <STDIN>;
+                if (/^\s+[_ 0-9A-F]+\s+\[(.)\]$/i) {
+                    $r = $1;
+                }
+                elsif (!/^(:?\s+[_ 0-9A-F]+)?$/i) {
+                    myerror(1, "Unexpected input line: $_");
+                }
+            }
+            myerror(1, "$md checksum wasn't marked as verified!") unless lc $r eq 'x';
+            notice "Found $md checksum (marked as verified, assumed good)";
+            push @checksums, uc $md;
+        }
+        elsif (/^(?:-+|_+)$/) {
+            $goodblock = 0;
+        }
+        elsif (/^(#*)(?:\d+)\s+\[(.)\] Fingerprint(?:\(s\)|s)? OK\s+\[(.)\] ID OK\s*$/) {
+            $goodblock = (!$1 and lc $2 eq 'x' and lc $3 eq 'x') ? 1 : 0;
+        }
+        elsif (/^\s+Key fingerprint = ([A-F0-9]{32}|(?:[A-F0-9]{2} ){8}(?: [A-F0-9]{2}){8})$/) {
+            mywarn("Ignoring v3 fingerprint ".($1 =~ y/ //dr).".  v3 keys are obsolete.");
+        }
+        elsif (/^\s+Key fingerprint = ([A-F0-9]{40}|(?:[A-F0-9]{4} ){5}(?: [A-F0-9]{4}){5})$/) {
+            my $fpr = ($1 =~ y/ //dr);
+            if ($goodblock) {
+                info("Adding fingerprint $fpr", 1);
+                push @KEYIDS, $fpr;
+            } else {
+                info("Ignoring fingerprint $fpr", 0);
+            }
+        }
+    }
 
-	if ($got_input) {
-		if (!@checksums) {
-			mywarn "No checksum found!";
-		} elsif (!grep { my $x = $_; grep { $x eq $_ } qw/SHA256 SHA384 SHA512 SHA224/ } @checksums) {
-			mywarn "No checksum of the SHA-2 family found!";
-		}
-	}
+    if ($got_input) {
+        if (!@checksums) {
+            mywarn "No checksum found!";
+        } elsif (!grep { my $x = $_; grep { $x eq $_ } qw/SHA256 SHA384 SHA512 SHA224/ } @checksums) {
+            mywarn "No checksum of the SHA-2 family found!";
+        }
+    }
 
-	close STDIN;
-	open TTY, '<', '/dev/tty' or myerror(1,"No TTY.")
+    close STDIN;
+    open TTY, '<', '/dev/tty' or myerror(1,"No TTY.")
 }
 
 for my $hashkey (qw{local-user no-download no-sign no-mail mail keys-from-gnupg}) {
-	$CONFIG{$hashkey} = $PARAMS->{$hashkey}  if defined $PARAMS->{$hashkey};
+    $CONFIG{$hashkey} = $PARAMS->{$hashkey}  if defined $PARAMS->{$hashkey};
 };
 
 # If old 'no-mail' parameter, or if the 'mail' parameter is set to 'no'
 if ( defined $CONFIG{'no-mail'} ||
      ( defined $CONFIG{'mail'} && $CONFIG{'mail'}  eq 'no' ) ) {
-	$CONFIG{'mail'} = 'no';
+    $CONFIG{'mail'} = 'no';
 
 } elsif ( !defined $CONFIG{'mail'} ) {
-	$CONFIG{'mail'} = 'ask-yes';
+    $CONFIG{'mail'} = 'ask-yes';
 }
 $CONFIG{'mail-cant-encrypt'} //= $CONFIG{'mail'};
 
 push @{$CONFIG{'key-files'}}, @{$PARAMS->{'key-files'}} if defined $PARAMS->{'key-files'};
 
 for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argument
-	if ($keyid =~ /^(\p{AHex}{32}|(?:\p{AHex}{2} ){8}(?: \p{AHex}{2}){8})$/) {
-		mywarn("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
-		next;
-	}
-	elsif ($keyid !~ /^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
-		print STDERR "$keyid is not a keyid.\n";
-		usage(\*STDERR, 1);
-	};
+    if ($keyid =~ /^(\p{AHex}{32}|(?:\p{AHex}{2} ){8}(?: \p{AHex}{2}){8})$/) {
+        mywarn("Ignoring v3 fingerprint ".($keyid =~ y/ //dr).".  v3 keys are obsolete.");
+        next;
+    }
+    elsif ($keyid !~ /^((?:0x)?\p{AHex}{8}|(?:0x)?\p{AHex}{16}|\p{AHex}{40}|(?:\p{AHex}{4} ){5}(?: \p{AHex}{4}){5})$/) {
+        print STDERR "$keyid is not a keyid.\n";
+        usage(\*STDERR, 1);
+    };
 
-	$keyid =~ s/^0x//;
-	$keyid =~ y/ //d; # gpg --fingerprint includes spaces
-	push @KEYIDS, uc($keyid);
+    $keyid =~ s/^0x//;
+    $keyid =~ y/ //d; # gpg --fingerprint includes spaces
+    push @KEYIDS, uc($keyid);
 };
 
 
@@ -1347,44 +1347,44 @@ $GNUPG_VERSION =~ s/^cfg:version:(\d+\.\d+).*/$1/;
 debug "gpg (GnuPG) $GNUPG_VERSION";
 
 if ($GNUPG_VERSION >= 2.1) {
-	my @sockets;
-	unless ($CONFIG{'no-sign'}) {
-		# Ensure we have a working agent for our secret key material
-		my $secdir = $CONFIG{'secret-keyring'};
-		$secdir =~ s#/[^/]+$## unless -d $secdir;
-		mysystem('gpg-connect-agent', '--homedir', $secdir, '/bye');
-		push @sockets, "$secdir/S.gpg-agent";
-	}
-	unless ($CONFIG{'no-download'}) {
-		# Ensure we have a working agent for the downloads
-		my $homedir = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg");
-		mysystem('gpg-connect-agent', '--homedir', $homedir, '--dirmngr', '/bye');
-		push @sockets, "$homedir/S.dirmngr";
-	}
+    my @sockets;
+    unless ($CONFIG{'no-sign'}) {
+        # Ensure we have a working agent for our secret key material
+        my $secdir = $CONFIG{'secret-keyring'};
+        $secdir =~ s#/[^/]+$## unless -d $secdir;
+        mysystem('gpg-connect-agent', '--homedir', $secdir, '/bye');
+        push @sockets, "$secdir/S.gpg-agent";
+    }
+    unless ($CONFIG{'no-download'}) {
+        # Ensure we have a working agent for the downloads
+        my $homedir = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg");
+        mysystem('gpg-connect-agent', '--homedir', $homedir, '--dirmngr', '/bye');
+        push @sockets, "$homedir/S.dirmngr";
+    }
 
-	foreach my $socket (@sockets) {
-		my $l = $socket =~ s#.*/(S\.[^/]+)$#$GNUPGHOME/$1#r;
-		if (-l $l) {
-			unlink $l
-		}
-		elsif (-S $l) {
-			# don't run agents in caff's homedir
-			myerror(1, "$l: socket exists; runaway gpg-agent?");
-		}
-		elsif (! -S $socket) {
-			myerror(1, "Missing socket $socket");
-		}
-		debug "Creating symlink $l to $socket";
-		symlink $socket, $l or myerror(1, "Cannot symlink: $!");
-	}
+    foreach my $socket (@sockets) {
+        my $l = $socket =~ s#.*/(S\.[^/]+)$#$GNUPGHOME/$1#r;
+        if (-l $l) {
+            unlink $l
+        }
+        elsif (-S $l) {
+            # don't run agents in caff's homedir
+            myerror(1, "$l: socket exists; runaway gpg-agent?");
+        }
+        elsif (! -S $socket) {
+            myerror(1, "Missing socket $socket");
+        }
+        debug "Creating symlink $l to $socket";
+        symlink $socket, $l or myerror(1, "Cannot symlink: $!");
+    }
 }
 elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto' and $CONFIG{'gpg-sign-type'} !~ /l/) {
-	# Ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
-	system qw/gpg-agent -q/;
-	unless ($? == 0) {
-		mywarn("No gpg-agent running: set \$CONFIG{'also-lsign-in-gnupghome'} = 'ask'");
-		$CONFIG{'also-lsign-in-gnupghome'} = 'ask';
-	}
+    # Ensure there is a working gpg-agent if $CONFIG{'also-lsign-in-gnupghome'} is 'auto'
+    system qw/gpg-agent -q/;
+    unless ($? == 0) {
+        mywarn("No gpg-agent running: set \$CONFIG{'also-lsign-in-gnupghome'} = 'ask'");
+        $CONFIG{'also-lsign-in-gnupghome'} = 'ask';
+    }
 }
 
 ##################################
@@ -1398,469 +1398,469 @@ import_keys_to_sign();
 #############################
 my @keyids_ok;
 if ($CONFIG{'no-download'}) {
-	@keyids_ok = @KEYIDS;
+    @keyids_ok = @KEYIDS;
 } else {
-	unless (defined $CONFIG{'keyserver'}) {
-		my $gpgconf = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/gpg.conf';
-		if (-e $gpgconf and open my $fh, $gpgconf) {
-			my @keyservers = grep defined, map { /^\s*keyserver\s+(.+)/ ? $1 : undef } <$fh>;
-			if (@keyservers) {
-				$CONFIG{'keyserver'} = $keyservers[$#keyservers]; # take the last one found
-				seek $fh, 0, 0;
-				my @keyserver_options = grep defined, map { /^\s*keyserver-options\s+(.+)/ ? $1 : undef } <$fh>;
-				$CONFIG{'keyserver'} .= ' '. join (' ', @keyserver_options) if @keyserver_options;
-			}
-			close $fh;
-		}
-	}
-	$CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
-	notice("Fetching keys from ".($CONFIG{keyserver} =~ s/\s.*//r).", this may take a while...");
+    unless (defined $CONFIG{'keyserver'}) {
+        my $gpgconf = ($ENV{'GNUPGHOME'} || "$ENV{'HOME'}/.gnupg") . '/gpg.conf';
+        if (-e $gpgconf and open my $fh, $gpgconf) {
+            my @keyservers = grep defined, map { /^\s*keyserver\s+(.+)/ ? $1 : undef } <$fh>;
+            if (@keyservers) {
+                $CONFIG{'keyserver'} = $keyservers[$#keyservers]; # take the last one found
+                seek $fh, 0, 0;
+                my @keyserver_options = grep defined, map { /^\s*keyserver-options\s+(.+)/ ? $1 : undef } <$fh>;
+                $CONFIG{'keyserver'} .= ' '. join (' ', @keyserver_options) if @keyserver_options;
+            }
+            close $fh;
+        }
+    }
+    $CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
+    notice("Fetching keys from ".($CONFIG{keyserver} =~ s/\s.*//r).", this may take a while...");
 
-	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
-	# logger: requesting key ... from hkp
-	# stdout: gpgkeys: key ... not found on keyserver
-	my $handles = mkGnuPG_fds( status => undef );
-	my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
+    my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
+    # logger: requesting key ... from hkp
+    # stdout: gpgkeys: key ... not found on keyserver
+    my $handles = mkGnuPG_fds( status => undef );
+    my $pid = $gpg->recv_keys(handles => $handles, command_args => \@KEYIDS);
 
-# [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
-# [GNUPG:] NODATA 1
-# [GNUPG:] NODATA 1
-# [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
-	my %local_keyids = map { $_ => 1 } @KEYIDS;
-	my $had_v3_keys = 0;
-	while (readline $handles->{status}) {
-		if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
-			my $imported_key = $1;
-			my $whole_fpr = $imported_key;
-			my $long_keyid = substr($imported_key, -16);
-			my $short_keyid = substr($imported_key, -8);
-			my $speced_key;
-			for my $spec (($whole_fpr, $long_keyid, $short_keyid)) {
-				$speced_key = $spec if $local_keyids{$spec};
-			};
-			unless ($speced_key) {
-			    mywarn("Imported unexpected key; got: $imported_key\nAre you trying to work on a subkey?");
-			    next;
-			};
-			debug ("Imported $imported_key for $speced_key");
-			delete $local_keyids{$speced_key};
-			unshift @keyids_ok, $imported_key;
-		} elsif (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
-			my $imported_key = $1;
-			mywarn("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
-			$had_v3_keys = 1;
-		} elsif (!/^\[GNUPG:\] (?:NODATA \d|IMPORT_RES .+|IMPORTED .+|KEYEXPIRED \d+|SIGEXPIRED(?: deprecated-use-keyexpired-instead)?)$/) {
-			mywarn("Got unknown reply from gpg: ".$_);
-		}
-	};
-	done_gpg($pid, $handles);
+    # [GNUPG:] IMPORT_OK 0 5B00C96D5D54AEE1206BAF84DE7AAF6E94C09C7F
+    # [GNUPG:] NODATA 1
+    # [GNUPG:] NODATA 1
+    # [GNUPG:] IMPORT_OK 0 25FC1614B8F87B52FF2F99B962AF4031C82E0039
+    my %local_keyids = map { $_ => 1 } @KEYIDS;
+    my $had_v3_keys = 0;
+    while (readline $handles->{status}) {
+        if (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{40})$/) {
+            my $imported_key = $1;
+            my $whole_fpr = $imported_key;
+            my $long_keyid = substr($imported_key, -16);
+            my $short_keyid = substr($imported_key, -8);
+            my $speced_key;
+            for my $spec (($whole_fpr, $long_keyid, $short_keyid)) {
+                $speced_key = $spec if $local_keyids{$spec};
+            };
+            unless ($speced_key) {
+                mywarn("Imported unexpected key; got: $imported_key\nAre you trying to work on a subkey?");
+                next;
+            };
+            debug ("Imported $imported_key for $speced_key");
+            delete $local_keyids{$speced_key};
+            unshift @keyids_ok, $imported_key;
+        } elsif (/^\[GNUPG:\] IMPORT_OK \d+ ([0-9A-F]{32})$/) {
+            my $imported_key = $1;
+            mywarn("Imported v3 key $1.  Version 3 keys are obsolete, should not be used, and are not and will not be properly supported.");
+            $had_v3_keys = 1;
+        } elsif (!/^\[GNUPG:\] (?:NODATA \d|IMPORT_RES .+|IMPORTED .+|KEYEXPIRED \d+|SIGEXPIRED(?: deprecated-use-keyexpired-instead)?)$/) {
+            mywarn("Got unknown reply from gpg: ".$_);
+        }
+    };
+    done_gpg($pid, $handles);
 
-	if (scalar %local_keyids) {
-		mywarn("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
-		exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
-		if (scalar keys %local_keyids == 1) {
-			mywarn("Assuming ". (join ' ', keys %local_keyids)." is a fine keyid");
-		} else {
-			mywarn("Assuming ". (join ' ', keys %local_keyids)." are fine keyids");
-		};
-		push @keyids_ok, keys %local_keyids;
-	}
+    if (scalar %local_keyids) {
+        mywarn("Import failed for: ". (join ' ', keys %local_keyids)."." . ($had_v3_keys ? " (Or maybe it's one of those ugly v3 keys?)" :  ""));
+        exit 1 unless ask ("Some keys could not be imported - continue anyway?", 0);
+        if (scalar keys %local_keyids == 1) {
+            mywarn("Assuming ". (join ' ', keys %local_keyids)." is a fine keyid");
+        } else {
+            mywarn("Assuming ". (join ' ', keys %local_keyids)." are fine keyids");
+        };
+        push @keyids_ok, keys %local_keyids;
+    }
 };
 
 if ($CONFIG{'ask-sign'} && ! $CONFIG{'no-sign'}) {
-	$CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
+    $CONFIG{'no-sign'} = ! ask("Continue with signing?", 1);
 }
 
 @LOCAL_USER = get_local_user_keys() unless $CONFIG{'no-sign'};
 
 my %KEYS;
 for my $keyid (@keyids_ok) {
-	# get key listing (and ensure there is no collision)
-	####################################################
-	my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--with-fingerprint', '--with-colons'] );
-	my $handles = mkGnuPG_fds( stdout => undef );
+    # get key listing (and ensure there is no collision)
+    ####################################################
+    my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--with-fingerprint', '--with-colons'] );
+    my $handles = mkGnuPG_fds( stdout => undef );
 
-	# process the keys one by one so we can detect collisions
-	my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
+    # process the keys one by one so we can detect collisions
+    my $pid = $gpg->list_public_keys( handles => $handles, command_args => [$keyid] );
 
-	while (readline $handles->{stdout}) {
-		if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
-			if (exists $KEYS{$keyid}) {
-				mywarn("More than one key matched $keyid; try to specify the long keyid or fingerprint");
-				last;
-			} elsif ($1 =~ /[eir]/ or $3 =~ /D/ ) {
-				mywarn("Ignoring unusable key $keyid");
-				last;
-			}
-			$KEYS{$keyid} = { longkeyid => $2, flags => $3, uids => [], subkeys => [] };
-		}
-		elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/) {
-			$KEYS{$keyid}->{fpr} = $1;
-		}
-		elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{32})(?::.*)?$/) {
-			mywarn("Ignoring v3 key $keyid.  v3 keys are obsolete.");
-			delete $KEYS{$keyid};
-			last;
-		}
-		elsif (/^sub:[^:]+:(?:[^:]*:){2}([0-9A-F]{16}):/) {
-			push @{$KEYS{$keyid}->{subkeys}}, $1;
-		}
-		elsif (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
-			my $uid = { type => $1
-				      , validity => $2
-				      , hash => $3
-				      , text => $1 eq 'uid' ? $4 : '[attribute]'
-			};
-			$uid->{text} =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
-			# --with-colons always outputs UTF-8
-			$uid->{text} = Encode::decode_utf8($uid->{text});
-			$uid->{address} = $1 if $uid->{type} eq 'uid' and $uid->{text} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/;
-			# XXX This does not cover the full RFC 2822 specification:
-			# The local part may contain '>' in a quoted string.
-			# However as of 1.4.18/2.0.26, gpg doesn't allow that either.
-			push @{$KEYS{$keyid}->{uids}}, $uid;
-		}
-		elsif (!/^(?:rvk|tru):/) {
-			chomp;
-			mywarn("Got unknown reply from gpg: ".$_);
-		}
-	}
-	done_gpg($pid, $handles);
+    while (readline $handles->{stdout}) {
+        if (/^pub:([^:]+):(?:[^:]*:){2}([0-9A-F]{16}):(?:[^:]*:){6}([^:]+)/) {
+            if (exists $KEYS{$keyid}) {
+                mywarn("More than one key matched $keyid; try to specify the long keyid or fingerprint");
+                last;
+            } elsif ($1 =~ /[eir]/ or $3 =~ /D/ ) {
+                mywarn("Ignoring unusable key $keyid");
+                last;
+            }
+            $KEYS{$keyid} = { longkeyid => $2, flags => $3, uids => [], subkeys => [] };
+        }
+        elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{40})(?::.*)?$/) {
+            $KEYS{$keyid}->{fpr} = $1;
+        }
+        elsif (/^fpr:(?:[^:]*:){8}([0-9A-F]{32})(?::.*)?$/) {
+            mywarn("Ignoring v3 key $keyid.  v3 keys are obsolete.");
+            delete $KEYS{$keyid};
+            last;
+        }
+        elsif (/^sub:[^:]+:(?:[^:]*:){2}([0-9A-F]{16}):/) {
+            push @{$KEYS{$keyid}->{subkeys}}, $1;
+        }
+        elsif (/^(uid|uat):([^:]+):(?:[^:]*:){5}([0-9A-F]{40}):[^:]*:([^:]+)/) {
+            my $uid = { type => $1
+                      , validity => $2
+                      , hash => $3
+                      , text => $1 eq 'uid' ? $4 : '[attribute]'
+            };
+            $uid->{text} =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
+            # --with-colons always outputs UTF-8
+            $uid->{text} = Encode::decode_utf8($uid->{text});
+            $uid->{address} = $1 if $uid->{type} eq 'uid' and $uid->{text} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/;
+            # XXX This does not cover the full RFC 2822 specification:
+            # The local part may contain '>' in a quoted string.
+            # However as of 1.4.18/2.0.26, gpg doesn't allow that either.
+            push @{$KEYS{$keyid}->{uids}}, $uid;
+        }
+        elsif (!/^(?:rvk|tru):/) {
+            chomp;
+            mywarn("Got unknown reply from gpg: ".$_);
+        }
+    }
+    done_gpg($pid, $handles);
 
-	unless (defined $KEYS{$keyid}) {
-		mywarn("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME)");
-		next;
-	}
+    unless (defined $KEYS{$keyid}) {
+        mywarn("No public keys found with list-key $keyid (note that caff uses its own keyring in $GNUPGHOME)");
+        next;
+    }
 }
 
 unless (keys %KEYS) {
-	notice("No keys to sign found", 0);
-	exit 0;
+    notice("No keys to sign found", 0);
+    exit 0;
 }
 
 
 for my $keyid (@keyids_ok) {
-	next unless exists $KEYS{$keyid};
-	my $longkeyid = $KEYS{$keyid}->{longkeyid};
+    next unless exists $KEYS{$keyid};
+    my $longkeyid = $KEYS{$keyid}->{longkeyid};
 
-	###########
-	# sign keys
-	###########
-	unless ($CONFIG{'no-sign'}) {
-		notice("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
-		foreach my $local_user (@LOCAL_USER) {
-			my @command = ($CONFIG{'gpg'});
-			push @command, '--local-user', $local_user;
-			push @command, "--homedir=$GNUPGHOME";
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
-			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
-			push @command, '--edit-key', $keyid;
-			push @command, 'showphoto' if $CONFIG{'show-photos'};
-			push @command, $CONFIG{'gpg-sign-type'}.'sign';
-			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
-			print join(' ', @command),"\n";
-			mysystem(@command);
-		};
-	};
-
-
-	##################
-	# export and prune
-	##################
-
-	# export the key
-	################
-	my $keydir = File::Temp->newdir( "caff-$keyid-XXXXX", TMPDIR => 1 );
-	# we can't use only one import here because the cleaning is done as the
-	# keys come and our keys might not be imported yet
-	import_keys_from_gnupghome($CONFIG{'keyid'}, $GNUPGHOME, $keydir, 'import-minimal', 'import-local-sigs');
-	import_keys_from_gnupghome([$keyid],		 $GNUPGHOME, $keydir, 'import-clean',	'import-local-sigs');
-
-	# the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
-	my @uids = @{$KEYS{$keyid}->{uids}};
-	my $first_uid = (grep {$_->{type} eq 'uid'} @uids)[0];
-
-	for (my $uid_number = 1; $uid_number <= $#uids+1; $uid_number++) {
-		debug("Doing key $keyid, uid $uid_number");
-		my $uid = $uids[$uid_number-1];
-
-		# /!\ this serial is valid in caff's GnuPGHOME only, and can't
-		# be relied upon if the keyring is modified in the meantime.
-		$uid->{serial} = $uid_number;
-
-		next if $uid->{validity} =~ /[eir]/; # skip expired / invalid / revokey UIDs
-
-		# copy pubring to temporary gpghome
-		###################################
-		my $uiddir = File::Temp->newdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1 );
-		foreach (qw/pubring.gpg pubring.kbx/) {
-			copy($keydir.'/'.$_, $uiddir.'/'.$_) if -e $keydir.'/'.$_;
-		}
-
-		# prune it
-		##########
-		my $gpg = mkGnuPG( homedir => $uiddir, extra_args => ['--with-colons'] );
-		my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
-		my $pid = $gpg->wrap_call(
-			commands     => [ '--edit-key' ],
-			command_args => [ $keyid ],
-			handles      => $handles );
-
-		debug("Starting edit session");
-		my %output = readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
-
-		# delete other uids
-		###################
-		my $delete_some = 0;
-		for (my $i = 1; $i <= $#uids+1; $i++) {
-			# it's quicker with gpg2: 'uid *' then 'uid $i'
-			next if $i == $uid_number;
-			next if $uid->{type} ne 'uid' and $uids[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
-
-			debug("Marking UID $i ($uids[$i-1]->{hash}) for deletion");
-			readwrite_gpg($handles, command => "uid $i", status => $KEYEDIT_PROMPT);
-			$delete_some++;
-		}
-
-		if ($delete_some) {
-			debug("Need to delete $delete_some uids");
-			readwrite_gpg($handles, command => "deluid", status => $KEYEDIT_DELUID_PROMPT);
-			readwrite_gpg($handles, command => "yes",    status => $KEYEDIT_PROMPT);
-		};
-
-		# delete all subkeys
-		####################
-		if (@{$KEYS{$keyid}->{subkeys}}) {
-			for (my $i = 1; $i <= $#{$KEYS{$keyid}->{subkeys}} + 1; $i++) {
-				debug("Marking subkey $i ($KEYS{$keyid}->{subkeys}->[$i-1]) for deletion");
-				readwrite_gpg($handles, command => "key $i", status => $KEYEDIT_PROMPT);
-			};
-			readwrite_gpg($handles, command => "delkey", status => $KEYEDIT_DELSUBKEY_PROMPT);
-			readwrite_gpg($handles, command => "yes", status => $KEYEDIT_PROMPT);
-		};
-
-		# delete signatures
-		###################
-		# this shouldn't delete anything as $longkeyid is already clean, but maybe we didn't sign that uid with all keys in @{$CONFIG{'keyid'}}
-		my ($last_signed_on, $xsigners) = delete_signatures($handles, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
-
-		delete_signatures($handles, $longkeyid, $first_uid->{hash}, [])
-			if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
+    ###########
+    # sign keys
+    ###########
+    unless ($CONFIG{'no-sign'}) {
+        notice("Sign the following keys according to your policy, then exit gpg with 'save' after signing each key");
+        foreach my $local_user (@LOCAL_USER) {
+            my @command = ($CONFIG{'gpg'});
+            push @command, '--local-user', $local_user;
+            push @command, "--homedir=$GNUPGHOME";
+            push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
+            push @command, qw/--no-auto-check-trustdb --trust-model=always/;
+            push @command, '--edit-key', $keyid;
+            push @command, 'showphoto' if $CONFIG{'show-photos'};
+            push @command, $CONFIG{'gpg-sign-type'}.'sign';
+            push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+            print join(' ', @command),"\n";
+            mysystem(@command);
+        };
+    };
 
 
-		readwrite_gpg($handles, command => "save");
-		done_gpg($pid, $handles);
-		debug("Done editing");
+    ##################
+    # export and prune
+    ##################
 
-		my $asciikey = export_keys($uiddir, [$keyid], 'export-local-sigs');
-		undef $uiddir; # delete dir
+    # export the key
+    ################
+    my $keydir = File::Temp->newdir( "caff-$keyid-XXXXX", TMPDIR => 1 );
+    # we can't use only one import here because the cleaning is done as the
+    # keys come and our keys might not be imported yet
+    import_keys_from_gnupghome($CONFIG{'keyid'}, $GNUPGHOME, $keydir, 'import-minimal', 'import-local-sigs');
+    import_keys_from_gnupghome([$keyid],         $GNUPGHOME, $keydir, 'import-clean',   'import-local-sigs');
 
-		unless ($asciikey) {
-			mywarn "No data from gpg for export $keyid";
-			next;
-		};
+    # the first UID. we won't delete that one when pruning for UATs because a key has to have at least one UID
+    my @uids = @{$KEYS{$keyid}->{uids}};
+    my $first_uid = (grep {$_->{type} eq 'uid'} @uids)[0];
 
-		if ($last_signed_on) {
-			# it's a bit inefficient to store the $asciikey in memory,
-			# but it has been pruned so it's shouldn't be too big
-			$uid->{key} = $asciikey;
-			$uid->{xsigners} = $xsigners;
-			$uid->{last_signed_on} = $last_signed_on;
-		};
-	};
+    for (my $uid_number = 1; $uid_number <= $#uids+1; $uid_number++) {
+        debug("Doing key $keyid, uid $uid_number");
+        my $uid = $uids[$uid_number-1];
+
+        # /!\ this serial is valid in caff's GnuPGHOME only, and can't
+        # be relied upon if the keyring is modified in the meantime.
+        $uid->{serial} = $uid_number;
+
+        next if $uid->{validity} =~ /[eir]/; # skip expired / invalid / revokey UIDs
+
+        # copy pubring to temporary gpghome
+        ###################################
+        my $uiddir = File::Temp->newdir( "caff-$keyid-$uid_number-XXXXX", TMPDIR => 1 );
+        foreach (qw/pubring.gpg pubring.kbx/) {
+            copy($keydir.'/'.$_, $uiddir.'/'.$_) if -e $keydir.'/'.$_;
+        }
+
+        # prune it
+        ##########
+        my $gpg = mkGnuPG( homedir => $uiddir, extra_args => ['--with-colons'] );
+        my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
+        my $pid = $gpg->wrap_call(
+            commands     => [ '--edit-key' ],
+            command_args => [ $keyid ],
+            handles      => $handles );
+
+        debug("Starting edit session");
+        my %output = readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
+
+        # delete other uids
+        ###################
+        my $delete_some = 0;
+        for (my $i = 1; $i <= $#uids+1; $i++) {
+            # it's quicker with gpg2: 'uid *' then 'uid $i'
+            next if $i == $uid_number;
+            next if $uid->{type} ne 'uid' and $uids[$i-1]->{hash} eq $first_uid->{hash}; # keep the first UID
+
+            debug("Marking UID $i ($uids[$i-1]->{hash}) for deletion");
+            readwrite_gpg($handles, command => "uid $i", status => $KEYEDIT_PROMPT);
+            $delete_some++;
+        }
+
+        if ($delete_some) {
+            debug("Need to delete $delete_some uids");
+            readwrite_gpg($handles, command => "deluid", status => $KEYEDIT_DELUID_PROMPT);
+            readwrite_gpg($handles, command => "yes",    status => $KEYEDIT_PROMPT);
+        };
+
+        # delete all subkeys
+        ####################
+        if (@{$KEYS{$keyid}->{subkeys}}) {
+            for (my $i = 1; $i <= $#{$KEYS{$keyid}->{subkeys}} + 1; $i++) {
+                debug("Marking subkey $i ($KEYS{$keyid}->{subkeys}->[$i-1]) for deletion");
+                readwrite_gpg($handles, command => "key $i", status => $KEYEDIT_PROMPT);
+            };
+            readwrite_gpg($handles, command => "delkey", status => $KEYEDIT_DELSUBKEY_PROMPT);
+            readwrite_gpg($handles, command => "yes", status => $KEYEDIT_PROMPT);
+        };
+
+        # delete signatures
+        ###################
+        # this shouldn't delete anything as $longkeyid is already clean, but maybe we didn't sign that uid with all keys in @{$CONFIG{'keyid'}}
+        my ($last_signed_on, $xsigners) = delete_signatures($handles, $longkeyid, $uid->{hash}, $CONFIG{'keyid'});
+
+        delete_signatures($handles, $longkeyid, $first_uid->{hash}, [])
+            if $uid->{type} ne 'uid'; # delete all sigs on the first UID if $uid is an attribute
 
 
-	unless ($CONFIG{'also-lsign-in-gnupghome'} eq 'no') {
-		# remove all exportable sigs, and import into our GnuPGHOME
-		###########################################################
-		my $gpg = mkGnuPG( homedir => $keydir, extra_args => ['--with-colons'] );
-		my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
-		my $pid = $gpg->wrap_call(
-			commands     => [ '--edit-key' ],
-			command_args => [ $keyid ],
-			handles      => $handles );
+        readwrite_gpg($handles, command => "save");
+        done_gpg($pid, $handles);
+        debug("Done editing");
 
-		debug("Starting edit session on $keyid");
-		my %output = readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
-		delete_signatures($handles, $longkeyid, $uids[$_]->{hash}, $CONFIG{'keyid'}, 1) foreach (0 .. $#uids);
+        my $asciikey = export_keys($uiddir, [$keyid], 'export-local-sigs');
+        undef $uiddir; # delete dir
 
-		readwrite_gpg($handles, command => "save");
-		done_gpg($pid, $handles);
-		debug("Done editing");
+        unless ($asciikey) {
+            mywarn "No data from gpg for export $keyid";
+            next;
+        };
 
-		# import the pruned keys with our own local sigs only; this is
-		# required even if there are no lsigs, to ensure we've got all
-		# UIDs in our own GnuPGHOME
-		import_keys_from_gnupghome( [$keyid], $keydir, undef, 'import-local-sigs' );
-	}
-	undef $keydir; # delete dir
+        if ($last_signed_on) {
+            # it's a bit inefficient to store the $asciikey in memory,
+            # but it has been pruned so it's shouldn't be too big
+            $uid->{key} = $asciikey;
+            $uid->{xsigners} = $xsigners;
+            $uid->{last_signed_on} = $last_signed_on;
+        };
+    };
 
-	if ($CONFIG{'also-lsign-in-gnupghome'} eq 'ask') {
-		# manually lsign the key
-		########################
-		foreach my $local_user (@LOCAL_USER) {
-			my @command = ($CONFIG{'gpg'});
-			push @command, '--local-user', $local_user;
-			push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
-			push @command, qw/--no-auto-check-trustdb --trust-model=always/;
-			push @command, '--edit-key', $keyid;
-			push @command, 'showphoto' if $CONFIG{'show-photos'};
-			push @command, 'lsign';
-			push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
-			print join(' ', @command),"\n";
-			mysystem(@command);
-		}
-	}
-	elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto') {
-		# auto lsign the uids we for which we have an exportable sig
-		############################################################
-		my @uids = grep {exists $_->{xsigners}} @{$KEYS{$keyid}->{uids}};
-		my @signers = map {keys %{$_->{xsigners}}} @uids;
-		# which of @LOCAL_USER has signed at least one UID in this key?
-		@signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
-		@signers = keys %{{ map { $_ => 1 } @signers }}; # remove duplicates to avoid double signing
 
-		foreach my $u (@signers) {
-			my @signeduids; # uids signed by $u
-			foreach my $uid (@uids) {
-				# we use UIDs hashes to distinguish and select UIDs; it's the only reliable way to identify them accross keyrings
-				push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{xsigners}}) and
-										 !grep { $uid->{hash} eq $_->{hash} } @signeduids;
-			}
+    unless ($CONFIG{'also-lsign-in-gnupghome'} eq 'no') {
+        # remove all exportable sigs, and import into our GnuPGHOME
+        ###########################################################
+        my $gpg = mkGnuPG( homedir => $keydir, extra_args => ['--with-colons'] );
+        my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
+        my $pid = $gpg->wrap_call(
+            commands     => [ '--edit-key' ],
+            command_args => [ $keyid ],
+            handles      => $handles );
 
-			my $gpg = mkGnuPG( extra_args => ['--local-user' => $u, '--ask-cert-level', '--with-colons', '--no-batch'] );
-			$gpg->options->push_extra_args('--secret-keyring', $CONFIG{'secret-keyring'}) if $GNUPG_VERSION < 2.1;
-			$gpg->options->push_extra_args('--use-agent') if $GNUPG_VERSION < 2.0; # we know there is a working agent
-			my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
-			my $pid = $gpg->wrap_call(
-				commands     => [ '--edit-key' ],
-				command_args => [ $keyid ],
-				handles      => $handles );
+        debug("Starting edit session on $keyid");
+        my %output = readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
+        delete_signatures($handles, $longkeyid, $uids[$_]->{hash}, $CONFIG{'keyid'}, 1) foreach (0 .. $#uids);
 
-			debug("Starting edit session on $keyid, signer $u");
-			readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
+        readwrite_gpg($handles, command => "save");
+        done_gpg($pid, $handles);
+        debug("Done editing");
 
-			foreach my $level (0..3) {
-				my @signeduids_with_level = grep {$_->{xsigners}->{$u} eq $level} @signeduids;
-				next unless @signeduids_with_level;
+        # import the pruned keys with our own local sigs only; this is
+        # required even if there are no lsigs, to ensure we've got all
+        # UIDs in our own GnuPGHOME
+        import_keys_from_gnupghome( [$keyid], $keydir, undef, 'import-local-sigs' );
+    }
+    undef $keydir; # delete dir
 
-				notice("Key $longkeyid UID(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level)).": lsign'ing with $u, cert level $level", 1);
-				readwrite_gpg($handles, command => "uid 0",          status => $KEYEDIT_PROMPT); # unselect UIDs
-				readwrite_gpg($handles, command => "uid $_->{hash}", status => $KEYEDIT_PROMPT) for @signeduids_with_level;
-				my %output = readwrite_gpg($handles, command => "lsign", status => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/);
-				next if $output{status} =~ /^\[GNUPG:\] $KEYEDIT_PROMPT/m; # already signed
-				readwrite_gpg($handles, command => $level, status => $KEYEDIT_SIGNUID_PROMPT);
-				readwrite_gpg($handles, command => "yes",  status => $KEYEDIT_PROMPT);
-			}
+    if ($CONFIG{'also-lsign-in-gnupghome'} eq 'ask') {
+        # manually lsign the key
+        ########################
+        foreach my $local_user (@LOCAL_USER) {
+            my @command = ($CONFIG{'gpg'});
+            push @command, '--local-user', $local_user;
+            push @command, '--secret-keyring', $CONFIG{'secret-keyring'} if $GNUPG_VERSION < 2.1;
+            push @command, qw/--no-auto-check-trustdb --trust-model=always/;
+            push @command, '--edit-key', $keyid;
+            push @command, 'showphoto' if $CONFIG{'show-photos'};
+            push @command, 'lsign';
+            push @command, split ' ', $CONFIG{'gpg-sign-args'} || "";
+            print join(' ', @command),"\n";
+            mysystem(@command);
+        }
+    }
+    elsif ($CONFIG{'also-lsign-in-gnupghome'} eq 'auto') {
+        # auto lsign the uids we for which we have an exportable sig
+        ############################################################
+        my @uids = grep {exists $_->{xsigners}} @{$KEYS{$keyid}->{uids}};
+        my @signers = map {keys %{$_->{xsigners}}} @uids;
+        # which of @LOCAL_USER has signed at least one UID in this key?
+        @signers = grep { my $u = $_; grep { $u eq $_ } @signers } @LOCAL_USER;
+        @signers = keys %{{ map { $_ => 1 } @signers }}; # remove duplicates to avoid double signing
 
-			readwrite_gpg($handles, command => "save");
-			done_gpg($pid, $handles);
-			debug("Done editing");
-		}
-	}
+        foreach my $u (@signers) {
+            my @signeduids; # uids signed by $u
+            foreach my $uid (@uids) {
+                # we use UIDs hashes to distinguish and select UIDs; it's the only reliable way to identify them accross keyrings
+                push @signeduids, $uid if grep { $u eq $_ } (keys %{$uid->{xsigners}}) and
+                                         !grep { $uid->{hash} eq $_->{hash} } @signeduids;
+            }
+
+            my $gpg = mkGnuPG( extra_args => ['--local-user' => $u, '--ask-cert-level', '--with-colons', '--no-batch'] );
+            $gpg->options->push_extra_args('--secret-keyring', $CONFIG{'secret-keyring'}) if $GNUPG_VERSION < 2.1;
+            $gpg->options->push_extra_args('--use-agent') if $GNUPG_VERSION < 2.0; # we know there is a working agent
+            my $handles = mkGnuPG_fds( command => undef, stdout => undef, status => undef );
+            my $pid = $gpg->wrap_call(
+                commands     => [ '--edit-key' ],
+                command_args => [ $keyid ],
+                handles      => $handles );
+
+            debug("Starting edit session on $keyid, signer $u");
+            readwrite_gpg($handles, status => $KEYEDIT_PROMPT);
+
+            foreach my $level (0..3) {
+                my @signeduids_with_level = grep {$_->{xsigners}->{$u} eq $level} @signeduids;
+                next unless @signeduids_with_level;
+
+                notice("Key $longkeyid UID(s) #".(join ',', sort (map {$_->{serial}} @signeduids_with_level)).": lsign'ing with $u, cert level $level", 1);
+                readwrite_gpg($handles, command => "uid 0",          status => $KEYEDIT_PROMPT); # unselect UIDs
+                readwrite_gpg($handles, command => "uid $_->{hash}", status => $KEYEDIT_PROMPT) for @signeduids_with_level;
+                my %output = readwrite_gpg($handles, command => "lsign", status => qr/$KEYEDIT_SIGNUID_CLASS_PROMPT|$KEYEDIT_PROMPT/);
+                next if $output{status} =~ /^\[GNUPG:\] $KEYEDIT_PROMPT/m; # already signed
+                readwrite_gpg($handles, command => $level, status => $KEYEDIT_SIGNUID_PROMPT);
+                readwrite_gpg($handles, command => "yes",  status => $KEYEDIT_PROMPT);
+            }
+
+            readwrite_gpg($handles, command => "save");
+            done_gpg($pid, $handles);
+            debug("Done editing");
+        }
+    }
 }
 
 #############
 # send emails
 #############
 for my $keyid (@keyids_ok) {
-	next unless exists $KEYS{$keyid};
-	my $longkeyid = $KEYS{$keyid}->{longkeyid};
-	my $can_encrypt = $KEYS{$keyid}->{flags} =~ /E/;
-	my @UIDS = @{$KEYS{$keyid}->{uids}};
+    next unless exists $KEYS{$keyid};
+    my $longkeyid = $KEYS{$keyid}->{longkeyid};
+    my $can_encrypt = $KEYS{$keyid}->{flags} =~ /E/;
+    my @UIDS = @{$KEYS{$keyid}->{uids}};
 
-	unless (grep {$_->{last_signed_on}} @UIDS) {
-		info("Key 0x$longkeyid has no signed uids, skipping", 0);
-		next;
-	}
+    unless (grep {$_->{last_signed_on}} @UIDS) {
+        info("Key 0x$longkeyid has no signed uids, skipping", 0);
+        next;
+    }
 
-	my @attached;
-	for my $uid (@UIDS) {
-		my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
+    my @attached;
+    for my $uid (@UIDS) {
+        my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
 
-		trace("UID: $text\n");
-		if ($uid->{validity} =~ /[eir]/) {
-			my $reason = $uid->{validity} =~ /e/ ? 'expired' :
-						 $uid->{validity} =~ /i/ ? 'invalid' :
-						 $uid->{validity} =~ /r/ ? 'revoked' : undef;
-			info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is $reason, skipping", 0);
-			next;
-		}
-		unless ($uid->{last_signed_on}) {
-			info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is not signed by me, skipping", 0);
-			next;
-		}
+        trace("UID: $text\n");
+        if ($uid->{validity} =~ /[eir]/) {
+            my $reason = $uid->{validity} =~ /e/ ? 'expired' :
+                         $uid->{validity} =~ /i/ ? 'invalid' :
+                         $uid->{validity} =~ /r/ ? 'revoked' : die;
+            info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is $reason, skipping", 0);
+            next;
+        }
+        unless ($uid->{last_signed_on}) {
+            info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text is not signed by me, skipping", 0);
+            next;
+        }
 
-		if ($NOW - $uid->{last_signed_on} > $CONFIG{'export-sig-age'} and
-				!ask("Signature on $text is old.  Export?", 0, $PARAMS->{'export-old'}, $PARAMS->{'no-export-old'})) {
-			next;
-		}
+        if ($NOW - $uid->{last_signed_on} > $CONFIG{'export-sig-age'} and
+                !ask("Signature on $text is old.  Export?", 0, $PARAMS->{'export-old'}, $PARAMS->{'no-export-old'})) {
+            next;
+        }
 
-		# save the armored key
-		my $keydir = "$KEYSBASE/$DATE_STRING";
-		-d $keydir || mkdir $keydir, 0700 or myerror(1, "Cannot mkdir $keydir: $!");
+        # save the armored key
+        my $keydir = "$KEYSBASE/$DATE_STRING";
+        -d $keydir || mkdir $keydir, 0700 or myerror(1, "Cannot mkdir $keydir: $!");
 
-		my $keyfile = "$keydir/$longkeyid.key.$uid->{serial}.".sanitize_uid($text).".asc";
-		open my $KEY, '>', $keyfile or myerror(1, "Cannot open $keyfile: $!");
-		debug "Writing armored key 0x$longkeyid to $keyfile";
-		print $KEY $uid->{key};
-		close $KEY;
+        my $keyfile = "$keydir/$longkeyid.key.$uid->{serial}.".sanitize_uid($text).".asc";
+        open my $KEY, '>', $keyfile or myerror(1, "Cannot open $keyfile: $!");
+        debug "Writing armored key 0x$longkeyid to $keyfile";
+        print $KEY $uid->{key};
+        close $KEY;
 
-		if ($uid->{type} eq 'uat') {
-			if (ask("UID $text is an attribute UID, attach it to every email?", 1)) {
-				push @attached, $uid;
-				$uid->{export} = 1;
-			}
-		} elsif (!defined $uid->{address}) {
-			if (ask("UID $text is no email address, attach it to every email?", 1)) {
-				push @attached, $uid;
-				$uid->{export} = 1;
-			}
-		}
-		else {
-			$uid->{export} = 1;
-		}
+        if ($uid->{type} eq 'uat') {
+            if (ask("UID $text is an attribute UID, attach it to every email?", 1)) {
+                push @attached, $uid;
+                $uid->{export} = 1;
+            }
+        } elsif (!defined $uid->{address}) {
+            if (ask("UID $text is no email address, attach it to every email?", 1)) {
+                push @attached, $uid;
+                $uid->{export} = 1;
+            }
+        }
+        else {
+            $uid->{export} = 1;
+        }
 
-		info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text done", 1);
-	}
+        info("Key 0x$longkeyid ".(uc $uid->{type})." $uid->{serial} $text done", 1);
+    }
 
-	@UIDS = grep {$_->{last_signed_on}} @UIDS; 				# ignore UIDs we didn't sign
-	delete $_->{key} foreach grep {!$_->{export}} @UIDS;	# delete non-exported keys
+    @UIDS = grep {$_->{last_signed_on}} @UIDS;              # ignore UIDs we didn't sign
+    delete $_->{key} foreach grep {!$_->{export}} @UIDS;    # delete non-exported keys
 
-	if (!grep {defined $_->{address}} @UIDS) {
-		mywarn "No signed RFC 2822 UID on $longkeyid; won't send other signed UID and attributes!"
-			if @attached;
-	}
-	elsif (grep {$_->{export}} @UIDS) {
-		notice("Key 0x$longkeyid has no encryption capabilities, mail(s) will be sent/stored unencrypted", 0) unless $can_encrypt;
-		my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
+    if (!grep {defined $_->{address}} @UIDS) {
+        mywarn "No signed RFC 2822 UID on $longkeyid; won't send other signed UID and attributes!"
+            if @attached;
+    }
+    elsif (grep {$_->{export}} @UIDS) {
+        notice("Key 0x$longkeyid has no encryption capabilities, mail(s) will be sent/stored unencrypted", 0) unless $can_encrypt;
+        my $sendmail = $can_encrypt ? $CONFIG{'mail'} : $CONFIG{'mail-cant-encrypt'};
 
-		for my $uid (@UIDS) {
-			next unless defined $uid->{address};
-			next unless $uid->{export} or @attached;
-			my @keys = @attached;
-			unshift @keys, $uid if exists $uid->{key};
+        for my $uid (@UIDS) {
+            next unless defined $uid->{address};
+            next unless $uid->{export} or @attached;
+            my @keys = @attached;
+            unshift @keys, $uid if exists $uid->{key};
 
-			my $mail = create_mail($uid->{address}, $can_encrypt, $longkeyid, @keys);
-			if (defined $mail) {
-				my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
-				my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $text to '$uid->{address}'?",
-										   $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
-				send_message($mail) if $should_send_mail;
+            my $mail = create_mail($uid->{address}, $can_encrypt, $longkeyid, @keys);
+            if (defined $mail) {
+                my $text = defined $LOCALE ? $LOCALE->encode($uid->{text}) : $uid->{text};
+                my $should_send_mail = ask("Mail ".($can_encrypt ? '' : '*unencrypted* ')."signature for $text to '$uid->{address}'?",
+                                           $sendmail ne 'ask-no', $sendmail eq 'yes', $sendmail eq 'no');
+                send_message($mail) if $should_send_mail;
 
-				my $keydir = "$KEYSBASE/$DATE_STRING";
-				my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($text);
-				open my $MAILFILE, '>', $mailfile or myerror(1, "Cannot open $mailfile: $!");
-				debug "Writing message to $mailfile";
-				$mail->print($MAILFILE);
-				close $MAILFILE;
-			} else {
-				mywarn "Generating mail failed";
-			}
-		}
-	}
+                my $keydir = "$KEYSBASE/$DATE_STRING";
+                my $mailfile = "$keydir/$longkeyid.mail.".($should_send_mail ? '' : 'unsent.').$uid->{'serial'}.".".sanitize_uid($text);
+                open my $MAILFILE, '>', $mailfile or myerror(1, "Cannot open $mailfile: $!");
+                debug "Writing message to $mailfile";
+                $mail->print($MAILFILE);
+                close $MAILFILE;
+            } else {
+                mywarn "Generating mail failed";
+            }
+        }
+    }
 
-	info("Key 0x$longkeyid done", 1);
+    info("Key 0x$longkeyid done", 1);
 };
 
 ###########################
