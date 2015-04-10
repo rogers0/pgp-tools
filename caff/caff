@@ -185,8 +185,9 @@ Base directory for the files caff stores.  Default: B<$HOME/.caff/>.
 
 =item B<colors> [hash]
 
-How to color output messages.  Colored output can be disabled by setting
-this option to an empty hash B<{}>.  Default:
+How to color output messages.  See the C<Term::ANSIColor> documentation
+for the list of supported colors; colored output can be disabled by
+setting this option to an empty hash B<{}>.  Default:
 
 	{ error => 'bold bright_red'
 	, warn => 'bright_red'
