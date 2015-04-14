@@ -1,4 +1,4 @@
-signing-party (1.1.13-1) UNRELEASED; urgency=low
+signing-party (2.0-1) unstable; urgency=low
 
   * caff:
     + Fix broken compatibility with GnuPG 2.1 (2.1.3 and later only; earlier
@@ -40,7 +40,7 @@ signing-party (1.1.13-1) UNRELEASED; urgency=low
     + Add the possibility to choose the gpg binary via the "GNUPGBIN"
       environment variable.  (Default: "gpg".)
 
- -- Guilhem Moulin <guilhem@guilhem.org>  Sat, 03 Jan 2015 11:36:26 +0100
+ -- Guilhem Moulin <guilhem@guilhem.org>  Tue, 14 Apr 2015 20:02:36 +0200
 
 signing-party (1.1.12-1) unstable; urgency=low
 
