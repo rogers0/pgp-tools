@@ -1,3 +1,11 @@
+signing-party (2.1-1) UNRELEASED; urgency=low
+
+  * caff:
+    + Only consider non-expired/invalid/revoked keys and UIDs when generating
+      the caffrc.
+
+ -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 20 Apr 2015 10:28:20 +0200
+
 signing-party (2.0-1) unstable; urgency=low
 
   * caff:

@@ -530,13 +530,13 @@ sub generate_config() {
             mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
         };
 
-        @keys = ($output{stdout} =~ /^pub:[^r:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
+        @keys = ($output{stdout} =~ /^pub:[^eir:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
         unless (scalar @keys) {
             notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"", 0);
             @keys = qw{0123456789abcdef 89abcdef76543210};
             $Ckeys = '#';
         }
-        ($email) = ($output{stdout} =~ /^uid:(?:[^:]*:){8}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
+        ($email) = ($output{stdout} =~ /^uid:[^eir:]*:(?:[^:]*:){7}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
         unless (defined $email) {
             notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
             $email = $ENV{'LOGNAME'}.'@'.$hostname;
