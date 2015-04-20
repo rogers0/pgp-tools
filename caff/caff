@@ -416,7 +416,7 @@ use Text::Template;
 use MIME::Entity;
 use Encode ();
 use I18N::Langinfo qw{langinfo};
-use Net::IDN::Encode ();
+use Net::IDN::Encode qw{email_to_ascii domain_to_ascii};
 use Fcntl;
 use IO::Select;
 use Getopt::Long;
@@ -501,6 +501,50 @@ sub get_GnuPG_version() {
     return $version;
 }
 
+# See RFC 5322 section 3.4.1; only the pattern for the local part, which
+# doesn't go beyond the ASCII range, is validated.  The domain part is
+# NOT checked against RFC 5322, as it must be encoded to ASCII first;
+# for now any string in the full-range unicode that does not contain
+# U+0040 (commercial at), U+FE6B (small commercial at) and U+FF20
+# (fullwidth commercial at) is accepted.
+my $RE_word = qr/[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x41-\x5A\x5E-\x7E]+ # atom: any ASCII CHAR except specials, SPACE and CTLs
+                 |\x22(?:[\x00-\x21\x23-\x5B\x5D-\x7E]|\x5C\p{ASCII})*\x22       # quoted string
+                /x;
+my $RE_address_spec = qr/(?<l>$RE_word(?:\.$RE_word)*)[\@\N{U+FE6B}\N{U+FF20}](?<d>[^\@\N{U+FE6B}\N{U+FF20}]+)/o;
+
+# A domain label is a non-empty ASCII string of length at most 63
+# characters (RFC 1035 2.3.4).  Valid characters are alphanumeric and
+# hyphen '-', but an hyphen may not appear at the start or end of a
+# label (RFC 952, RFC 1123 2.1).
+my $RE_label = qr/[0-9a-z](?:[0-9a-z\x2D]{0,61}[0-9a-z])?/aai;
+
+# Take a 'mailbox' (RFC 5322 section 3.4) and return its ASCII-encoded
+# 'addr-spec'; or undef if it violates one of RFC 5322/5892/1035/5321.
+# We're not using Email::Valid because it's not unicode-friendly.
+# NOTE: This subroutine should only be used to extract e-mail addresses
+# from UIDs.  The phrase is NOT checked against RFC 5322 (any string
+# containing only characters in the full-unicode printable range are
+# accepted), but we don't care as long as it's not used in email
+# headers.
+sub email_valid($) {
+    local $_ = shift // return;
+    return unless /\A$RE_address_spec\z/ao or                         # addr-spec
+                  /\A(?:\p{Print}*\p{Space})?<$RE_address_spec>\z/ao; # [phrase] "<" addr-spec ">"
+    my ($l,$d) = @+{qw/l d/};
+    if ($d =~ /\P{ASCII}/) {
+        # encode the IDN to ASCII using Punycode for RFC 5321 validation
+        eval { $d = domain_to_ascii($d) };
+        return if $@; # violates RFC 5892
+    }
+    my $address = "$l\@$d";
+    return unless
+        length $d > 0 and length $d <= 255 # violates RFC 1035 2.3.4 "size limits"
+        and length $l <= 64                # violates RFC 5321 4.5.3.1.1
+        and length $address <= 254         # violates RFC 5321 4.5.3.1.3
+        and $d =~ /\A$RE_label(?:\.$RE_label)+\z/o; # ignore non-FQDN
+    return $address;
+}
+
 open NULL, '+<', '/dev/null';
 my $NULL = fileno NULL;
 sub generate_config() {
@@ -536,7 +580,12 @@ sub generate_config() {
             @keys = qw{0123456789abcdef 89abcdef76543210};
             $Ckeys = '#';
         }
-        ($email) = ($output{stdout} =~ /^uid:[^eir:]*:(?:[^:]*:){7}[^:]+ <([^:]+\@[^:]+)>(?::.*)?$/m);
+        my @emails = ($output{stdout} =~ /^uid:[^eir:]*:(?:[^:]*:){7}([^:]+)(?::.*)?$/mg);
+        if (@emails) {
+            s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge foreach @emails;
+            @emails = grep defined, map {email_valid(Encode::decode_utf8($_))} @emails;
+            $email = shift @emails; # take the first valid address
+        }
         unless (defined $email) {
             notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
             $email = $ENV{'LOGNAME'}.'@'.$hostname;
@@ -971,7 +1020,7 @@ sub create_mail($$$@) {
     $message_entity->head->add("From", $from);
     $message_entity->head->add("Date", strfCtime("%a, %e %b %Y %H:%M:%S %z", localtime));
     $message_entity->head->add("Subject", Encode::encode('MIME-Q', $CONFIG{'mail-subject'} =~ s/%k/$key_id/gr));
-    $message_entity->head->add("To", email_to_ascii($address));
+    $message_entity->head->add("To", $address);
     $message_entity->head->add("Sender", $from);
     $message_entity->head->add("Reply-To", $CONFIG{'reply-to'}) if defined $CONFIG{'reply-to'};
     $message_entity->head->add("Bcc", $CONFIG{'bcc'}) if defined $CONFIG{'bcc'};
@@ -992,21 +1041,6 @@ sub send_message($) {
     };
     $message_entity->send(@{$CONFIG{'mailer-send'}});
 };
-
-# Net::IDN::Encode::email_to_ascii crashes upon punycode conversion failure:
-# we don't want caff to crash, so upon errors return the input as is and
-# let the MUA handle that
-sub email_to_ascii($) {
-    my $email = shift;
-    my $res;
-
-    eval { $res = Net::IDN::Encode::email_to_ascii($email) };
-    return $res unless $@;
-
-    chomp $@;
-    mywarn($@);
-    return $email;
-}
 
 ######
 # clean up a UID so that it can be used on the FS.
@@ -1521,10 +1555,7 @@ for my $keyid (@keyids_ok) {
             $uid->{text} =~ s/\\x(\p{AHex}{2})/ chr(hex($1)) /ge;
             # --with-colons always outputs UTF-8
             $uid->{text} = Encode::decode_utf8($uid->{text});
-            $uid->{address} = $1 if $uid->{type} eq 'uid' and $uid->{text} =~ /.*<([^>]+[\@\N{U+FE6B}\N{U+FF20}][^>]+)>$/;
-            # XXX This does not cover the full RFC 2822 specification:
-            # The local part may contain '>' in a quoted string.
-            # However as of 1.4.18/2.0.26, gpg doesn't allow that either.
+            $uid->{address} = email_valid $uid->{text} if $uid->{type} eq 'uid';
             push @{$KEYS{$keyid}->{uids}}, $uid;
         }
         elsif (!/^(?:rvk|tru):/) {
@@ -1835,7 +1866,7 @@ for my $keyid (@keyids_ok) {
     delete $_->{key} foreach grep {!$_->{export}} @UIDS;    # delete non-exported keys
 
     if (!grep {defined $_->{address}} @UIDS) {
-        mywarn "No signed RFC 2822 UID on $longkeyid; won't send other signed UID and attributes!"
+        mywarn "No signed RFC 5322 UID on $longkeyid; won't send other signed UID and attributes!"
             if @attached;
     }
     elsif (grep {$_->{export}} @UIDS) {

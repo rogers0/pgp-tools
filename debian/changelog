@@ -3,6 +3,11 @@ signing-party (2.1-1) UNRELEASED; urgency=low
   * caff:
     + Only consider non-expired/invalid/revoked keys and UIDs when generating
       the caffrc.
+    + Proper RFC 5322 validation of email addresses.  Currently gpg(1) only
+      allows accept a subset of RFC 5322-valid addresses (unless
+      --allow-freeform-uid is set).  caff is now able to extract the email
+      address from any UID of the form "addr-spec" or "[phrase] <addr-spec>"
+      with a RFC 5322-valid addr-spec.
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 20 Apr 2015 10:28:20 +0200
 
