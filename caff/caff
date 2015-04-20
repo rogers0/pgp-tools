@@ -493,6 +493,14 @@ sub mysystem(@) {
 }
 
 
+sub get_GnuPG_version() {
+    my $version = `$CONFIG{gpg} --with-colons --list-config version` or exit 1;
+    chomp $version;
+    $version =~ s/^cfg:version:(\d+\.\d+).*/$1/;
+    debug "gpg (GnuPG) $version";
+    return $version;
+}
+
 open NULL, '+<', '/dev/null';
 my $NULL = fileno NULL;
 sub generate_config() {
@@ -510,11 +518,13 @@ sub generate_config() {
         $gecos =~ s/,.*//;
 
         $CONFIG{'gpg'} = $ENV{GNUPGBIN} // 'gpg';
+        $GNUPG_VERSION = get_GnuPG_version();
         my $gpg = mkGnuPG( extra_args => ['--with-colons'] );
         my $handles = mkGnuPG_fds ( stdout => undef );
         my $pid = $gpg->list_public_keys(handles => $handles, command_args => [ $gecos ]);
         my %output = readwrite_gpg($handles);
-        done_gpg($pid, $handles);
+        waitpid $pid, 0;
+        $handles->{stdout}->close;
 
         if ($output{stdout} eq '') {
             mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
@@ -1342,11 +1352,7 @@ for my $keyid (map { split /\n/ } @ARGV) { # caff "`cat txt`" is a single argume
 };
 
 
-$GNUPG_VERSION = `$CONFIG{'gpg'} --with-colons --list-config version` or exit 1;
-chomp $GNUPG_VERSION;
-$GNUPG_VERSION =~ s/^cfg:version:(\d+\.\d+).*/$1/;
-debug "gpg (GnuPG) $GNUPG_VERSION";
-
+$GNUPG_VERSION = get_GnuPG_version();
 if ($GNUPG_VERSION >= 2.1) {
     my @sockets;
     unless ($CONFIG{'no-sign'}) {
