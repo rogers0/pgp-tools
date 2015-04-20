@@ -571,13 +571,13 @@ sub generate_config() {
         $handles->{stdout}->close;
 
         if ($output{stdout} eq '') {
-            mywarn "No data from gpg for list-key"; # There should be at least 'tru:' everywhere.
+            mywarn "No data from $CONFIG{gpg} for list-key"; # There should be at least 'tru:' everywhere.
         };
 
         @keys = ($output{stdout} =~ /^pub:[^eir:]*:(?:[^:]*:){2}([0-9A-F]{16}):/mg);
         unless (scalar @keys) {
-            notice("Error: No keys were found using \"gpg --list-public-keys '$gecos'\"", 0);
-            @keys = qw{0123456789abcdef 89abcdef76543210};
+            notice("Error: No keys were found using \"$CONFIG{gpg} --list-public-keys '$gecos'\"", 0);
+            @keys = qw{0123456789ABCDEF 89ABCDEF76543210};
             $Ckeys = '#';
         }
         my @emails = ($output{stdout} =~ /^uid:[^eir:]*:(?:[^:]*:){7}([^:]+)(?::.*)?$/mg);
@@ -587,14 +587,14 @@ sub generate_config() {
             $email = shift @emails; # take the first valid address
         }
         unless (defined $email) {
-            notice("Error: No email address was found using \"gpg --list-public-keys '$gecos'\"", 0);
+            notice("Error: No email address was found using \"$CONFIG{gpg} --list-public-keys '$gecos'\"", 0);
             $email = $ENV{'LOGNAME'}.'@'.$hostname;
             $Cemail = '#';
         }
     } else {
         $gecos = 'Unknown Caff User';
         $email = $ENV{'LOGNAME'}.'@'.$hostname;
-        @keys = qw{0123456789abcdef 89abcdef76543210};
+        @keys = qw{0123456789ABCDEF 89ABCDEF76543210};
         ($Cgecos,$Cemail,$Ckeys) = ('#','#','#');
     };
 
@@ -607,7 +607,7 @@ $Cemail\$CONFIG{'email'} = '$email';
 #\$CONFIG{'reply-to'} = 'foo\@bla.org';
 
 # You can get your long keyid from
-#   gpg --keyid-format long --list-key <yourkeyid|name|emailaddress..>
+#   $CONFIG{gpg} --keyid-format long --list-key <yourkeyid|name|emailaddress..>
 #
 # If you have a v4 key, it will simply be the last 16 digits of
 # your fingerprint.
