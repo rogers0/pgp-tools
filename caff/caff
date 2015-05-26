@@ -656,7 +656,7 @@ sub load_config() {
     $CONFIG{'caffhome'} //= $ENV{'HOME'}.'/.caff';
     $KEYSBASE  = $CONFIG{'caffhome'}.'/keys';
     $GNUPGHOME = $CONFIG{'caffhome'}.'/gnupghome';
-    foreach ($KEYSBASE, $GNUPGHOME) {
+    foreach ($CONFIG{'caffhome'}, $KEYSBASE, $GNUPGHOME) {
         next if -d $_;
         debug("Creating $_");
         mkdir $_, 0700 or myerror(1, "Cannot mkdir $_: $!");

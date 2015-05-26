@@ -9,6 +9,8 @@ signing-party (2.1-1) UNRELEASED; urgency=low
       address from any UID of the form "addr-spec" or "[phrase] <addr-spec>"
       with a RFC 5322-valid addr-spec.
     + Prefix the signature by "-- \n" in the email template.
+    + Automatically mkdir ~/.caff if it doesn't exit.  Regression introduced
+      in r776.  (Closes: #786933)
 
  -- Guilhem Moulin <guilhem@guilhem.org>  Mon, 20 Apr 2015 10:28:20 +0200
 
