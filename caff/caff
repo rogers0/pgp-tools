@@ -244,7 +244,7 @@ Keyserver to download keys from, passed to gpg(1) as argument to the
 "--keyserver" option.  (Optional keyserver configuration options may be
 provided after the keyserver name.)
 Default: the keyserver and keyserver-options defined in
-~/.gnupg/gpg.conf if found, otherwise B<pool.sks-keyservers.net>.
+~/.gnupg/gpg.conf if found, otherwise B<keys.openpgp.org>.
 
 =item B<no-download> [boolean]
 
@@ -1454,7 +1454,7 @@ if ($CONFIG{'no-download'}) {
             close $fh;
         }
     }
-    $CONFIG{'keyserver'} //= 'pool.sks-keyservers.net';
+    $CONFIG{'keyserver'} //= 'keys.openpgp.org';
     notice("Fetching keys from ".($CONFIG{keyserver} =~ s/\s.*//r).", this may take a while...");
 
     my $gpg = mkGnuPG( homedir => $GNUPGHOME, extra_args => ['--keyserver='.$CONFIG{'keyserver'}] );
@@ -1920,7 +1920,7 @@ the signatures by running each through `gpg --import`.
 Note that I did not upload your key to any keyservers. If you want this
 new signature to be available to others, please upload it yourself.
 With GnuPG this can be done using
-	gpg --keyserver pool.sks-keyservers.net --send-key {$key}
+	gpg --keyserver keys.openpgp.org --send-key {$key}
 
 If you have any questions, don't hesitate to ask.
 
